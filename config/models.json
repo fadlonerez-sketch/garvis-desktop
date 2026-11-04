@@ -1,0 +1,88 @@
+{
+  "_about": "Garvis model registry (app/llm/registry.py), used with GARVIS_LLM_PROVIDER=tiered. SINGLE-MODEL POLICY: every tier has exactly one entry, Claude Haiku 5.5 through the direct Anthropic API. Garvis refuses to start if any tier lists another model (enabled or disabled) or more than one entry (app/llm/registry.py:enforce_single_model), and the router re-checks the model before every request. If Claude Haiku 5.5 fails, Garvis reports the error -- no other model or provider is ever called. The tiers only choose the effort level and are recorded as each request's cost category.",
+  "_verified": "Claude Haiku 5.5 ID and prices: platform.claude.com/docs/en/about-claude/models/overview and /pricing, 2026-10-22.",
+  "zero_cost": false,
+  "tiers": {
+    "small": [
+      {
+        "provider": "anthropic",
+        "model": "claude-haiku-5-5",
+        "reasoning_effort": "low",
+        "thinking": "disabled",
+        "max_output_tokens": 8192,
+        "prompt_cache": "5m",
+        "verify_served_model": true,
+        "cost": "paid",
+        "pricing": {
+          "input": 0.1,
+          "output": 0.5,
+          "cache_read": 0.01,
+          "cache_write_5m": 0.125,
+          "cache_write_1h": 0.2,
+          "long_context_threshold": 100000,
+          "long_input": 0.5,
+          "long_output": 2.5,
+          "long_cache_read": 0.05,
+          "long_cache_write_5m": 0.625,
+          "long_cache_write_1h": 1.0,
+          "source": "platform.claude.com/docs/en/about-claude/pricing (verified 2026-10-22)"
+        },
+        "note": "Claude Haiku 5.5 via the official Anthropic API (ANTHROPIC_API_KEY). The only model Garvis uses."
+      }
+    ],
+    "medium": [
+      {
+        "provider": "anthropic",
+        "model": "claude-haiku-5-5",
+        "reasoning_effort": "medium",
+        "thinking": "disabled",
+        "max_output_tokens": 8192,
+        "prompt_cache": "5m",
+        "verify_served_model": true,
+        "cost": "paid",
+        "pricing": {
+          "input": 0.1,
+          "output": 0.5,
+          "cache_read": 0.01,
+          "cache_write_5m": 0.125,
+          "cache_write_1h": 0.2,
+          "long_context_threshold": 100000,
+          "long_input": 0.5,
+          "long_output": 2.5,
+          "long_cache_read": 0.05,
+          "long_cache_write_5m": 0.625,
+          "long_cache_write_1h": 1.0,
+          "source": "platform.claude.com/docs/en/about-claude/pricing (verified 2026-10-22)"
+        },
+        "note": "Claude Haiku 5.5 via the official Anthropic API (ANTHROPIC_API_KEY). The only model Garvis uses."
+      }
+    ],
+    "large": [
+      {
+        "provider": "anthropic",
+        "model": "claude-haiku-5-5",
+        "reasoning_effort": "high",
+        "thinking": "disabled",
+        "max_output_tokens": 8192,
+        "prompt_cache": "5m",
+        "verify_served_model": true,
+        "cost": "paid",
+        "pricing": {
+          "input": 0.1,
+          "output": 0.5,
+          "cache_read": 0.01,
+          "cache_write_5m": 0.125,
+          "cache_write_1h": 0.2,
+          "long_context_threshold": 100000,
+          "long_input": 0.5,
+          "long_output": 2.5,
+          "long_cache_read": 0.05,
+          "long_cache_write_5m": 0.625,
+          "long_cache_write_1h": 1.0,
+          "source": "platform.claude.com/docs/en/about-claude/pricing (verified 2026-10-22)"
+        },
+        "note": "Claude Haiku 5.5 via the official Anthropic API (ANTHROPIC_API_KEY). The only model Garvis uses."
+      }
+    ]
+  }
+}

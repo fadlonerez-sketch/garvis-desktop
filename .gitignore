@@ -1,0 +1,82 @@
+# --- Local configuration and secrets -------------------------------------
+.env
+.env.*
+!.env.example
+*.local
+config/gmail_client_secret.json
+config/*secret*.json
+config/*token*.json
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.dpapi
+*.keystore
+*.jks
+id_rsa*
+id_ed25519*
+
+# --- Runtime data (databases, logs, recordings, pairing, caches) ----------
+# Garvis writes everything it creates at runtime under data/ (see
+# app/core/config.py): memory/usage databases, logs, paired devices and the
+# local CA, reminders, tasks, screenshots, window state and Piper voices.
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
+logs/
+*.dmp
+*.wav
+*.mp3
+*.onnx
+*.onnx.json
+
+# --- Python ----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.spec
+.venv/
+venv/
+env/
+.python-version
+
+# --- Test / tool caches ------------------------------------------------------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# --- Browser automation state ------------------------------------------------
+playwright-report/
+test-results/
+*browser-profile*/
+*user-data-dir*/
+
+# --- Editors and OS ------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Backups and temporary files ------------------------------------------------
+*.bak
+*.orig
+*.tmp
+*.temp
+tmp/
+temp/

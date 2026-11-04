@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#030a17">
+  <meta name="referrer" content="no-referrer">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Garvis">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Garvis</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icon-180.png">
+  <link rel="apple-touch-icon" href="/static/icon-180.png">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="orb" aria-hidden="true"><span class="orb-ring"></span><span class="orb-core"></span></span>
+      <div>
+        <h1>GARVIS</h1>
+        <p id="status-text" class="status" role="status" aria-live="polite">Connecting…</p>
+      </div>
+    </div>
+    <span id="status-pill" class="pill pill-offline"><span class="pill-dot"></span><span id="pill-text">Offline</span></span>
+  </header>
+
+  <div id="banner" class="banner" role="alert" hidden></div>
+
+  <main id="pair-view" class="pair" hidden>
+    <span class="orb orb-large" aria-hidden="true"><span class="orb-ring"></span><span class="orb-core"></span></span>
+    <h2>Pair this phone</h2>
+    <p>On the PC, open <strong>Settings › Phone › Pair phone…</strong> in Garvis and enter the 8-digit code.</p>
+    <form id="pair-form" autocomplete="off">
+      <input id="pair-code" name="code" inputmode="numeric" autocomplete="one-time-code"
+             pattern="[0-9 ]*" maxlength="9" placeholder="1234 5678" aria-label="Pairing code" required>
+      <button type="submit" class="primary">Pair</button>
+    </form>
+    <p id="pair-error" class="error-text" role="alert"></p>
+  </main>
+
+  <main id="chat-view" class="view chat" hidden>
+    <ol id="messages" class="messages" aria-live="polite"></ol>
+  </main>
+
+  <main id="tasks-view" class="view list-view" hidden>
+    <div class="view-head">
+      <h2>Tasks</h2>
+      <span id="tasks-stamp" class="stamp"></span>
+    </div>
+    <ul id="task-list" class="cards"></ul>
+    <p id="tasks-empty" class="empty" hidden>No tasks yet. Send Garvis an instruction from Chat, or run a protocol.</p>
+  </main>
+
+  <main id="protocols-view" class="view list-view" hidden>
+    <div class="view-head">
+      <h2>Protocols</h2>
+      <span class="stamp">Created and edited on the PC</span>
+    </div>
+    <ul id="protocol-list" class="cards"></ul>
+    <p id="protocols-empty" class="empty" hidden>No protocols yet. Create one on the PC: Garvis › Protocols.</p>
+  </main>
+
+  <section id="confirmations" class="confirmations" aria-label="Waiting for your approval" hidden></section>
+
+  <footer id="composer" class="composer" hidden>
+    <div id="voice-state" class="voice-state" hidden>
+      <span id="voice-label">Recording…</span>
+      <button id="stop-audio" class="ghost" type="button" hidden>Stop audio</button>
+    </div>
+    <form id="message-form" class="message-form">
+      <button id="mic-button" class="mic" type="button" aria-label="Start recording">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-2.08A7 7 0 0 0 19 12h-2Z"/></svg>
+      </button>
+      <textarea id="message-input" rows="1" maxlength="4000" placeholder="Tell Garvis what to do on the PC"
+                aria-label="Message" enterkeyhint="send"></textarea>
+      <button id="send-button" class="primary send" type="submit" aria-label="Send">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 20.4 21 12 3.4 3.6 3.4 10l12.6 2-12.6 2z"/></svg>
+      </button>
+    </form>
+  </footer>
+
+  <nav id="tabbar" class="tabbar" hidden>
+    <button class="tab active" data-view="chat" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg><span>Chat</span>
+    </button>
+    <button class="tab" data-view="tasks" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h3M11 6h8M5 12h3M11 12h8M5 18h3M11 18h8"/></svg>
+      <span>Tasks</span><span id="tasks-badge" class="badge" hidden></span>
+    </button>
+    <button class="tab" data-view="protocols" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="12" r="2.2"/><circle cx="6" cy="18" r="2.2"/><path d="M8 6.5 16 11M16 13l-8 4.5"/></svg>
+      <span>Protocols</span>
+    </button>
+    <button id="menu-button" class="tab" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H5v16h4M14 8l4 4-4 4M18 12H9"/></svg><span>Unpair</span>
+    </button>
+  </nav>
+
+  <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+  <section id="sheet" class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden>
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <header class="sheet-head">
+      <h3 id="sheet-title"></h3>
+      <button id="sheet-close" class="ghost" type="button" aria-label="Close">Close</button>
+    </header>
+    <div id="sheet-body" class="sheet-body"></div>
+    <div id="sheet-actions" class="sheet-actions"></div>
+  </section>
+</body>
+</html>

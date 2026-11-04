@@ -1,0 +1,8 @@
+{
+  "notepad": "notepad.exe",
+  "calculator": "calc.exe",
+  "file_explorer": "explorer.exe",
+  "paint": "mspaint.exe",
+  "wordpad": "write.exe",
+  "task_manager": "taskmgr.exe"
+}

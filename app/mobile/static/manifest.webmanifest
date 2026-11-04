@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "Garvis",
+  "short_name": "Garvis",
+  "description": "Your Garvis on the PC: chat, tasks and protocols.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#030a17",
+  "theme_color": "#030a17",
+  "icons": [
+    {"src": "/static/icon-180.png", "sizes": "180x180", "type": "image/png"},
+    {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/static/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
