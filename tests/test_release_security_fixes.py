@@ -111,6 +111,14 @@ def test_unc_paths_are_refused_before_they_are_resolved(tmp_path, monkeypatch, r
     assert "UNC" in open_path.refusal(open_path.expand(raw))
 
 
+@pytest.mark.parametrize("name", ["setup.iso", "disk.vhdx", "work.rdp", "dark.theme", "sandbox.wsb",
+                                  "update.msu", "app.appinstaller", "run.sh", "budget.xlsm", "notes.docm"])
+def test_open_path_refuses_mounting_and_launching_types(tmp_path, name):
+    target = tmp_path / name
+    target.write_bytes(b"x")
+    assert open_path.refusal(target)
+
+
 # --------------------------------------------------------- desktop commit guard
 def test_explorer_and_start_search_are_commit_guarded():
     apps = {a.strip() for a in DEFAULT_COMMIT_APPS.split(",")}

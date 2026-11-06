@@ -292,6 +292,10 @@ def classify(command: str, analysis: CommandAnalysis) -> str | None:
                     "(approve it only for a project you trust).")
         if name == "foreach-object" and not _foreach_is_script_blocks(parsed.args):
             return "ForEach-Object with a member name calls a method on every item, which may change something."
+        # The read-only rules trust a tool by name; a copy run from a path (.\ping.exe,
+        # C:\Users\...\Downloads\whoami.exe) could be any program.
+        if ("\\" in name or "/" in name) and _normalize_name(name) in _EXTERNAL_RULES:
+            return f"It runs '{parsed.name}' from a path, which may not be the Windows tool of that name."
         rule = _EXTERNAL_RULES.get(_normalize_name(name))
         if rule is not None:
             if not rule(parsed.args):

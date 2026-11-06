@@ -26,7 +26,9 @@ BLOCKED_SUFFIXES = frozenset(
     ".exe .com .bat .cmd .ps1 .psm1 .psd1 .ps1xml .psc1 .vbs .vbe .js .jse .wsf .wsh .wsc .msi .msp .mst "
     ".scr .pif .lnk .url .reg .hta .cpl .jar .py .pyw .pyc .application .appref-ms .msc .scf .inf .sys "
     ".dll .ocx .gadget .appx .msix .appxbundle .msixbundle .diagcab .settingcontent-ms .library-ms "
-    ".search-ms .xll .iqy .slk .chm .ins .isp .mde .mdb .accde .vb .sct .shb .shs .ws .cer".split()
+    ".search-ms .xll .iqy .slk .chm .ins .isp .mde .mdb .accde .vb .sct .shb .shs .ws .cer "
+    ".sh .msu .appinstaller .wsb .rdp .iso .img .vhd .vhdx .theme .themepack .deskthemepack "
+    ".docm .dotm .xlsm .xltm .xlam .pptm .potm .ppam".split()
 )
 """Types that execute or configure something when "opened" -- never opened here."""
 

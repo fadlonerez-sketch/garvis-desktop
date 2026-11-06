@@ -218,6 +218,8 @@ def test_read_only_commands_run_without_confirmation(command, analysis):
     ("winget install x", _analysis(("winget", "install", "x")), "may change"),
     ("python -m pytest -q", _analysis(("python", "-m", "pytest", "-q")), "test suite"),
     ("mytool.exe --go", _analysis(("mytool.exe", "--go")), "can't verify"),
+    (r".\ping.exe 1.1.1.1", _analysis((r".\ping.exe", "1.1.1.1")), "from a path"),
+    (r"C:\Users\me\Downloads\whoami.bat", _analysis((r"C:\Users\me\Downloads\whoami.bat",)), "from a path"),
     ("& $x", _analysis((None,)), "dynamic"),
     ("Get-Process > p.txt", _analysis(("Get-Process",), redirections=1), "redirection"),
     ("(gi x).Attributes = 'Hidden'", _analysis(("gi", "x"), member_assignments=1), "properties"),
