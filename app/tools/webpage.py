@@ -89,6 +89,9 @@ class FetchWebpageTool(Tool):
     risk_level = RiskLevel.LOW
     input_model = FetchWebpageInput
 
+    def egress_url(self, args: FetchWebpageInput) -> str | None:
+        return args.url
+
     async def execute(self, args: FetchWebpageInput) -> ToolResult:
         url = args.url
 

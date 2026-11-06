@@ -102,6 +102,9 @@ class NavigateTool(Tool):
         self._placer = placer
         self._workspace_available = workspace_available
 
+    def egress_url(self, args: NavigateInput) -> str | None:
+        return args.url
+
     async def execute(self, args: NavigateInput) -> ToolResult:
         default = DesktopTarget.WORKSPACE if self._workspace_available else DesktopTarget.USER
         resolution = self._routing.resolve("browser", args.target_desktop, default)

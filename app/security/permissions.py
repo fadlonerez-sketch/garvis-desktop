@@ -13,6 +13,8 @@ from enum import StrEnum
 
 from pydantic import BaseModel
 
+from app.llm.base import Message
+from app.security.egress import url_egress_reason
 from app.tools.base import RiskLevel, Tool
 
 
@@ -39,16 +41,24 @@ class PermissionChecker:
     tool itself flags as consequential (Tool.confirmation_reason).
     """
 
-    async def evaluate_call(self, tool: Tool, args: BaseModel) -> PermissionResult:
+    async def evaluate_call(self, tool: Tool, args: BaseModel,
+                            history: list[Message] | None = None) -> PermissionResult:
         """`evaluate(tool)`, plus the tool's own per-call check for ALLOW
         decisions. The per-call check can only escalate ALLOW to
         REQUIRE_CONFIRMATION -- never relax a tool-level decision -- and if
-        it fails, the call is confirmed rather than silently allowed."""
+        it fails, the call is confirmed rather than silently allowed.
+
+        `history` (the conversation, for calls the model asked for) adds the
+        egress taint rule: a URL the model composed after local data entered
+        the conversation asks first (app/security/egress.py)."""
         decision = self.evaluate(tool)
         if decision.decision != PermissionDecision.ALLOW:
             return decision
         try:
             reason = await tool.confirmation_reason(args)
+            if not reason and history is not None:
+                url = tool.egress_url(args)
+                reason = url_egress_reason(url, history) if url else None
         except Exception as exc:  # a broken check must fail closed
             reason = f"Garvis couldn't check whether this '{tool.name}' call is safe ({exc})."
         if reason:

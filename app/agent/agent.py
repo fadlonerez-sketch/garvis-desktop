@@ -345,7 +345,7 @@ class Agent:
         else:
             turn.call_counts[key] = turn.call_counts.get(key, 0) + 1
             result = await self._execute_and_publish(tool_call.name, tool_call.arguments,
-                                                     source=getattr(turn, "source", None))
+                                                     source=getattr(turn, "source", None), from_model=True)
             if result.success:
                 turn.failures.pop(key, None)
                 turn.completed.append(tool_call.name)
@@ -376,13 +376,16 @@ class Agent:
 
     async def _execute_and_publish(self, name: str, arguments: dict, *, source: str | None = None,
                                    presentation_override: str | None = None,
-                                   task_id: str | None = None) -> ToolResult:
+                                   task_id: str | None = None, from_model: bool = False) -> ToolResult:
         """TOOL_STARTED, the permission-checked call, TOOL_FINISHED (with any
         sources) and, for a result the user should see, one PRESENTATION.
         Shared by chat turns and protocol steps, so both go through exactly
-        the same validation, permission and confirmation path."""
+        the same validation, permission and confirmation path. `from_model`
+        marks a call the model asked for (vs. a user-authored protocol step),
+        which also gets the egress taint check (app/security/egress.py)."""
         await self._publish(EventType.TOOL_STARTED, name=name, arguments=arguments)
-        result = await self._execute_tool_call(ToolCall(id=f"call_{name}", name=name, arguments=arguments))
+        result = await self._execute_tool_call(ToolCall(id=f"call_{name}", name=name, arguments=arguments),
+                                               from_model=from_model)
         # For the desktop Sources view only; the model's tool message is unchanged.
         sources = extract_sources(name, result.data) if result.success else []
         await self._publish(
@@ -442,7 +445,7 @@ class Agent:
             await self._publish(EventType.CONFIRMATION_RESOLVED, id=request.id, outcome=outcome)
         return outcome
 
-    async def _execute_tool_call(self, tool_call: ToolCall) -> ToolResult:
+    async def _execute_tool_call(self, tool_call: ToolCall, from_model: bool = False) -> ToolResult:
         try:
             tool = self._registry.get(tool_call.name)
         except ToolNotFoundError as exc:
@@ -455,7 +458,10 @@ class Agent:
             log_extra(logger, 30, "agent.tool_validation_failed", tool=tool_call.name, error=str(exc))
             return ToolResult.fail(f"Invalid arguments for '{tool.name}': {exc}")
 
-        permission = await self._permissions.evaluate_call(tool, args)
+        if from_model:
+            permission = await self._permissions.evaluate_call(tool, args, history=self._context.messages)
+        else:
+            permission = await self._permissions.evaluate_call(tool, args)
         if permission.decision == PermissionDecision.DENY:
             log_extra(logger, 30, "agent.tool_denied", tool=tool_call.name, reason=permission.reason)
             return ToolResult.fail(f"Denied: {permission.reason}")

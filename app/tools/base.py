@@ -66,6 +66,13 @@ class Tool(ABC):
         add a confirmation -- see PermissionChecker.evaluate_call()."""
         return None
 
+    def egress_url(self, args: BaseModel) -> str | None:
+        """The web address this call would send out, for tools that fetch or
+        open a model-chosen URL. Checked against the conversation by
+        app/security/egress.py, so a URL composed after reading local data
+        asks first. None for every other tool."""
+        return None
+
     def parameters_schema(self) -> dict:
         return self.input_model.model_json_schema()
 

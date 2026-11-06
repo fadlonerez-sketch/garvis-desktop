@@ -171,6 +171,12 @@ real hardware or a real API key. Read each one before running it.
   - Enter in terminals, chat and mail apps and IDEs;
   - PowerShell commands that aren't provably read-only, and every test
     runner;
+  - network lookups and pings (`nslookup`, `ping`, `Resolve-DnsName`, …)
+    except to localhost or a few well-known public hosts, plus UNC paths,
+    URLs and remote parameters in commands (see
+    [SECURITY.md](SECURITY.md#network-commands));
+  - web addresses Garvis composed itself after reading your files, email
+    or screen in the same conversation;
   - writes of executable or startup files and of Garvis's own code;
   - reading or writing credential files.
 - **Untrusted input stays contained:**
