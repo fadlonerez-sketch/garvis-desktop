@@ -424,3 +424,50 @@ async def test_headless_config_is_forwarded_to_launch(monkeypatch):
     manager = BrowserManager(headless=False)
     await manager.navigate("https://example.com/")
     assert harness.chromium.launch_kwargs == {"headless": False}
+
+
+# --- DNS rebinding backstop: check the address Chromium connected to ------
+
+
+class _FakeResponse:
+    def __init__(self, ip):
+        self._ip = ip
+
+    async def server_addr(self):
+        return None if self._ip is None else {"ipAddress": self._ip, "port": 443}
+
+
+def _goto_returning(harness, ip):
+    original = harness.page.goto
+
+    async def goto(url, timeout=None, wait_until=None):
+        await original(url, timeout=timeout, wait_until=wait_until)
+        return _FakeResponse(ip) if url != "about:blank" else None
+
+    harness.page.goto = goto
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("ip", ["127.0.0.1", "192.168.1.1", "100.100.1.1", "::1", "::ffff:10.0.0.1"])
+async def test_navigate_rejects_rebound_document_address(monkeypatch, ip):
+    harness = _FakeHarness()
+    _install_fake_playwright(monkeypatch, harness)
+    manager = BrowserManager(headless=True)
+    await manager._ensure_started()
+    _goto_returning(harness, ip)
+
+    with pytest.raises(BrowserError, match="non-public address"):
+        await manager.navigate("https://example.com/page")
+    assert harness.page.goto_calls[-1] == "about:blank"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("ip", ["93.184.216.34", None])
+async def test_navigate_accepts_public_or_unknown_document_address(monkeypatch, ip):
+    harness = _FakeHarness()
+    _install_fake_playwright(monkeypatch, harness)
+    manager = BrowserManager(headless=True)
+    await manager._ensure_started()
+    _goto_returning(harness, ip)
+
+    assert await manager.navigate("https://example.com/page") == "https://example.com/page"

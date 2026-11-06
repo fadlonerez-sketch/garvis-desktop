@@ -57,7 +57,7 @@ def main() -> int:
 
     logger = get_logger("main")
     settings = get_settings()
-    configure_logging(settings.log_level, settings.log_dir)
+    configure_logging(settings.log_level, settings.log_dir, settings.log_content_excerpts)
     logger.info("Starting Garvis")
 
     app = QApplication(sys.argv)

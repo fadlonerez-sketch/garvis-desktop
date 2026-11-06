@@ -309,12 +309,17 @@ async def test_chat_response_log_carries_content_fingerprint_not_full_text(monke
     fields = records[0].extra_fields
     assert fields["content_length"] == len(reply)
     assert fields["content_hash"] == hashlib.sha256(reply.encode("utf-8")).hexdigest()[:12]
-    assert fields["content_excerpt"] == reply
+    # Excerpt logging is opt-in (GARVIS_LOG_CONTENT_EXCERPTS); off by default.
+    assert "content_excerpt" not in fields
+    assert reply not in str(fields)
     assert "content" not in fields  # no verbatim full-text field name
 
 
 @pytest.mark.asyncio
 async def test_chat_response_log_excerpt_is_truncated_for_long_content(monkeypatch, caplog):
+    from app.core import logging as core_logging
+
+    monkeypatch.setattr(core_logging, "_log_content_excerpts", True)  # restored after the test
     long_reply = "x" * 500
 
     def handler(request: httpx.Request) -> httpx.Response:

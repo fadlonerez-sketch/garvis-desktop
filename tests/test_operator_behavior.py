@@ -235,16 +235,194 @@ async def test_real_tesseract_reads_rendered_text_and_reuses_unchanged_results(t
 
 
 # --------------------------------------------------------- UI Automation
+class _PassiveProbeWindow:
+    """A real top-level Win32 window with known child controls, owned by the
+    test, for passive UI Automation reads. It never takes input or focus:
+    no-activate, click-through, fully transparent, bottom of the z-order, no
+    taskbar button. Its own thread pumps messages (UIA's Win32 proxies send
+    WM_GETOBJECT/WM_GETTEXT to it) and records anything that would mean the
+    read was not passive: WM_COMMAND (a click/notification), activation and
+    focus messages, and keyboard/mouse input."""
+
+    BUTTON, LABEL, EDIT = "Garvis probe button", "Garvis probe label", "garvis probe value"
+    _SUSPICIOUS = {
+        0x0006: "WM_ACTIVATE", 0x0007: "WM_SETFOCUS", 0x0086: "WM_NCACTIVATE",
+        0x0111: "WM_COMMAND", 0x0100: "WM_KEYDOWN", 0x0102: "WM_CHAR",
+        0x0201: "WM_LBUTTONDOWN", 0x0204: "WM_RBUTTONDOWN", 0x0021: "WM_MOUSEACTIVATE",
+    }
+
+    def __init__(self, shown: bool = True) -> None:
+        import threading
+
+        self.shown = shown
+        self.hwnd = 0
+        self.events: list[str] = []
+        self._ready = threading.Event()
+        self._error: BaseException | None = None
+        self._thread = threading.Thread(target=self._run, name="garvis-uia-probe-window", daemon=True)
+
+    def __enter__(self) -> "_PassiveProbeWindow":
+        self._thread.start()
+        if not self._ready.wait(10):
+            raise RuntimeError("the probe window did not start")
+        if self._error is not None:
+            raise self._error
+        return self
+
+    def __exit__(self, *exc) -> None:
+        import ctypes
+
+        if self.hwnd:
+            ctypes.windll.user32.PostMessageW(self.hwnd, 0x0010, 0, 0)  # WM_CLOSE
+        self._thread.join(10)
+
+    def focus_in_window_thread(self) -> int:
+        """The keyboard-focus HWND of the probe's GUI thread (0 = nothing focused)."""
+        import ctypes
+        from ctypes import wintypes
+
+        class GUITHREADINFO(ctypes.Structure):
+            _fields_ = [("cbSize", wintypes.DWORD), ("flags", wintypes.DWORD),
+                        ("hwndActive", wintypes.HWND), ("hwndFocus", wintypes.HWND),
+                        ("hwndCapture", wintypes.HWND), ("hwndMenuOwner", wintypes.HWND),
+                        ("hwndMoveSize", wintypes.HWND), ("hwndCaret", wintypes.HWND),
+                        ("rcCaret", wintypes.RECT)]
+
+        user32 = ctypes.windll.user32
+        user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.c_void_p]
+        info = GUITHREADINFO(cbSize=ctypes.sizeof(GUITHREADINFO))
+        thread_id = user32.GetWindowThreadProcessId(self.hwnd, None)
+        if not user32.GetGUIThreadInfo(thread_id, ctypes.byref(info)):
+            raise ctypes.WinError()
+        return info.hwndFocus or 0
+
+    def _run(self) -> None:
+        import ctypes
+        from ctypes import wintypes
+
+        try:
+            user32, kernel32 = ctypes.windll.user32, ctypes.windll.kernel32
+            LRESULT = ctypes.c_ssize_t
+            WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
+            user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+            user32.DefWindowProcW.restype = LRESULT
+            user32.CreateWindowExW.argtypes = [wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
+                                               ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                                               wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID]
+            user32.CreateWindowExW.restype = wintypes.HWND
+            user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
+                                            ctypes.c_int, ctypes.c_int, wintypes.UINT]
+            user32.SetLayeredWindowAttributes.argtypes = [wintypes.HWND, wintypes.COLORREF, wintypes.BYTE, wintypes.DWORD]
+            user32.GetMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT, wintypes.UINT]
+            kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+            user32.UnregisterClassW.argtypes = [wintypes.LPCWSTR, wintypes.HINSTANCE]
+            user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+
+            class WNDCLASSW(ctypes.Structure):
+                _fields_ = [("style", wintypes.UINT), ("lpfnWndProc", WNDPROC), ("cbClsExtra", ctypes.c_int),
+                            ("cbWndExtra", ctypes.c_int), ("hInstance", wintypes.HINSTANCE),
+                            ("hIcon", wintypes.HICON), ("hCursor", wintypes.HANDLE),
+                            ("hbrBackground", wintypes.HBRUSH), ("lpszMenuName", wintypes.LPCWSTR),
+                            ("lpszClassName", wintypes.LPCWSTR)]
+
+            def wndproc(hwnd, msg, wparam, lparam):
+                name = self._SUSPICIOUS.get(msg)
+                if name and not (msg in (0x0006, 0x0086) and wparam == 0):  # deactivation is harmless
+                    self.events.append(f"{name}(0x{wparam:x})")
+                if msg == 0x0002:  # WM_DESTROY
+                    user32.PostQuitMessage(0)
+                return user32.DefWindowProcW(hwnd, msg, wparam, lparam)
+
+            self._wndproc = WNDPROC(wndproc)  # keep the callback alive
+            instance = kernel32.GetModuleHandleW(None)
+            class_name = f"GarvisPassiveUiaProbe{id(self)}"
+            wc = WNDCLASSW(lpfnWndProc=self._wndproc, hInstance=instance, lpszClassName=class_name)
+            if not user32.RegisterClassW(ctypes.byref(wc)):
+                raise ctypes.WinError()
+            ex_style = 0x00080000 | 0x00000020 | 0x08000000 | 0x00000080  # LAYERED|TRANSPARENT|NOACTIVATE|TOOLWINDOW
+            self.hwnd = user32.CreateWindowExW(ex_style, class_name, "Garvis passive UIA probe",
+                                               0x80000000 | 0x02000000,  # WS_POPUP | WS_CLIPCHILDREN
+                                               0, 0, 360, 120, None, None, instance, None)
+            if not self.hwnd:
+                raise ctypes.WinError()
+            child = 0x40000000 | 0x10000000  # WS_CHILD | WS_VISIBLE
+            for cls, text, style, (x, y, cx, cy), ident in (
+                    ("BUTTON", self.BUTTON, 0, (10, 10, 160, 30), 101),
+                    ("STATIC", self.LABEL, 0, (180, 10, 170, 30), 102),
+                    ("EDIT", self.EDIT, 0x00800000, (10, 60, 340, 30), 103)):  # WS_BORDER
+                if not user32.CreateWindowExW(0, cls, text, child | style, x, y, cx, cy,
+                                              self.hwnd, ident, instance, None):
+                    raise ctypes.WinError()
+            user32.SetLayeredWindowAttributes(self.hwnd, 0, 0, 0x2)  # LWA_ALPHA, fully transparent
+            if self.shown:  # bottom of the z-order, without activating it
+                user32.SetWindowPos(self.hwnd, 1, 0, 0, 0, 0, 0x0010 | 0x0040 | 0x0001 | 0x0002)
+                # SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOMOVE
+            self.events.clear()  # creating the EDIT notifies EN_UPDATE/EN_CHANGE; only the read counts
+        except BaseException as exc:
+            self._error = exc
+            self._ready.set()
+            return
+        self._ready.set()
+        msg = wintypes.MSG()
+        while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+            user32.TranslateMessage(ctypes.byref(msg))
+            user32.DispatchMessageW(ctypes.byref(msg))
+        user32.UnregisterClassW(class_name, instance)
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows UI Automation")
-async def test_real_ui_automation_reads_the_taskbar_passively():
-    """Read-only: lists the taskbar's controls; nothing is clicked or typed."""
+async def test_real_ui_automation_reads_a_window_passively():
+    """Deterministic: the production UIA path reads a real top-level window
+    the test owns, with known controls; nothing is clicked, typed, focused or
+    activated (the window itself records any such message)."""
     import ctypes
 
     from app.desktop.uia import ComUiAutomation
 
-    taskbar = ctypes.windll.user32.FindWindowW("Shell_TrayWnd", None)
+    with _PassiveProbeWindow() as probe:
+        elements = await ComUiAutomation().elements(probe.hwnd, limit=50)
+        focus_after = probe.focus_in_window_thread()
+        foreground_after = ctypes.windll.user32.GetForegroundWindow()
+    assert elements, "the window exposes named controls"
+    assert all(e.rect is None or e.rect.width >= 0 for e in elements)
+    by_id = {e.automation_id: e for e in elements}
+    assert by_id["101"].control_type == "button" and by_id["101"].name == probe.BUTTON
+    assert by_id["102"].name == probe.LABEL
+    assert by_id["103"].control_type == "edit" and by_id["103"].value == probe.EDIT
+    assert not any(e.focused for e in elements)
+    assert probe.events == [], f"the read was not passive: {probe.events}"
+    assert focus_after == 0, "nothing in the window took keyboard focus"
+    assert foreground_after != probe.hwnd, "the window was never activated"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows UI Automation")
+async def test_real_ui_automation_returns_nothing_for_a_hidden_window():
+    """A hidden window (e.g. the Windows taskbar while a replacement shell
+    such as Project Glass hides it) reads as empty, not as an error."""
+    from app.desktop.uia import ComUiAutomation
+
+    with _PassiveProbeWindow(shown=False) as probe:
+        elements = await ComUiAutomation().elements(probe.hwnd, limit=50)
+    assert elements == []
+    assert probe.events == []
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows UI Automation")
+async def test_real_ui_automation_reads_the_taskbar_passively():
+    """Read-only: lists the taskbar's controls; nothing is clicked or typed.
+    Needs the real Windows taskbar on screen; the deterministic coverage of
+    this code path is test_real_ui_automation_reads_a_window_passively."""
+    import ctypes
+
+    from app.desktop.uia import ComUiAutomation
+
+    user32 = ctypes.windll.user32
+    taskbar = user32.FindWindowW("Shell_TrayWnd", None)
     if not taskbar:
         pytest.skip("no taskbar window (e.g. a headless session)")
+    if not user32.IsWindowVisible(taskbar):
+        pytest.skip("the Windows taskbar (Shell_TrayWnd) exists but is hidden, "
+                    "e.g. by a replacement shell; UI Automation exposes no controls for it")
     elements = await ComUiAutomation().elements(taskbar, limit=50)
     assert elements, "the taskbar exposes named controls"
     assert all(e.rect is None or e.rect.width >= 0 for e in elements)

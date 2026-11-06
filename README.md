@@ -123,6 +123,7 @@ The most useful ones:
 | `GARVIS_BROWSER_HEADLESS` | `false` | Run the controlled browser hidden |
 | `GARVIS_OCR_TESSERACT_PATH` | auto-detect | Path to `tesseract.exe` |
 | `GARVIS_GMAIL_CLIENT_SECRET_PATH` | `config/gmail_client_secret.json` | Gmail OAuth client; see below |
+| `GARVIS_LOG_CONTENT_EXCERPTS` | `false` | `true` adds the first ~120 characters of each model reply to the log (length and hash are always logged) |
 
 **Gmail (optional):**
 
@@ -182,7 +183,10 @@ real hardware or a real API key. Read each one before running it.
 - **Untrusted input stays contained:**
   - web content and tool output are treated as untrusted;
   - secrets are redacted from tool output;
-  - web fetches can't reach private or local network addresses.
+  - web fetches can't reach private or local network addresses, including
+    through DNS rebinding: the connection goes to the exact address that was
+    checked (see [SECURITY.md](SECURITY.md#web-fetching-and-logs));
+  - model replies are logged by length and hash only, not their text.
 - **No listening port by default.** The optional phone interface in
   `app/mobile/` is off unless you set `GARVIS_MOBILE_ENABLED=true`, and it
   isn't supported in this beta.

@@ -8,14 +8,17 @@ data, not authority" boundary in one place.
 
 SSRF guard: before every request -- including every redirect hop, not
 just the user-supplied URL -- the target hostname is resolved and its
-address(es) checked against private/loopback/link-local/reserved ranges
-(covers localhost, RFC1918 ranges, and metadata endpoints like
-169.254.169.254). This is a minimal boundary, not full anti-DNS-rebinding
-protection: the address is validated just before connecting, but a
-malicious DNS server could in principle change the answer between our
-check and httpx's own connection a moment later. Closing that fully would
-mean pinning the resolved IP for the actual socket connection, which
-would need a custom transport; out of scope for this fix.
+address(es) checked against private/loopback/link-local/reserved/CGNAT
+ranges (covers localhost, RFC1918 ranges, Tailscale's 100.64.0.0/10 and
+metadata endpoints like 169.254.169.254).
+
+Anti-DNS-rebinding: the socket is then opened to exactly the address(es)
+that were validated -- httpx never resolves the name a second time. A
+pinned network backend (`_PinnedBackend`) swaps the hostname for the
+validated IP at connect time only; the URL, Host header, TLS SNI and
+certificate hostname verification all still use the real hostname, so
+HTTPS keeps verifying the site it claims to be. Environment proxies are
+ignored (a proxy would do its own, unvalidated resolution).
 """
 from __future__ import annotations
 
@@ -24,6 +27,7 @@ import ipaddress
 import socket
 from urllib.parse import urlparse
 
+import httpcore
 import httpx
 from bs4 import BeautifulSoup
 from pydantic import BaseModel, Field
@@ -44,7 +48,9 @@ class UnsafeURLError(Exception):
     non-public address, or is otherwise not safe to fetch."""
 
 
-def _validate_url_is_public(url: str) -> None:
+def _resolve_public_addresses(url: str) -> tuple[str, list[str]]:
+    """Validate `url` and return (host as httpx will connect to it, the
+    validated public IPs). Every resolved address must be public."""
     parsed = urlparse(url)
     if parsed.scheme not in _ALLOWED_SCHEMES:
         raise UnsafeURLError(f"Refusing to fetch '{url}': only http(s) URLs are allowed.")
@@ -54,10 +60,16 @@ def _validate_url_is_public(url: str) -> None:
         raise UnsafeURLError(f"Refusing to fetch '{url}': no hostname.")
 
     try:
+        connect_host = httpx.URL(url).raw_host.decode("ascii").lower()
+    except (httpx.InvalidURL, UnicodeError) as exc:
+        raise UnsafeURLError(f"Refusing to fetch '{url}': invalid host.") from exc
+
+    try:
         addrinfo = socket.getaddrinfo(hostname, None)
     except socket.gaierror as exc:
         raise UnsafeURLError(f"Could not resolve host '{hostname}': {exc}") from exc
 
+    addresses: list[str] = []
     for *_rest, sockaddr in addrinfo:
         ip = ipaddress.ip_address(sockaddr[0])
         if (
@@ -73,6 +85,58 @@ def _validate_url_is_public(url: str) -> None:
                 f"Refusing to fetch '{url}': host '{hostname}' resolves to a "
                 f"non-public address ({ip})."
             )
+        if str(ip) not in addresses:
+            addresses.append(str(ip))
+    if not addresses:
+        raise UnsafeURLError(f"Could not resolve host '{hostname}'.")
+    return connect_host, addresses
+
+
+def _validate_url_is_public(url: str) -> None:
+    _resolve_public_addresses(url)
+
+
+class _PinnedBackend(httpcore.AsyncNetworkBackend):
+    """Connects only to the pre-validated IPs of one host (no second DNS
+    lookup). TLS is layered on top by httpcore with server_hostname set to
+    the real hostname, so SNI and certificate verification are unchanged."""
+
+    def __init__(self, host: str, addresses: list[str], inner: httpcore.AsyncNetworkBackend | None = None) -> None:
+        self._host = host
+        self._addresses = list(addresses)
+        self._inner = inner if inner is not None else httpcore.AnyIOBackend()
+
+    async def connect_tcp(self, host, port, timeout=None, local_address=None, socket_options=None):
+        if host.lower() != self._host:
+            # Never connect anywhere we didn't validate.
+            raise httpcore.ConnectError(f"Refusing unvalidated connection to '{host}'.")
+        last_exc: Exception | None = None
+        for address in self._addresses:
+            try:
+                return await self._inner.connect_tcp(
+                    address, port, timeout=timeout, local_address=local_address,
+                    socket_options=socket_options,
+                )
+            except (httpcore.ConnectError, httpcore.ConnectTimeout) as exc:
+                last_exc = exc
+        assert last_exc is not None
+        raise last_exc
+
+    async def connect_unix_socket(self, path, timeout=None, socket_options=None):
+        raise httpcore.ConnectError("Unix sockets are not allowed.")
+
+    async def sleep(self, seconds: float) -> None:
+        await self._inner.sleep(seconds)
+
+
+def _pinned_transport(host: str, addresses: list[str]) -> httpx.AsyncHTTPTransport:
+    transport = httpx.AsyncHTTPTransport(trust_env=False)
+    pool = getattr(transport, "_pool", None)
+    if not isinstance(pool, httpcore.AsyncConnectionPool) or not hasattr(pool, "_network_backend"):
+        # Fail closed if an httpx/httpcore upgrade moved the hook.
+        raise UnsafeURLError("Cannot pin the validated address with this httpx version.")
+    pool._network_backend = _PinnedBackend(host, addresses)
+    return transport
 
 
 class FetchWebpageInput(BaseModel):
@@ -97,13 +161,16 @@ class FetchWebpageTool(Tool):
 
         for _ in range(_MAX_REDIRECTS + 1):
             try:
-                await asyncio.to_thread(_validate_url_is_public, url)
+                host, addresses = await asyncio.to_thread(_resolve_public_addresses, url)
+                transport = _pinned_transport(host, addresses)
             except UnsafeURLError as exc:
                 log_extra(logger, 30, "fetch_webpage.blocked", url=url, error=str(exc))
                 return ToolResult.fail(str(exc))
 
             try:
                 async with httpx.AsyncClient(
+                    transport=transport,
+                    trust_env=False,
                     timeout=_TIMEOUT_SECONDS,
                     follow_redirects=False,
                     headers={"User-Agent": "Garvis/0.1 (local personal assistant)"},

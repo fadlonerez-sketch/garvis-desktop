@@ -104,6 +104,28 @@ Accepted risks:
 - Your remembered facts and the live desktop context are in the system
   prompt. They don't count as private data for the address rule.
 
+## Web fetching and logs
+
+- **DNS rebinding.** `fetch_webpage_text` resolves the host once, checks
+  every address it gets (private, loopback, link-local, reserved, multicast
+  and CGNAT `100.64.0.0/10` are refused), then connects to exactly those
+  checked addresses. The HTTP client never looks the name up again, so a DNS
+  server can't hand out a public address for the check and a private one
+  for the connection. The Host header, TLS SNI and certificate check still
+  use the real host name. Each redirect hop is checked and pinned the same
+  way, and proxy environment variables are ignored for these fetches.
+- **Controlled browser.** Chromium resolves names itself, so the browser
+  can't be pinned the same way. After each `browser_navigate`, Garvis checks
+  the address Chromium actually connected to for the page. If it isn't a
+  public address, the page is cleared and the navigation fails, so content
+  from a private host never reaches the model. A request the page already
+  sent can't be taken back, and later in-page navigations and subresources
+  only get the pre-navigation checks.
+- **Logs.** Replies from the model are logged by length and a short hash
+  only. Set `GARVIS_LOG_CONTENT_EXCERPTS=true` to add a short excerpt for
+  debugging. Turning it back off doesn't remove excerpts already written to
+  `data/logs/`.
+
 ## If you run Garvis
 
 - Keep your `.env`, `config/gmail_client_secret.json` and the `data/`

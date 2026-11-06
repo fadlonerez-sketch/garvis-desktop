@@ -33,6 +33,13 @@ before it's allowed to proceed. Non-document subresource requests
 (images/scripts/styles a page loads on its own) are not re-validated here;
 covering those as well would mean a much broader per-request network
 policy, out of scope for this tool.
+
+DNS rebinding: Chromium does its own DNS lookup, so the pre-navigation check
+can't pin the address the way `fetch_webpage_text` does. As a practical
+backstop, `navigate()` checks the address Chromium actually connected to for
+the final document (`response.server_addr()`); if it isn't a public address
+the page is cleared to about:blank and the navigation fails, so content from
+a rebound private host is never handed back to the agent.
 """
 from __future__ import annotations
 
@@ -97,6 +104,32 @@ def _is_local_subresource(url: str) -> bool:
         return not ipaddress.ip_address(host).is_global
     except ValueError:
         return False
+
+
+async def _non_public_server_address(response) -> str | None:
+    """The connected server's IP if it is NOT a public address, else None.
+    Unknown (no response, served from cache, fake/older Playwright) -> None."""
+    if response is None:
+        return None
+    server_addr = getattr(response, "server_addr", None)
+    if server_addr is None:
+        return None
+    try:
+        info = server_addr()
+        if inspect.isawaitable(info):
+            info = await info
+    except Exception:
+        return None
+    if not isinstance(info, dict) or not info.get("ipAddress"):
+        return None
+    raw = str(info["ipAddress"]).strip("[]")
+    try:
+        ip = ipaddress.ip_address(raw)
+    except ValueError:
+        return None
+    if getattr(ip, "ipv4_mapped", None) is not None:
+        ip = ip.ipv4_mapped
+    return None if ip.is_global else str(ip)
 
 
 class BrowserManager:
@@ -267,7 +300,7 @@ class BrowserManager:
 
         self._blocked_reason = None
         try:
-            await self._page.goto(url, timeout=self._nav_timeout_ms, wait_until="domcontentloaded")
+            response = await self._page.goto(url, timeout=self._nav_timeout_ms, wait_until="domcontentloaded")
         except Exception as exc:
             if self._blocked_reason:
                 reason = self._blocked_reason
@@ -279,6 +312,17 @@ class BrowserManager:
             reason = self._blocked_reason
             self._blocked_reason = None
             raise BrowserError(reason)
+
+        bad_ip = await _non_public_server_address(response)
+        if bad_ip is not None:
+            log_extra(logger, 30, "browser.rebinding_blocked", ip=bad_ip)
+            try:
+                await self._page.goto("about:blank")
+            except Exception:
+                pass
+            raise BrowserError(
+                f"Refusing to use '{url}': the browser connected to a non-public address ({bad_ip})."
+            )
 
         return self._page.url
 

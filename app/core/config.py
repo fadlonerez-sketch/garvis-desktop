@@ -459,6 +459,12 @@ class Settings(BaseSettings):
 
     # --- Logging ----------------------------------------------------------
     log_level: str = Field(default="INFO")
+    log_content_excerpts: bool = Field(
+        default=False,
+        description="Opt-in: include the first ~120 characters of each LLM reply in the log "
+        "(content_excerpt). Off by default -- replies can contain personal data; length and hash "
+        "are always logged.",
+    )
 
     def effective_max_context_tokens(self) -> int:
         if self.max_context_tokens is not None:
