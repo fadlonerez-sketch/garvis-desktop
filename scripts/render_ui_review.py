@@ -9,7 +9,9 @@ appears on the desktop and no input is touched. Output: PNGs in OUT_DIR.
 
 --demo fills the window with sample content shaped like the approved mockup
 (a short conversation, a tool step, usage figures and one telemetry sample),
-fed through the same signals and slots the real bridge drives. --dialog also
+fed through the same signals and slots the real bridge drives. All sample
+content is invented (example.com addresses, placeholder paths); the fake
+bridge reports an API key as configured, but no request is ever made. --dialog also
 renders the approval dialog over the window (desktop_dialog.png).
 """
 from __future__ import annotations
@@ -53,13 +55,15 @@ def demo_content(win) -> None:
     bridge.tool_started.emit("open_path", {"path": r"C:\Users\me\Projects\garvis"})
     bridge.tool_finished.emit("open_path", True, "")
     reply = (r"Opened <b>C:\Users\me\Projects\garvis</b>. Today's changes: the plasma orb, a separate "
-             "logo module, and the phone's audio routing.")
+             "logo module, and the approval dialog.")
     bridge.assistant_message.emit(reply)
     bridge.status_changed.emit("Done.")
-    second = "Thanks. Remind me at 6 to call mom"
+    second = "How much free space is left on C:?"
     win._append_conversation("You", second)
     bridge.user_message.emit(second)
-    bridge.assistant_message.emit("Done — I'll call your phone at 18:00.")
+    bridge.tool_started.emit("system_status", {})
+    bridge.tool_finished.emit("system_status", True, "")
+    bridge.assistant_message.emit("412 GB free of 1 TB on C:.")
     bridge.status_changed.emit("Done.")
     research = "Latest news on the Artemis program?"
     win._append_conversation("You", research)
@@ -74,8 +78,6 @@ def demo_content(win) -> None:
          "url": "https://space.example/artemis", "publisher": "space.example", "snippet": ""}])
     bridge.assistant_message.emit("The Artemis II crew finished its launch rehearsal this week.")
     bridge.status_changed.emit("Done.")
-    bridge.remote_user_message.emit("What's on my calendar tomorrow?", "mobile")
-    bridge.assistant_message.emit("Nothing booked — your day is free.")
     bridge.status_changed.emit("Idle.")
     days = [{"day": f"2026-10-{18 + i:02d}", "cost_usd": c, "calls": n}
             for i, (c, n) in enumerate([(0.02, 4), (0.0, 0), (0.06, 9), (0.11, 14), (0.03, 5), (0.0, 0), (0.08, 10),
@@ -110,7 +112,7 @@ def demo_protocol() -> None:
 
     store = ProtocolStore(get_settings().data_dir / "protocols")
     store.save(Protocol(name="Programming workspace", description="Open the project and get ready to work.",
-                        steps=[Step(type="open_path", params={"path": str(ROOT)}),
+                        steps=[Step(type="open_path", params={"path": r"C:\Users\me\Projects\garvis"}),
                                Step(type="wait", params={"seconds": 2}),
                                Step(type="notify", params={"title": "Workspace ready", "message": ""})]))
 
@@ -160,6 +162,14 @@ def main() -> int:
                 self._demand = demand
 
         main_window.TelemetryMonitor = _DemoMonitor
+
+        class _DemoBridge(fakes._CatalogBridge):
+            """Shows the configured-key state; the fake bridge never sends a request."""
+
+            def system_info(self) -> dict:
+                return {**super().system_info(), "api_key_configured": True}
+
+        main_window.AgentBridge = _DemoBridge
     win = main_window.MainWindow()
     win.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
     w, h = (int(v) for v in args.size.split("x"))
