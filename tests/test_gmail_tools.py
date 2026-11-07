@@ -9,6 +9,7 @@ instead. Mirrors test_browser_tools.py's structure exactly.
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from app.core.exceptions import GmailAuthError, GmailError
 from app.security.permissions import PermissionChecker, PermissionDecision
@@ -114,7 +115,7 @@ async def test_search_emails_auth_failure_becomes_safe_tool_result_fail():
 
 
 def test_search_emails_input_requires_query():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         SearchEmailsInput.model_validate({})
 
 
@@ -143,7 +144,7 @@ async def test_read_email_failure():
 
 
 def test_read_email_input_requires_message_id():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         ReadEmailInput.model_validate({})
 
 
@@ -173,7 +174,7 @@ def test_draft_email_is_medium_risk_with_confirmation():
 
 
 def test_draft_email_input_requires_all_fields():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         DraftEmailInput.model_validate({"to": "bob@example.com"})
 
 
@@ -216,7 +217,7 @@ def test_send_email_always_requires_confirmation_via_permission_checker():
 
 
 def test_send_email_input_requires_all_fields():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         SendEmailInput.model_validate({"to": "bob@example.com"})
 
 

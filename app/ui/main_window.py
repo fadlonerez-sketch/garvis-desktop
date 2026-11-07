@@ -22,7 +22,6 @@ from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap, QRadialGradient
 from PySide6.QtWidgets import (
     QApplication,
-    QCheckBox,
     QComboBox,
     QDialog,
     QFrame,
@@ -36,7 +35,6 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QStackedWidget,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -45,6 +43,7 @@ from app.core.config import get_settings
 from app.ui import fonts, motion, theme
 from app.ui.agent_bridge import AgentBridge
 from app.ui.approval import ApprovalDialog
+from app.ui.attention import AttentionController
 from app.ui.conversation import ConversationView
 from app.ui.dashboard import (
     PAGES,
@@ -64,11 +63,10 @@ from app.ui.dashboard import (
     repolish,
     set_button_icon,
 )
-from app.ui.attention import AttentionController
+from app.ui.logo import render_logo_pixmap
 from app.ui.protocols_page import ProtocolsPage
 from app.ui.state import MODE_LABELS, GarvisState
 from app.ui.telemetry import DETAIL, OFF, SUMMARY, TelemetryMonitor
-from app.ui.logo import render_logo_pixmap
 
 _EDGE = 5
 """Frameless-window margin that resizes the window (and draws its border)."""

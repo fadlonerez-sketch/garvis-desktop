@@ -2,3 +2,16 @@
 pythonpath = ["."]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+extend-exclude = ["data"]
+
+[tool.ruff.lint]
+# Pyflakes, syntax/runtime errors, pycodestyle warnings, bugbear and import order.
+# Line length is left to `ruff format`; long string literals are not flagged.
+select = ["F", "E4", "E7", "E9", "W", "B", "I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests", "scripts", "env_file"]

@@ -10,7 +10,7 @@ from __future__ import annotations
 import pytest
 
 from app.agent.agent import Agent
-from app.agent.memory import SQLiteMemoryStore, MemoryItem
+from app.agent.memory import MemoryItem, SQLiteMemoryStore
 from app.agent.policies import _BASE_SYSTEM_PROMPT, build_system_prompt
 from app.core.events import EventBus
 from app.llm.base import Role
@@ -18,7 +18,6 @@ from app.llm.registry import ModelTier
 from app.llm.router import TieredLLMRouter
 from app.personality.policy import PERSONALITY_POLICY
 from app.tools.registry import ToolRegistry
-
 from tests.conftest import final_response
 
 

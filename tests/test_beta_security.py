@@ -16,10 +16,11 @@ import pytest
 
 from app.agent.agent import Agent
 from app.agent.memory import SQLiteMemoryStore
+from app.browser.manager import BrowserManager, _is_local_subresource
 from app.core.config import Settings
 from app.core.events import AgentEvent, EventBus, EventType
 from app.core.logging import JsonFormatter, log_extra, redact
-from app.mobile.pairing import PairingManager
+from app.mobile.pairing import PairingError, PairingManager
 from app.mobile.server import COOKIE_NAME
 from app.security.commands import CommandAnalysis, CommandPolicy, ParsedCommand, classify
 from app.security.confirmations import ConfirmationManager
@@ -31,7 +32,6 @@ from app.tools.applications import resolve_application
 from app.tools.registry import ToolRegistry
 from app.tools.system import RunPowerShellTool
 from app.tools.webpage import UnsafeURLError, _validate_url_is_public
-from app.browser.manager import BrowserManager, _is_local_subresource
 from tests.conftest import final_response, tool_call_response
 from tests.test_mobile_native_api import _start as start_native
 
@@ -348,9 +348,9 @@ def test_a_pairing_code_is_burnt_after_wrong_guesses(tmp_path):
     code = manager.new_pairing_code().code
     wrong = "00000000" if code != "00000000" else "11111111"
     for _ in range(5):
-        with pytest.raises(Exception):
+        with pytest.raises(PairingError):
             manager.redeem(wrong)
-    with pytest.raises(Exception):
+    with pytest.raises(PairingError, match="No pairing code is active"):
         manager.redeem(code)  # the real code no longer works either
 
 

@@ -284,7 +284,7 @@ class EchoGuard:
             valid = (index >= 0) & (index < clip.played_frames())
             ref_env[valid] = clip.envelope[index[valid]]
         best_delay, best_corr = None, 0.0
-        for row, candidate in zip(ref_env, candidates):
+        for row, candidate in zip(ref_env, candidates, strict=True):
             mask = ~np.isnan(row)
             if mask.sum() < 60:
                 continue

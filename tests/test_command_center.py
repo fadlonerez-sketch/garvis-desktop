@@ -10,12 +10,12 @@ manual checklist, not here.
 """
 from __future__ import annotations
 
-import math
 import os
 import subprocess
 import sys
 import time
 from datetime import datetime
+from itertools import pairwise
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -34,13 +34,12 @@ from app.security.permissions import PermissionChecker
 from app.system.telemetry import Disk, GpuAdapter, Snapshot, StaticInfo
 from app.tools.base import RiskLevel, Tool, ToolResult
 from app.tools.registry import ToolRegistry
-from app.ui import dashboard, theme
+from app.ui import dashboard, plasma, theme
 from app.ui.agent_bridge import AgentBridge, _gmail_status
+from app.ui.logo import HALO_REACH, paint_logo, plasma_intensity, render_logo_pixmap
 from app.ui.state import Mode
 from app.ui.telemetry import DETAIL, OFF, SUMMARY, GiB, TelemetryMonitor
 from app.ui.usage_view import read_usage_summary
-from app.ui import plasma
-from app.ui.logo import HALO_REACH, paint_logo, plasma_intensity, render_logo_pixmap
 from app.ui.visuals import (
     ACTIVE_INTERVAL_MS,
     IDLE_INTERVAL_MS,
@@ -50,7 +49,7 @@ from app.ui.visuals import (
     paint_orb,
     shader_uniforms,
 )
-from tests.test_ui_dashboard import SOURCES, _FakeBridge, _research_turn
+from tests.test_ui_dashboard import _FakeBridge, _research_turn
 
 CATALOG = [
     {"name": "web_research", "description": "Research a question on the web. Opens pages.", "risk": "low",
@@ -173,7 +172,7 @@ def test_the_logo_glow_fades_smoothly_outward_with_no_rings(qapp):
     alphas = [image.pixelColor(int(size / 2 + r * k), size // 2).alpha() for k in
               [1.04 + 0.02 * i for i in range(int((HALO_REACH - 1.04) / 0.02))]]
     assert alphas[0] > 0
-    assert all(b <= a + 1 for a, b in zip(alphas, alphas[1:]))  # monotonic: no rings, ticks or bands
+    assert all(b <= a + 1 for a, b in pairwise(alphas))  # monotonic: no rings, ticks or bands
     assert image.pixelColor(2, 2).alpha() == 0 and image.pixelColor(size // 2, 1).alpha() == 0
 
 

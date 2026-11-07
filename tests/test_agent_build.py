@@ -2,10 +2,10 @@
 browser tools and Phase 9 Gmail tools wired in."""
 from __future__ import annotations
 
+from app.agent.build import build_registry
+from app.agent.memory import SQLiteMemoryStore
 from app.browser.manager import BrowserManager
 from app.gmail.manager import GmailManager
-from app.agent.memory import SQLiteMemoryStore
-from app.agent.build import build_registry
 
 
 def _build_registry(tmp_path):

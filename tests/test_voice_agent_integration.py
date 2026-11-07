@@ -20,7 +20,6 @@ from app.tools.calculator import CalculatorTool
 from app.tools.registry import ToolRegistry
 from app.voice.pipeline import VoicePipeline
 from app.voice.stt.base import TranscriptionResult
-
 from tests.conftest import final_response, tool_call_response
 
 

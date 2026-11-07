@@ -43,8 +43,8 @@ from app.core.exceptions import DesktopError
 from app.desktop.backend import MouseButton, Rect
 from app.desktop.controller import DesktopController
 from app.desktop.keys import parse_hotkey
-from app.desktop.routing import TARGET_FIELD_DESCRIPTION, DesktopRouting, DesktopTarget
 from app.desktop.ocr import OcrEngine
+from app.desktop.routing import TARGET_FIELD_DESCRIPTION, DesktopRouting, DesktopTarget
 from app.desktop.uia import UiInspector, best_match
 from app.security.sensitive import consequential_reason, redact_secrets
 from app.tools.base import RiskLevel, Tool, ToolResult

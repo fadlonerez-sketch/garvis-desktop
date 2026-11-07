@@ -18,10 +18,9 @@ from __future__ import annotations
 import copy
 from collections.abc import Callable
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
+from PySide6.QtCore import QPointF, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFileDialog,
@@ -48,8 +47,7 @@ from app.tasks.protocols import (
     describe_step,
     validate,
 )
-from app.ui import theme
-from app.ui import fonts
+from app.ui import fonts, theme
 from app.ui.dashboard import (
     Page,
     PageHeader,

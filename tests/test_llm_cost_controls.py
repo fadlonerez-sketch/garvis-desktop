@@ -14,7 +14,7 @@ from app.agent.agent import Agent
 from app.agent.build import build_llm_provider
 from app.agent.memory import SQLiteMemoryStore
 from app.core.config import Settings
-from app.core.events import AgentEvent, EventBus, EventType
+from app.core.events import EventBus, EventType
 from app.core.exceptions import (
     ConfigurationError,
     LLMBadRequestError,
@@ -23,8 +23,7 @@ from app.core.exceptions import (
     LLMRateLimitError,
     LLMUnavailableError,
 )
-from app.llm.base import LLMProvider, LLMResponse, Message, Role, ToolCall, ToolSpec
-from app.llm.base import served_model_matches
+from app.llm.base import LLMProvider, LLMResponse, Message, Role, ToolCall, ToolSpec, served_model_matches
 from app.llm.omniroute import OmniRouteProvider, parse_usage
 from app.llm.registry import ModelTier, load_model_registry
 from app.llm.router import TieredLLMRouter, estimate_prompt_tokens

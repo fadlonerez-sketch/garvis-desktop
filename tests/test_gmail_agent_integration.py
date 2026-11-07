@@ -18,7 +18,6 @@ from app.core.exceptions import GmailAuthError, GmailError
 from app.security.confirmations import ConfirmationManager
 from app.tools.gmail import ListRecentEmailsTool, SearchEmailsTool, SendEmailTool
 from app.tools.registry import ToolRegistry
-
 from tests.conftest import final_response, tool_call_response
 
 

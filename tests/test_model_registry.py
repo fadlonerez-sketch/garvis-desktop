@@ -8,11 +8,9 @@ import pytest
 
 from app.core.exceptions import ConfigurationError
 from app.llm.registry import (
-    ZERO_COST_UPSTREAMS,
     ModelTier,
     enforce_single_model,
     load_model_registry,
-    zero_cost_violation,
 )
 
 _REPO_REGISTRY = Path(__file__).resolve().parents[1] / "config" / "models.json"

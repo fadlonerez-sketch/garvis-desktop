@@ -228,7 +228,6 @@ async def test_synthesize_to_file_prepends_approximately_200ms_of_silence(tmp_pa
     result = await provider.synthesize_to_file("hello there", output_path)
 
     with wave.open(result, "rb") as wav_file:
-        params = wav_file.getparams()
         all_samples = struct.unpack(
             f"<{wav_file.getnframes()}h", wav_file.readframes(wav_file.getnframes())
         )

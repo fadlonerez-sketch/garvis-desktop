@@ -104,7 +104,7 @@ def _score_words(
     a known variant): a fuzzy ratio on short words is too loose ("test" vs
     "rest" is 0.75)."""
     scores = []
-    for word, target in zip(candidate, phrase_words):
+    for word, target in zip(candidate, phrase_words, strict=True):
         variants = _TOKEN_VARIANTS.get(target, (target,))
         if len(target) <= exact_max_len:
             ratio = 1.0 if word in variants else 0.0

@@ -21,7 +21,7 @@ from typing import Any
 from app.agent import presentation as pres
 from app.agent.agent import CANCELLED_REPLY, CancelToken
 from app.core.events import AgentEvent, EventType
-from app.core.logging import get_logger, log_extra
+from app.core.logging import get_logger
 from app.tasks.protocols import ACTIONS, Protocol, Step, clean_params, describe_step
 
 logger = get_logger("tasks.runner")

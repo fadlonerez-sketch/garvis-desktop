@@ -16,6 +16,7 @@ import time
 from collections import deque
 from collections.abc import Callable
 from datetime import datetime
+from itertools import pairwise
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QTimer, QUrl, Signal
 from PySide6.QtGui import (
@@ -524,7 +525,7 @@ class Sparkline(QWidget):
         # fresh series fills the width instead of huddling at the right edge.
         start = max(now - self._span, points[0][0])
         span = max(now - start, 1.0)
-        steps = sorted(b[0] - a[0] for a, b in zip(points, points[1:]))
+        steps = sorted(b[0] - a[0] for a, b in pairwise(points))
         gap = max(5.0, 3.0 * steps[len(steps) // 2])
         runs: list[list[QPointF]] = [[]]
         previous = None

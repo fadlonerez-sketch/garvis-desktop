@@ -28,7 +28,18 @@ import time
 from collections.abc import Callable
 
 from PySide6.QtCore import QEasingCurve, QObject, QPoint, QPointF, QRect, QRectF, Qt, QTimer, QVariantAnimation, Signal
-from PySide6.QtGui import QBrush, QColor, QCursor, QFontMetrics, QGuiApplication, QLinearGradient, QPainter, QPainterPath, QPen, QRadialGradient
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QCursor,
+    QFontMetrics,
+    QGuiApplication,
+    QLinearGradient,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QRadialGradient,
+)
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from app.ui import theme

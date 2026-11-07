@@ -18,10 +18,9 @@ from app.agent.memory import SQLiteMemoryStore
 from app.core.events import AgentEvent, EventBus, EventType
 from app.core.exceptions import BrowserError
 from app.security.confirmations import ConfirmationManager
-from app.tools.browser import SubmitFormTool, NavigateTool, ReadPageTool
+from app.tools.browser import NavigateTool, ReadPageTool, SubmitFormTool
 from app.tools.calculator import CalculatorTool
 from app.tools.registry import ToolRegistry
-
 from tests.conftest import final_response, tool_call_response
 
 

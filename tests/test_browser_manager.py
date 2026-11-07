@@ -12,8 +12,8 @@ import types
 import pytest
 
 import app.tools.webpage as webpage_module
-from app.core.exceptions import BrowserError
 from app.browser.manager import BrowserManager
+from app.core.exceptions import BrowserError
 
 
 @pytest.fixture(autouse=True)

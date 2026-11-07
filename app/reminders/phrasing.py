@@ -340,7 +340,7 @@ def _content_words(text: str, lang: str) -> list[str]:
         body = body.replace(matched, " ")
     stop = _HE_STOP if lang == "he" else _EN_STOP
     raw = [w for w in _WORD.findall(body) if w and not _DIGITS.fullmatch(w)]
-    return [t for w, t in zip(raw, _tokens(" ".join(raw), lang)) if w.lower() not in stop and t not in stop]
+    return [t for w, t in zip(raw, _tokens(" ".join(raw), lang), strict=False) if w.lower() not in stop and t not in stop]
 
 
 def _has(token: str, pool: set[str]) -> bool:

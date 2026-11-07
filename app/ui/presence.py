@@ -22,11 +22,24 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import QEasingCurve, QObject, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer, QVariantAnimation, Signal
+from PySide6.QtCore import (
+    QEasingCurve,
+    QObject,
+    QPoint,
+    QPointF,
+    QRect,
+    QRectF,
+    QSize,
+    Qt,
+    QTimer,
+    QVariantAnimation,
+    Signal,
+)
 from PySide6.QtGui import QBrush, QColor, QGuiApplication, QIcon, QPainter, QPainterPath, QPen, QPixmap, QRadialGradient
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon, QWidget
 
 from app.ui import theme
+from app.ui.logo import render_logo_pixmap
 from app.ui.placement import (
     UiPrefs,
     UiStateStore,
@@ -36,7 +49,6 @@ from app.ui.placement import (
     restore_position,
 )
 from app.ui.state import MODE_LABELS, GarvisState, Mode
-from app.ui.logo import render_logo_pixmap
 from app.ui.visuals import CoreVisual
 
 ORB_SIZE = 124

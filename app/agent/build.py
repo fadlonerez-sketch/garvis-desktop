@@ -12,15 +12,17 @@ from app.agent.agent import Agent
 from app.agent.memory import SQLiteMemoryStore
 from app.browser.build import build_browser_manager
 from app.browser.manager import BrowserManager
+from app.browser.research import WebResearcher
 from app.core.config import Settings, get_settings
 from app.core.events import EventBus
 from app.core.exceptions import ConfigurationError
 from app.core.logging import get_logger, log_extra
-from app.browser.research import WebResearcher
 from app.desktop.browser_placement import OFFSCREEN_LAUNCH_ARGS, BrowserWindowPlacer
 from app.desktop.build import build_desktop_controller, build_workspace_manager
 from app.desktop.controller import DesktopController
+from app.desktop.ocr import TesseractOcr
 from app.desktop.routing import DesktopRouting
+from app.desktop.uia import ComUiAutomation
 from app.desktop.workspace import WorkspaceManager
 from app.gmail.build import build_gmail_manager
 from app.gmail.manager import GmailManager
@@ -29,7 +31,9 @@ from app.llm.base import LLMProvider
 from app.llm.registry import REQUIRED_MODEL, ModelEntry, ModelTier, enforce_single_model, load_model_registry
 from app.llm.router import PoolMember, TieredLLMRouter
 from app.llm.usage import BudgetGuard, BudgetLimits, UsageLedger
-from app.tools.applications import OpenApplicationTool
+from app.system.info import SystemInfo
+from app.tools.applications import OpenApplicationTool, list_start_apps
+from app.tools.base import Tool
 from app.tools.browser import (
     ClickTool,
     ClosePageTool,
@@ -40,10 +44,7 @@ from app.tools.browser import (
     TypeTextTool,
 )
 from app.tools.calculator import CalculatorTool
-from app.tools.base import Tool
 from app.tools.datetime_tool import DateTimeTool
-from app.desktop.ocr import TesseractOcr
-from app.desktop.uia import ComUiAutomation
 from app.tools.desktop import DEFAULT_COMMIT_APPS, build_desktop_tools
 from app.tools.filesystem import (
     EditTextFileTool,
@@ -51,15 +52,6 @@ from app.tools.filesystem import (
     ListDirectoryTool,
     ReadTextFileTool,
     WriteTextFileTool,
-)
-from app.system.info import SystemInfo
-from app.tools.applications import list_start_apps
-from app.tools.system import (
-    ListInstalledAppsTool,
-    ListProcessesTool,
-    RecentSystemErrorsTool,
-    RunPowerShellTool,
-    SystemStatusTool,
 )
 from app.tools.gmail import (
     DraftEmailTool,
@@ -74,9 +66,15 @@ from app.tools.open_website import OpenWebsiteTool
 from app.tools.registry import ToolRegistry
 from app.tools.research import WebResearchTool
 from app.tools.search import WebSearchTool
+from app.tools.system import (
+    ListInstalledAppsTool,
+    ListProcessesTool,
+    RecentSystemErrorsTool,
+    RunPowerShellTool,
+    SystemStatusTool,
+)
 from app.tools.webpage import FetchWebpageTool
 from app.tools.workspace import SwitchWorkspaceTool
-
 
 logger = get_logger("agent.build")
 

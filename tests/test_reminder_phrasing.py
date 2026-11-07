@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from itertools import pairwise
 
 import pytest
 
@@ -104,7 +105,7 @@ def test_consecutive_reminders_dont_sound_the_same():
     texts = ["להתקשר לאמא", "להתקשר לאבא", "להתקשר לסבתא", "להתקשר לדני"]
     sentences = [phraser.compose(f"id{i}", t).text for i, t in enumerate(texts)]
     openings = [s.split(" ", 3)[2] for s in sentences]
-    assert all(a != b for a, b in zip(openings, openings[1:])), sentences
+    assert all(a != b for a, b in pairwise(openings)), sentences
     # The stable form (what a phone asks for again later) is the same every time.
     assert phraser.compose("id0", texts[0], remember=False).text == phraser.compose("id0", texts[0], remember=False).text
 

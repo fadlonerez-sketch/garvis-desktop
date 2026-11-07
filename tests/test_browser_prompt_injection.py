@@ -13,7 +13,6 @@ from app.core.exceptions import BrowserError
 from app.llm.base import Role
 from app.tools.browser import ReadPageInput, ReadPageTool
 from app.tools.registry import ToolRegistry
-
 from tests.conftest import final_response, tool_call_response
 
 _MALICIOUS_PAGE_TEXT = (

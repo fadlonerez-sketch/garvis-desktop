@@ -1,6 +1,7 @@
 import asyncio
 
 import pytest
+from pydantic import BaseModel
 
 from app.agent.agent import Agent
 from app.agent.memory import SQLiteMemoryStore
@@ -10,8 +11,6 @@ from app.security.confirmations import ConfirmationManager
 from app.tools.base import RiskLevel, Tool, ToolResult
 from app.tools.calculator import CalculatorTool
 from app.tools.registry import ToolRegistry
-from pydantic import BaseModel
-
 from tests.conftest import final_response, tool_call_response
 
 

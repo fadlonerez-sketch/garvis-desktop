@@ -16,14 +16,13 @@ from pydantic import BaseModel
 
 from app.agent import presentation as pres
 from app.agent.agent import CANCELLED_REPLY, CancelToken
-from app.core.events import AgentEvent, EventBus, EventType
+from app.core.events import EventBus, EventType
 from app.tasks.manager import CANCELLED, COMPLETED, FAILED, INTERRUPTED, TaskError, TaskManager
 from app.tasks.protocols import (
     ACTIONS,
     Protocol,
     ProtocolStore,
     Step,
-    blocking,
     clean_params,
     describe_step,
     public_summary,

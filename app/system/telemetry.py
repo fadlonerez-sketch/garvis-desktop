@@ -469,7 +469,7 @@ class TelemetrySampler:
         if current is None or previous is None or len(previous) != len(current):
             return None
         loads = []
-        for (idle_now, total_now), (idle_before, total_before) in zip(current, previous):
+        for (idle_now, total_now), (idle_before, total_before) in zip(current, previous, strict=True):
             total = total_now - total_before
             loads.append(0.0 if total <= 0 else _clamp_percent(100.0 * (1.0 - (idle_now - idle_before) / total)))
         return tuple(loads)

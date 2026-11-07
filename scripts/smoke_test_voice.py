@@ -6,7 +6,6 @@ and model dependent). Run with: python scripts/smoke_test_voice.py
 from __future__ import annotations
 
 import asyncio
-import time
 
 from app.core.config import get_settings
 from app.core.logging import configure_logging

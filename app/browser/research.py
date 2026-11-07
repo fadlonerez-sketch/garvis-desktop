@@ -127,7 +127,7 @@ def relevant_excerpt(text: str, query: str, budget: int) -> str:
             scored.append((score, index, line))
     chosen: list[tuple[int, str]] = []
     used = 0
-    for score, index, line in sorted(scored, key=lambda item: (-item[0], item[1])):
+    for _score, index, line in sorted(scored, key=lambda item: (-item[0], item[1])):
         if used + len(line) > budget and chosen:
             continue
         chosen.append((index, line[:budget]))

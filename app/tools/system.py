@@ -207,7 +207,7 @@ class RunPowerShellTool(Tool):
         if target == "garvis_workspace" and user_foreground is not None:
             await self._desktop.restore_foreground(user_foreground)
         locations = await self._desktop.locate_windows(fresh)
-        for row, window in zip(report, fresh):
+        for row, window in zip(report, fresh, strict=True):
             row["desktop"] = {"user": "user_desktop", "garvis_workspace": "garvis_workspace"}.get(
                 locations.get(window.handle), "other_desktop")
         return report

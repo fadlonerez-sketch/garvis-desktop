@@ -16,7 +16,6 @@ from app.core.exceptions import (
 from app.llm.base import Message, Role, ToolCall, ToolSpec
 from app.llm.gemini import SKIP_SIGNATURE, GeminiProvider, sanitize_schema
 
-
 _REAL_ASYNC_CLIENT = httpx.AsyncClient
 
 

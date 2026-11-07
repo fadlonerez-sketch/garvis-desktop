@@ -44,11 +44,10 @@ a rebound private host is never handed back to the agent.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import ipaddress
 from collections.abc import Awaitable, Callable
 from urllib.parse import urlsplit
-
-import inspect
 
 from app.core.exceptions import BrowserError, WindowPlacementError
 from app.core.logging import get_logger, log_extra

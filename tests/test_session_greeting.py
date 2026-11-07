@@ -14,9 +14,9 @@ from tests.test_conversation_session import (
     _FakePlayer,
     _run_briefly,
     _ScriptedRecorder,
+    _silence_chunk,
     _speech_burst,
     _split,
-    _silence_chunk,
     _utterance_chunks,
 )
 

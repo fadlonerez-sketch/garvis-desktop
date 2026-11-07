@@ -17,6 +17,7 @@ import tempfile
 import threading
 import time
 import wave
+from itertools import pairwise
 
 import pytest
 from PySide6.QtCore import Qt
@@ -336,7 +337,7 @@ def test_end_then_immediate_start_does_not_race_standby_against_the_session(tmp_
         assert not bridge.is_standby_active
         assert recorder.open
         # The mic was never opened twice without a close in between.
-        assert all(a != b for a, b in zip(recorder.ops, recorder.ops[1:]))
+        assert all(a != b for a, b in pairwise(recorder.ops))
     finally:
         bridge.shutdown()
 

@@ -9,6 +9,7 @@ test_browser_manager.py instead.
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from app.core.exceptions import BrowserError
 from app.security.permissions import PermissionChecker, PermissionDecision
@@ -106,7 +107,7 @@ def test_navigate_tool_is_medium_risk_without_blanket_confirmation():
 
 
 def test_navigate_input_requires_url():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         NavigateInput.model_validate({})
 
 
@@ -159,7 +160,7 @@ def test_click_tool_is_medium_risk_without_blanket_confirmation():
 
 
 def test_click_input_requires_selector():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         ClickInput.model_validate({})
 
 
@@ -182,7 +183,7 @@ def test_type_text_tool_is_medium_risk_without_blanket_confirmation():
 
 
 def test_type_text_input_requires_selector_and_text():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         TypeTextInput.model_validate({"selector": "#q"})
 
 
@@ -205,7 +206,7 @@ def test_press_key_tool_is_medium_risk_without_blanket_confirmation():
 
 
 def test_press_key_input_requires_key():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         PressKeyInput.model_validate({})
 
 
@@ -263,7 +264,7 @@ def test_submit_form_always_requires_confirmation_via_permission_checker():
 
 
 def test_submit_form_input_requires_selector():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         SubmitFormInput.model_validate({})
 
 
