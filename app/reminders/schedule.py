@@ -1,7 +1,7 @@
 """Time zones, recurrence and the parsing of "when" for reminders.
 
-The Android app computes the next occurrence of a recurring reminder with
-the same rules (android/.../reminders/Recurrence.kt) so it can re-arm an
+A companion mobile client (not part of this repository) computes the next
+occurrence of a recurring reminder with the same rules so it can re-arm an
 alarm while the PC is unreachable; both sides must agree, which is why the
 rules are deliberately small:
 

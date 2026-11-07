@@ -1,6 +1,6 @@
 """Garvis visual identity: colour tokens, fonts and the dashboard stylesheet.
 
-The approved Desktop redesign (2026-10-31, docs/design-review/2026-10-31):
+The approved Desktop redesign (2026-10-31):
 Midnight Blue raised surfaces, Electric Blue for primary actions, the active
 navigation item and focus, rounded cards on a deep navy background. Manrope
 for headings and numbers, Inter for all other text, Material Symbols Rounded

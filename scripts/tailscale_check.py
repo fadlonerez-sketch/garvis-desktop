@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     failed = False
     print("Tailscale on this PC")
     if not TAILSCALE_CLI.exists():
-        _line(False, f"not installed ({TAILSCALE_CLI} missing) -- see docs/TAILSCALE.md")
+        _line(False, f"not installed ({TAILSCALE_CLI} missing) -- install it from tailscale.com")
         failed = True
     elif status is None:
         _line(False, "installed, but the Tailscale service isn't answering")

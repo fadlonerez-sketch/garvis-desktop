@@ -2,9 +2,9 @@
 dashboard's centre and the floating orb.
 
 How it looks is entirely app/ui/plasma_orb.frag (rendered by app/ui/plasma.py);
-Garvis Mobile runs a byte-identical copy of that shader. Its appearance was
-approved by the owner from prototypes/plasma_orb/previews -- don't change it
-without their approval. The logo (title bar, window and tray icons) is NOT this
+a companion mobile client (not part of this repository) runs a byte-identical
+copy of that shader. Its appearance is an approved design -- don't change it
+without the owner's approval. The logo (title bar, window and tray icons) is NOT this
 orb: it is the original amber orb, frozen in app/ui/logo.py.
 
 This module owns the orb's *behaviour*: `Dynamics` smooths every assistant

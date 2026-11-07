@@ -8,12 +8,11 @@ QPainter widgets paint: the dashboard core, the translucent floating orb.
 Quality adapts to the display size without changing the design:
 
 - full detail at 220 px and up, compact detail (fewer layers, no shards or
-  sparks) below -- the approved size ladder (prototypes/plasma_orb/previews/
-  02_sizes.png);
+  sparks) below -- the approved size ladder;
 - a frame is rendered at most MAX_RENDER_PX square and scaled up beyond that;
 - on a software rasterizer (no GPU driver, e.g. a remote session) frames are
-  rendered at SOFTWARE_MAX_PX with compact detail -- the approved CPU fallback
-  (previews/03b_cpu_live_fallback_160px.png) -- and paced at SOFTWARE_FPS;
+  rendered at SOFTWARE_MAX_PX with compact detail -- the approved CPU fallback --
+  and paced at SOFTWARE_FPS;
 - with no OpenGL at all (Qt's "offscreen" platform in tests) `renderer()` is
   None and callers draw `still_frame()`, a pre-rendered frame of the orb.
 

@@ -1,4 +1,4 @@
-"""The approved Desktop redesign (2026-10-31, docs/design-review/2026-10-31):
+"""The approved Desktop redesign (2026-10-31):
 bundled fonts and icons (app/ui/fonts.py), the design tokens (app/ui/theme.py),
 the navigation rail, the approval dialog (app/ui/approval.py), the chat-bubble
 conversation (app/ui/conversation.py), the switch, restrained motion
