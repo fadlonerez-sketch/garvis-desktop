@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      # Qt renders without a display; the suite is offline and needs no secrets.
+      QT_QPA_PLATFORM: offscreen
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          architecture: x64
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+            constraints.txt
+
+      # Installs the pinned packages only. No Whisper model, Piper voice or
+      # Playwright browser is downloaded: the tests fake the model, the audio
+      # devices and the browser, and none of them runs `playwright install`.
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt -c constraints.txt
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Format check
+        run: ruff format --check .
+
+      # The deselected test briefly registers a real global hotkey; it is
+      # excluded here as it is locally. Live desktop tests skip unless
+      # GARVIS_LIVE_DESKTOP_TESTS=1, which CI never sets.
+      - name: Tests
+        run: >-
+          python -m pytest -p no:cacheprovider -q --timeout=120
+          --deselect tests/test_single_instance_hotkey.py::test_real_registerhotkey_detects_conflicts_and_cleans_up
