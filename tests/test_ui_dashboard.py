@@ -247,6 +247,9 @@ def test_voice_level_drives_the_speaking_animation_and_decays():
 
 def test_core_animates_only_while_visible_and_slows_down_when_idle(window):
     core = window._overview.core
+    # The orb follows Windows' "Show animations" setting, which is off on some machines (e.g. CI runners);
+    # pin it so this test checks the animated path regardless of the host.
+    core.dynamics.reduced_motion = False
     assert not core.is_animating  # window never shown
     window.show()
     QTest.qWait(10)
