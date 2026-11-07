@@ -1,4 +1,5 @@
 """Agent-level policy constants and system prompt construction."""
+
 from __future__ import annotations
 
 from app.agent.memory import MemoryItem

@@ -41,6 +41,7 @@ the final document (`response.server_addr()`); if it isn't a public address
 the page is cleared to about:blank and the navigation fails, so content from
 a rebound private host is never handed back to the agent.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -216,8 +217,7 @@ class BrowserManager:
                 from playwright.async_api import async_playwright
             except ImportError as exc:
                 raise BrowserError(
-                    "Playwright is not installed. Run: pip install playwright && "
-                    "playwright install chromium"
+                    "Playwright is not installed. Run: pip install playwright && playwright install chromium"
                 ) from exc
 
             try:
@@ -243,8 +243,11 @@ class BrowserManager:
             except Exception as exc:
                 first_line = str(exc).splitlines()[0] if str(exc) else repr(exc)
                 log_extra(
-                    logger, 30, "browser.channel_unavailable_falling_back_to_bundled_chromium",
-                    channel=self._channel, error=first_line,
+                    logger,
+                    30,
+                    "browser.channel_unavailable_falling_back_to_bundled_chromium",
+                    channel=self._channel,
+                    error=first_line,
                 )
         return await self._playwright.chromium.launch(**kwargs)
 
@@ -319,9 +322,7 @@ class BrowserManager:
                 await self._page.goto("about:blank")
             except Exception as exc:
                 log_extra(logger, 10, "browser.blank_after_block_failed", error=str(exc))
-            raise BrowserError(
-                f"Refusing to use '{url}': the browser connected to a non-public address ({bad_ip})."
-            )
+            raise BrowserError(f"Refusing to use '{url}': the browser connected to a non-public address ({bad_ip}).")
 
         return self._page.url
 

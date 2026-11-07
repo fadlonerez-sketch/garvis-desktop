@@ -1,4 +1,5 @@
 """PairingManager: one-time codes, device tokens, expiry and revocation."""
+
 from __future__ import annotations
 
 import json

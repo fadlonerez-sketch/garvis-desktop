@@ -7,6 +7,7 @@ threading, demand and history logic run against a fake sampler. Waits use a
 real QEventLoop: QTest.qWait keeps the GIL, which would stall the sampling
 thread's cross-thread signal.
 """
+
 from __future__ import annotations
 
 import os
@@ -94,14 +95,30 @@ def test_resource_alerts_only_for_genuinely_exceeded_thresholds():
     now = 1000.0
     assert resource_alerts(history, now) == []
     for i in range(4):
-        history.add(Snapshot(at=now - 3 + i, detail=False, cpu_percent=50.0, ram_total=16 * GiB,
-                             ram_available=8 * GiB, process_memory=300 * 1024 ** 2))
+        history.add(
+            Snapshot(
+                at=now - 3 + i,
+                detail=False,
+                cpu_percent=50.0,
+                ram_total=16 * GiB,
+                ram_available=8 * GiB,
+                process_memory=300 * 1024**2,
+            )
+        )
     assert resource_alerts(history, now) == []
     history = TelemetryHistory()
     for i in range(4):
-        history.add(Snapshot(at=now - 3 + i, detail=True, cpu_percent=97.0, ram_total=16 * GiB,
-                             ram_available=GiB // 2, process_memory=3 * GiB,
-                             disks=(Disk("C:", total=100 * GiB, free=5 * GiB), Disk("D:", 100 * GiB, 60 * GiB))))
+        history.add(
+            Snapshot(
+                at=now - 3 + i,
+                detail=True,
+                cpu_percent=97.0,
+                ram_total=16 * GiB,
+                ram_available=GiB // 2,
+                process_memory=3 * GiB,
+                disks=(Disk("C:", total=100 * GiB, free=5 * GiB), Disk("D:", 100 * GiB, 60 * GiB)),
+            )
+        )
     texts = " ".join(alert.text for alert in resource_alerts(history, now))
     assert "CPU" in texts and "Memory" in texts and "Drive C:" in texts and "Garvis itself" in texts
     assert "Drive D:" not in texts
@@ -120,7 +137,7 @@ def test_sampler_reads_plausible_values_from_this_machine():
     sampler = TelemetrySampler()
     static = sampler.static_info()
     assert static.logical_cpus and static.logical_cpus >= 1
-    assert static.total_ram and static.total_ram > 512 * 1024 ** 2
+    assert static.total_ram and static.total_ram > 512 * 1024**2
     first = sampler.sample(detail=True)
     assert first.cpu_percent is None  # a rate needs two samples: never invented
     time.sleep(0.3)
@@ -173,8 +190,14 @@ class _FakeSampler:
     def sample(self, detail: bool = False) -> Snapshot:
         self.thread = threading.current_thread()
         self.calls.append(detail)
-        return Snapshot(at=time.time(), detail=detail, cpu_percent=12.0, ram_total=8 * GiB, ram_available=4 * GiB,
-                        per_core=(10.0, 20.0) if detail else None)
+        return Snapshot(
+            at=time.time(),
+            detail=detail,
+            cpu_percent=12.0,
+            ram_total=8 * GiB,
+            ram_available=4 * GiB,
+            per_core=(10.0, 20.0) if detail else None,
+        )
 
     def close(self) -> None:
         self.closed = True

@@ -18,6 +18,7 @@ Quality adapts to the display size without changing the design:
 
 One renderer is shared by every orb in the process; it lives on the GUI thread.
 """
+
 from __future__ import annotations
 
 import logging
@@ -41,8 +42,18 @@ MAX_RENDER_PX = 900
 SOFTWARE_MAX_PX = 160
 SOFTWARE_FPS = 10
 
-UNIFORMS = ("u_time", "u_drift", "u_swirl", "u_glow", "u_heat", "u_plasma", "u_swell", "u_alert", "u_standby",
-            "u_detail")
+UNIFORMS = (
+    "u_time",
+    "u_drift",
+    "u_swirl",
+    "u_glow",
+    "u_heat",
+    "u_plasma",
+    "u_swell",
+    "u_alert",
+    "u_standby",
+    "u_detail",
+)
 
 _GL_TRIANGLES = 0x0004
 _GL_FLOAT = 0x1406
@@ -80,8 +91,10 @@ class PlasmaRenderer:
         program = QOpenGLShaderProgram()
         vertex = header + "attribute vec2 a_pos;\nvoid main() { gl_Position = vec4(a_pos, 0.0, 1.0); }\n"
         fragment = header + shader_path.read_text(encoding="utf-8")
-        if not (program.addShaderFromSourceCode(QOpenGLShader.ShaderTypeBit.Vertex, vertex)
-                and program.addShaderFromSourceCode(QOpenGLShader.ShaderTypeBit.Fragment, fragment)):
+        if not (
+            program.addShaderFromSourceCode(QOpenGLShader.ShaderTypeBit.Vertex, vertex)
+            and program.addShaderFromSourceCode(QOpenGLShader.ShaderTypeBit.Fragment, fragment)
+        ):
             raise RuntimeError("shader compile failed: " + program.log())
         program.bindAttributeLocation("a_pos", 0)
         if not program.link():

@@ -41,6 +41,7 @@ LLMResponse out. Anthropic-specific handling, all contained here:
     the provider still builds (Garvis starts), but every request fails at
     once with LLMAuthenticationError -- nothing is sent.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -88,8 +89,11 @@ def tool_use_id(raw: str) -> str:
 
 def _tool_result_block(message: Message) -> dict[str, Any]:
     content = message.content or "(no output)"
-    block: dict[str, Any] = {"type": "tool_result", "tool_use_id": tool_use_id(message.tool_call_id or ""),
-                             "content": content}
+    block: dict[str, Any] = {
+        "type": "tool_result",
+        "tool_use_id": tool_use_id(message.tool_call_id or ""),
+        "content": content,
+    }
     try:
         parsed = json.loads(content)
     except ValueError:
@@ -137,8 +141,9 @@ def to_anthropic_messages(messages: list[Message]) -> list[dict[str, Any]]:
             if message.content.strip():
                 blocks.append({"type": "text", "text": message.content})
             for call in message.tool_calls:
-                blocks.append({"type": "tool_use", "id": tool_use_id(call.id), "name": call.name,
-                               "input": call.arguments})
+                blocks.append(
+                    {"type": "tool_use", "id": tool_use_id(call.id), "name": call.name, "input": call.arguments}
+                )
             append("assistant", blocks)
         elif message.role == Role.TOOL:
             append("user", [_tool_result_block(message)])
@@ -149,8 +154,7 @@ def to_anthropic_messages(messages: list[Message]) -> list[dict[str, Any]]:
 
 
 def _interrupted_results(ids: list[str]) -> list[dict[str, Any]]:
-    return [{"type": "tool_result", "tool_use_id": i, "content": _INTERRUPTED_RESULT, "is_error": True}
-            for i in ids]
+    return [{"type": "tool_result", "tool_use_id": i, "content": _INTERRUPTED_RESULT, "is_error": True} for i in ids]
 
 
 def _repair_tool_pairing(turns: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -179,8 +183,12 @@ def _repair_tool_pairing(turns: list[dict[str, Any]]) -> list[dict[str, Any]]:
     # The request must end with a user turn (Claude Haiku 5.5 rejects prefill).
     if repaired and repaired[-1]["role"] == "assistant":
         pending = [b["id"] for b in repaired[-1]["content"] if b["type"] == "tool_use"]
-        repaired.append({"role": "user", "content": _interrupted_results(pending) if pending
-                         else [{"type": "text", "text": "Continue."}]})
+        repaired.append(
+            {
+                "role": "user",
+                "content": _interrupted_results(pending) if pending else [{"type": "text", "text": "Continue."}],
+            }
+        )
     return repaired
 
 
@@ -212,8 +220,9 @@ def _map_error(exc: Exception, model: str, timeout: float) -> LLMError:
     if isinstance(exc, anthropic.APITimeoutError):
         return LLMTimeoutError(f"Claude ({model}) didn't answer within {timeout:g}s.")
     if isinstance(exc, anthropic.APIConnectionError):
-        return LLMUnavailableError("Garvis can't reach the Anthropic API (api.anthropic.com) -- check the internet "
-                                   "connection.")
+        return LLMUnavailableError(
+            "Garvis can't reach the Anthropic API (api.anthropic.com) -- check the internet connection."
+        )
     if isinstance(exc, anthropic.AuthenticationError):
         return LLMAuthenticationError(
             "Anthropic rejected the API key (401). Check ANTHROPIC_API_KEY in Garvis's .env "
@@ -227,8 +236,7 @@ def _map_error(exc: Exception, model: str, timeout: float) -> LLMError:
         return LLMRateLimitError(f"Anthropic rate limit reached for {model}{hint}: {_error_detail(exc)}")
     if isinstance(exc, anthropic.NotFoundError):
         return LLMUnavailableError(f"Anthropic doesn't know the model {model!r} (404): {_error_detail(exc)}")
-    if isinstance(exc, (anthropic.BadRequestError, anthropic.RequestTooLargeError,
-                        anthropic.UnprocessableEntityError)):
+    if isinstance(exc, (anthropic.BadRequestError, anthropic.RequestTooLargeError, anthropic.UnprocessableEntityError)):
         detail = _error_detail(exc)
         if "credit balance" in detail.lower() or "billing" in detail.lower():
             # Account-level: no request can succeed until the balance is topped up.
@@ -283,7 +291,10 @@ class AnthropicProvider(LLMProvider):
     def _get_client(self) -> Any:
         if self._client is None:
             self._client = anthropic.AsyncAnthropic(
-                api_key=self._api_key, base_url=self._base_url, timeout=self._timeout, max_retries=0,
+                api_key=self._api_key,
+                base_url=self._base_url,
+                timeout=self._timeout,
+                max_retries=0,
             )
         return self._client
 
@@ -326,8 +337,16 @@ class AnthropicProvider(LLMProvider):
                 "(python scripts/check_anthropic.py --set-key) and restart Garvis. No other model is used."
             )
         request = self.build_request(messages, tools)
-        log_extra(logger, 20, "anthropic.chat.request", model=self._model, num_messages=len(request["messages"]),
-                  num_tools=len(request.get("tools", [])), effort=self._effort, prompt_cache=self._prompt_cache)
+        log_extra(
+            logger,
+            20,
+            "anthropic.chat.request",
+            model=self._model,
+            num_messages=len(request["messages"]),
+            num_tools=len(request.get("tools", [])),
+            effort=self._effort,
+            prompt_cache=self._prompt_cache,
+        )
         started = time.monotonic()
         try:
             response = await self._get_client().messages.create(**request)
@@ -351,8 +370,13 @@ class AnthropicProvider(LLMProvider):
 
         if stop_reason == "max_tokens" and tool_calls:
             # A call cut off mid-arguments must never run.
-            log_extra(logger, 30, "anthropic.chat.truncated_tool_calls_dropped", model=self._model,
-                      dropped=[c.name for c in tool_calls])
+            log_extra(
+                logger,
+                30,
+                "anthropic.chat.truncated_tool_calls_dropped",
+                model=self._model,
+                dropped=[c.name for c in tool_calls],
+            )
             tool_calls = []
         if stop_reason == "tool_use" and tool_calls:
             finish_reason = "tool_calls"
@@ -362,28 +386,44 @@ class AnthropicProvider(LLMProvider):
             finish_reason = "stop"
 
         log_extra(
-            logger, 20, "anthropic.chat.response", model=self._model, served_model=served_model,
-            request_id=request_id, sdk_request_id=getattr(response, "_request_id", None), stop_reason=stop_reason,
-            num_tool_calls=len(tool_calls), latency_ms=int((time.monotonic() - started) * 1000),
-            usage=usage.model_dump(exclude_none=True) if usage else None, **content_fingerprint(content),
+            logger,
+            20,
+            "anthropic.chat.response",
+            model=self._model,
+            served_model=served_model,
+            request_id=request_id,
+            sdk_request_id=getattr(response, "_request_id", None),
+            stop_reason=stop_reason,
+            num_tool_calls=len(tool_calls),
+            latency_ms=int((time.monotonic() - started) * 1000),
+            usage=usage.model_dump(exclude_none=True) if usage else None,
+            **content_fingerprint(content),
         )
         if self._verify_served_model and not served_model_matches(self._model, served_model):
             raise LLMModelMismatchError(
                 f"Requested {self._model}, but the Anthropic API reports {served_model or 'no model'}. "
                 "The reply was discarded.",
-                usage=usage, served_model=served_model, request_id=request_id,
+                usage=usage,
+                served_model=served_model,
+                request_id=request_id,
             )
         if stop_reason == "refusal":
             details = getattr(response, "stop_details", None)
             category = getattr(details, "category", None) if details is not None else None
             raise LLMRefusalError(
-                "Claude declined this request" + (f" (safety category: {category})" if category else "")
+                "Claude declined this request"
+                + (f" (safety category: {category})" if category else "")
                 + ". Try rephrasing it.",
-                usage=usage, served_model=served_model, request_id=request_id,
+                usage=usage,
+                served_model=served_model,
+                request_id=request_id,
             )
         return LLMResponse(
             message=Message(role=Role.ASSISTANT, content=content, tool_calls=tool_calls),
-            finish_reason=finish_reason, usage=usage, served_model=served_model, request_id=request_id,
+            finish_reason=finish_reason,
+            usage=usage,
+            served_model=served_model,
+            request_id=request_id,
         )
 
     async def health_check(self) -> bool:

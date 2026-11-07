@@ -1,6 +1,7 @@
 """Local-network helpers for the mobile server: which client addresses may
 connect, and which addresses this PC is reachable at (for the certificate
 and the URL shown in the pairing dialog)."""
+
 from __future__ import annotations
 
 import ipaddress
@@ -68,7 +69,8 @@ def is_tailscale_connection(remote: str | None, local: str | None) -> bool:
 
 TAILSCALE_CLI = (
     Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Tailscale" / "tailscale.exe"
-    if sys.platform == "win32" else Path("/usr/bin/tailscale")
+    if sys.platform == "win32"
+    else Path("/usr/bin/tailscale")
 )
 
 
@@ -78,9 +80,14 @@ def _tailscale_cli_addresses(cli: Path = TAILSCALE_CLI) -> list[str]:
     if not cli.exists():
         return []
     try:
-        result = subprocess.run([str(cli), "ip", "-4"], capture_output=True, text=True, timeout=3,
-                                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    except (OSError, subprocess.SubprocessError):
+        result = subprocess.run(
+            [str(cli), "ip", "-4"],
+            capture_output=True,
+            text=True,
+            timeout=3,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except OSError, subprocess.SubprocessError:
         return []
     return [line.strip() for line in result.stdout.splitlines() if is_tailscale_address(line.strip())]
 
@@ -88,6 +95,7 @@ def _tailscale_cli_addresses(cli: Path = TAILSCALE_CLI) -> list[str]:
 @dataclass(frozen=True)
 class TailnetNode:
     """One device as `tailscale status --json` describes it."""
+
     host_name: str
     dns_name: str
     os: str
@@ -128,8 +136,11 @@ class TailnetStatus:
     def find_peer(self, name_or_ip: str) -> TailnetNode | None:
         wanted = name_or_ip.strip().lower().rstrip(".")
         for peer in self.peers:
-            if wanted in peer.ips or wanted in (peer.host_name.lower(), peer.dns_name.lower(),
-                                                peer.dns_name.lower().split(".", 1)[0]):
+            if wanted in peer.ips or wanted in (
+                peer.host_name.lower(),
+                peer.dns_name.lower(),
+                peer.dns_name.lower().split(".", 1)[0],
+            ):
                 return peer
         return None
 
@@ -171,10 +182,16 @@ def tailscale_status(cli: Path = TAILSCALE_CLI) -> TailnetStatus | None:
     if not cli.exists():
         return None
     try:
-        result = subprocess.run([str(cli), "status", "--json"], capture_output=True, text=True, timeout=5,
-                                encoding="utf-8", creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        result = subprocess.run(
+            [str(cli), "status", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            encoding="utf-8",
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
         data = json.loads(result.stdout)
-    except (OSError, subprocess.SubprocessError, ValueError):
+    except OSError, subprocess.SubprocessError, ValueError:
         return None
     return parse_tailscale_status(data) if isinstance(data, dict) else None
 

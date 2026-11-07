@@ -3,6 +3,7 @@ AgentBridge (real Agent, real loop, real StandbyListener/ConversationSession) on
 recorder of test_agent_bridge_standby.py -- the recorder's open/close log is the proof of what
 the microphone actually did. Other devices are driven through the same manager calls the
 /api/v1/voice routes make."""
+
 from __future__ import annotations
 
 import time
@@ -32,8 +33,14 @@ def _phone_claim(bridge, mode="priority", reason="reminder", **kwargs):
 def _phone_releases(bridge, claim) -> None:
     manager = bridge.voice_ownership
     manager.release(PHONE, claim.id)
-    manager.heartbeat(PHONE, kind="phone", label="Example Phone", mic_open=False, seen_version=manager.version,
-                      seen_epoch=manager.epoch)
+    manager.heartbeat(
+        PHONE,
+        kind="phone",
+        label="Example Phone",
+        mic_open=False,
+        seen_version=manager.version,
+        seen_epoch=manager.epoch,
+    )
 
 
 def test_desktop_does_not_listen_while_the_tablet_owns_standby(tmp_path):

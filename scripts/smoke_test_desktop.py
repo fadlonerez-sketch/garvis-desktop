@@ -9,6 +9,7 @@ Hebrew), keyboard_press(Enter) -- and checks what the window actually
 received. Your own windows are not typed into; the mouse pointer is
 returned to where it started.
 """
+
 from __future__ import annotations
 
 import asyncio

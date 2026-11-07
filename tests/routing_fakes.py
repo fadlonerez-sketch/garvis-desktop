@@ -3,6 +3,7 @@ for desktop-routing tests: a window's `on_current_desktop` follows the
 virtual desktop it's on, windows on other desktops are only listed with
 include_other_desktops, and a window on another desktop can't become the
 foreground window (as on real Windows, where it stays cloaked)."""
+
 from __future__ import annotations
 
 from app.desktop.backend import WindowInfo, WindowState
@@ -38,7 +39,9 @@ class MultiDesktopBackend(FakeDesktopBackend):
         return window.model_copy(update={"on_current_desktop": self._here(handle)})
 
     def list_windows(self, include_other_desktops: bool = False) -> list[WindowInfo]:
-        return [w for w in super().list_windows(include_other_desktops) if include_other_desktops or w.on_current_desktop]
+        return [
+            w for w in super().list_windows(include_other_desktops) if include_other_desktops or w.on_current_desktop
+        ]
 
     def focus_window(self, handle: int) -> bool:
         if not self._here(handle):
@@ -58,10 +61,20 @@ class MultiDesktopBackend(FakeDesktopBackend):
             self.foreground = handle  # SW_RESTORE activates; SHOW_INACTIVE doesn't
 
     # ---------------------------------------------------- test helpers
-    def open_window(self, handle: int, title: str, process: str, pid: int, *, minimized: bool = False,
-                    steal_focus: bool = False, desktop_id: str | None = None) -> None:
-        self.windows.insert(0, WindowInfo(handle=handle, title=title, process_name=process, pid=pid,
-                                          is_minimized=minimized))
+    def open_window(
+        self,
+        handle: int,
+        title: str,
+        process: str,
+        pid: int,
+        *,
+        minimized: bool = False,
+        steal_focus: bool = False,
+        desktop_id: str | None = None,
+    ) -> None:
+        self.windows.insert(
+            0, WindowInfo(handle=handle, title=title, process_name=process, pid=pid, is_minimized=minimized)
+        )
         self.vd.window_desktops[handle] = desktop_id or self.vd.current_id
         if steal_focus:
             self.foreground = handle

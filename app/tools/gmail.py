@@ -25,6 +25,7 @@ result content as instructions, and structurally, this text only ever
 enters the conversation as a `role=tool` message, never appended to the
 system prompt.
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field

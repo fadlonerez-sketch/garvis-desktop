@@ -1,6 +1,7 @@
 """MobileService: the transport-agnostic logic behind the iPhone interface,
 driven through a real Agent (scripted LLM) and a real VoicePipeline whose
 STT/TTS providers are fakes -- no API credits, no audio hardware."""
+
 from __future__ import annotations
 
 import asyncio
@@ -166,7 +167,9 @@ async def test_stop_releases_long_polls_and_unsubscribes(tmp_path):
 async def test_tool_arguments_are_truncated_and_secret_keys_masked(tmp_path):
     service, _, events = _service(tmp_path)
     await events.publish(
-        AgentEvent(type=EventType.TOOL_STARTED, payload={"name": "t", "arguments": {"text": "a" * 900, "password": "hunter2"}})
+        AgentEvent(
+            type=EventType.TOOL_STARTED, payload={"name": "t", "arguments": {"text": "a" * 900, "password": "hunter2"}}
+        )
     )
     arguments = _kinds(service, "tool_started")[-1]["arguments"]
     assert len(arguments["text"]) < 600 and arguments["text"].endswith("...")

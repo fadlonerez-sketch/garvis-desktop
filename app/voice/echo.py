@@ -59,6 +59,7 @@ raw level passes through untouched.
 
 Pure numpy, streaming, ~0.1 ms per 10 ms frame.
 """
+
 from __future__ import annotations
 
 import threading
@@ -189,8 +190,13 @@ class EchoGuard:
         totals = bands.sum(axis=1)
         loud = float(np.percentile(totals, 90)) if len(totals) else 0.0
         band_loud = np.percentile(bands, 90, axis=0) if len(bands) else np.zeros(self._bands)
-        clip = _Clip(bands=bands, envelope=envelope, start_time=start_time,
-                     audible_level=loud * 1e-3, band_levels=band_loud * 1e-2)
+        clip = _Clip(
+            bands=bands,
+            envelope=envelope,
+            start_time=start_time,
+            audible_level=loud * 1e-3,
+            band_levels=band_loud * 1e-2,
+        )
         with self._lock:
             self._clips.append(clip)
         return clip
@@ -257,7 +263,7 @@ class EchoGuard:
             lo, hi = max(lo, 0), min(hi, played - 1)
             if hi < lo:
                 continue
-            window = clip.bands[lo: hi + 1].max(axis=0)
+            window = clip.bands[lo : hi + 1].max(axis=0)
             aligned_index = int(round(k))
             aligned = clip.bands[aligned_index] if 0 <= aligned_index < played else None
             if best is None or window.sum() > best[0].sum():
@@ -311,7 +317,9 @@ class EchoGuard:
             # Prune on the microphone's own timeline (not the wall clock), so
             # analysis never depends on when this method happens to run.
             self._prune(chunk_start_time + samples.size / self._rate)
-            expected_start = (self._pending_time + len(self._pending) / self._rate) if self._pending_time is not None else None
+            expected_start = (
+                (self._pending_time + len(self._pending) / self._rate) if self._pending_time is not None else None
+            )
             if expected_start is None or abs(chunk_start_time - expected_start) > 0.05:
                 # first chunk, or a gap/overrun: restart framing on the new timestamp
                 self._pending = samples
@@ -319,7 +327,7 @@ class EchoGuard:
             else:
                 self._pending = np.concatenate([self._pending, samples])
             if not self._clips:
-                self._track_background(float(np.mean(samples ** 2)))
+                self._track_background(float(np.mean(samples**2)))
                 self._consume_frames(analyse=False)
                 return None
             residual_power, frames, any_echo = self._consume_frames(analyse=True)
@@ -341,7 +349,7 @@ class EchoGuard:
                 residual_power += power
                 any_echo = any_echo or echo
                 frames += 1
-            self._pending = self._pending[self._hop:]
+            self._pending = self._pending[self._hop :]
             self._pending_time += self._hop / self._rate
         if analyse and frames:
             self._frames_since_delay_update += frames
@@ -359,15 +367,15 @@ class EchoGuard:
             self._background_power *= 1.002  # creeps up slowly if the room gets louder
 
     def _analyse_frame(self, frame: np.ndarray, t: float) -> tuple[float, bool]:
-        hop_samples = frame[self._hop:]
-        mic_power = float(np.mean(hop_samples ** 2))
+        hop_samples = frame[self._hop :]
+        mic_power = float(np.mean(hop_samples**2))
         self._track_background(mic_power)
         bands = self._band_powers(frame)
         self._history.times.append(t)
         self._history.envelope.append(float(np.log(bands.sum() + 1e3)))
         expected = self._expected_echo(t, self._delay)
         if expected is None:
-            self.last = EchoFrame(t, mic_power ** 0.5, mic_power ** 0.5, False, self._delay)
+            self.last = EchoFrame(t, mic_power**0.5, mic_power**0.5, False, self._delay)
             return mic_power, False
         window, aligned, clip = expected
         echo = self._gain * window * self._over
@@ -381,7 +389,7 @@ class EchoGuard:
         # so the first `doubt_fraction` of unexplained energy is not counted.
         excess = max(0.0, fraction - self._doubt) / (1.0 - self._doubt)
         residual_power = mic_power * excess
-        self.last = EchoFrame(t, mic_power ** 0.5, residual_power ** 0.5, True, self._delay)
+        self.last = EchoFrame(t, mic_power**0.5, residual_power**0.5, True, self._delay)
         return residual_power, True
 
     def _learn_gain(self, bands: np.ndarray, window: np.ndarray, band_levels: np.ndarray) -> None:

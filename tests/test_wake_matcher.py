@@ -1,5 +1,6 @@
 """Tests for WakePhraseMatcher and GreetingPicker (app/voice/wake.py) --
 pure text logic, no audio."""
+
 from __future__ import annotations
 
 import random

@@ -1,6 +1,7 @@
 """/api/v1/voice/* -- voice ownership over the real HTTPS app (same in-process harness as
 test_mobile_native_api.py): a paired Eye Station and a paired phone check in, claim and release
 the voice, and always agree on the one endpoint allowed to listen."""
+
 from __future__ import annotations
 
 import asyncio
@@ -82,8 +83,9 @@ async def test_first_station_gets_standby_and_the_desktop_sleeps(devices):
 async def test_phone_reminder_priority_round_trip_restores_the_station(devices):
     h, station, phone, ownership = devices
     await station.beat(want="standby", mic=False)
-    response = await phone.call("/api/v1/voice/claim", {"mode": "priority", "reason": "reminder", "ref": "abc123",
-                                                         "max_seconds": 60})
+    response = await phone.call(
+        "/api/v1/voice/claim", {"mode": "priority", "reason": "reminder", "ref": "abc123", "max_seconds": 60}
+    )
     assert response.status == 200
     data = await response.json()
     claim = data["claim"]
@@ -160,8 +162,7 @@ async def test_station_conversation_keeps_everything_else_asleep_and_returns_to_
 async def test_explicit_phone_conversation_takes_over_and_gives_back(devices):
     h, station, phone, ownership = devices
     await station.beat(want="standby", mic=False)
-    response = await phone.call("/api/v1/voice/claim", {"mode": "active", "reason": "conversation",
-                                                         "explicit": True})
+    response = await phone.call("/api/v1/voice/claim", {"mode": "active", "reason": "conversation", "explicit": True})
     claim = (await response.json())["claim"]
     await station.ack()
     assert (await phone.beat())["state"] == "active"
@@ -220,8 +221,15 @@ async def test_bad_heartbeats_are_rejected(devices, body):
     assert response.status == 400
 
 
-@pytest.mark.parametrize("body", [{"mode": "forever"}, {"mode": "active", "reason": "DROP TABLE"},
-                                  {"mode": "priority", "max_seconds": -1}, {"mode": "active", "explicit": "yes"}])
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"mode": "forever"},
+        {"mode": "active", "reason": "DROP TABLE"},
+        {"mode": "priority", "max_seconds": -1},
+        {"mode": "active", "explicit": "yes"},
+    ],
+)
 async def test_bad_claims_are_rejected(devices, body):
     h, station, phone, ownership = devices
     response = await phone.call("/api/v1/voice/claim", body)

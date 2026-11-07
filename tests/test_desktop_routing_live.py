@@ -12,6 +12,7 @@ Deliberately unintrusive: no keyboard/mouse input is injected, nothing is
 activated, the user's view is never switched, and nothing is shown on the
 user's screen (the window is minimized whenever it is on their desktop).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -106,16 +107,21 @@ async def test_real_app_launched_into_workspace_lands_there_without_focus_theft(
     handle = result["handle"]
     after = await truth([handle, *others])
 
-    print(f"\nlaunch result: {result}\nbefore: current={before['current']} fg={before['foreground']}"
-          f"\nafter:  current={after['current']} fg={after['foreground']} window_desktop={after['desktops'][handle]}"
-          f" garvis={after['garvis']} cloaked={after['cloaked'][handle]}")
+    print(
+        f"\nlaunch result: {result}\nbefore: current={before['current']} fg={before['foreground']}"
+        f"\nafter:  current={after['current']} fg={after['foreground']} window_desktop={after['desktops'][handle]}"
+        f" garvis={after['garvis']} cloaked={after['cloaked'][handle]}"
+    )
     assert after["garvis"] is not None
     assert after["desktops"][handle] == after["garvis"]  # really on the Garvis virtual desktop
     assert after["cloaked"][handle] is True  # not drawn on the user's screen
     assert after["current"] == before["current"]  # the user's view never switched
     assert after["foreground"] == before["foreground"]  # the user's focus is unchanged
-    moved = [h for h in others if before["desktops"].get(h) and after["desktops"].get(h)
-             and before["desktops"][h] != after["desktops"][h]]
+    moved = [
+        h
+        for h in others
+        if before["desktops"].get(h) and after["desktops"].get(h) and before["desktops"][h] != after["desktops"][h]
+    ]
     assert moved == []  # no unrelated window moved
 
 
@@ -131,9 +137,11 @@ async def test_real_window_brought_to_users_desktop_is_on_the_current_desktop(st
     after = await truth([handle])
     location = await desktop.window_location(handle)
 
-    print(f"\nbefore: window_desktop={before['desktops'][handle]} (garvis)\n"
-          f"after:  window_desktop={after['desktops'][handle]} current={after['current']} "
-          f"cloaked={after['cloaked'][handle]} garvis_location={location!r} fg={after['foreground']}")
+    print(
+        f"\nbefore: window_desktop={before['desktops'][handle]} (garvis)\n"
+        f"after:  window_desktop={after['desktops'][handle]} current={after['current']} "
+        f"cloaked={after['cloaked'][handle]} garvis_location={location!r} fg={after['foreground']}"
+    )
     assert after["desktops"][handle] == after["current"]
     assert after["cloaked"][handle] is False
     assert location == "user"

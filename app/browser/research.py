@@ -24,6 +24,7 @@ Every run returns its plan with a status per step, so what happened
 All page text is untrusted external data -- it only ever reaches the LLM as
 a tool result (see app/agent/policies.py's security rule).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -97,7 +98,7 @@ def decode_result_url(href: str) -> str | None:
             encoded = encoded[2:]
         try:
             href = base64.urlsafe_b64decode(encoded + "=" * (-len(encoded) % 4)).decode("utf-8")
-        except (ValueError, UnicodeDecodeError):
+        except ValueError, UnicodeDecodeError:
             return None
     final = urlparse(href)
     final_host = (final.hostname or "").lower()
@@ -219,7 +220,9 @@ class WebResearcher:
                 "otherwise run on the user's screen. Use web_search instead, or browse on the user's desktop "
                 "if they want to watch."
             ) from exc
-        plan.append(PlanStep(step="prepare_workspace", status="done", detail=f"desktop {desktop.number} '{desktop.name}'"))
+        plan.append(
+            PlanStep(step="prepare_workspace", status="done", detail=f"desktop {desktop.number} '{desktop.name}'")
+        )
         return "garvis desktop"
 
     async def _search_in_browser(self, query: str) -> list[SearchResult]:
@@ -260,7 +263,9 @@ class WebResearcher:
         except BrowserError as exc:
             results, error = [], str(exc)
         if results:
-            plan.append(PlanStep(step="search", status="done", detail=f"{len(results)} results from {self._engine.name}"))
+            plan.append(
+                PlanStep(step="search", status="done", detail=f"{len(results)} results from {self._engine.name}")
+            )
             return results
 
         reason = error or "no results could be parsed from the results page (layout change or bot check?)"
@@ -274,11 +279,15 @@ class WebResearcher:
             plan.append(PlanStep(step="search", status="failed", detail=f"{reason}; API fallback failed: {exc}"))
             return []
         plan.append(
-            PlanStep(step="search", status="fallback", detail=f"{reason}; used ddgs API search ({len(results)} results)")
+            PlanStep(
+                step="search", status="fallback", detail=f"{reason}; used ddgs API search ({len(results)} results)"
+            )
         )
         return results
 
-    async def _read_sources(self, query: str, results: list[SearchResult], plan: list[PlanStep], wanted: int) -> list[Source]:
+    async def _read_sources(
+        self, query: str, results: list[SearchResult], plan: list[PlanStep], wanted: int
+    ) -> list[Source]:
         sources: list[Source] = []
         failures: list[str] = []
         for result in results:
@@ -325,13 +334,28 @@ class WebResearcher:
             finally:
                 if use_surface is not None and previous is not None:
                     await use_surface(previous)
-            plan.append(PlanStep(step="collect", status="done" if sources or results else "failed",
-                                 detail=f"{len(results)} results, {len(sources)} sources"))
+            plan.append(
+                PlanStep(
+                    step="collect",
+                    status="done" if sources or results else "failed",
+                    detail=f"{len(results)} results, {len(sources)} sources",
+                )
+            )
         log_extra(
-            logger, 20, "research.completed", engine=self._engine.name, num_results=len(results),
-            num_sources=len(sources), workspace=workspace, steps=[f"{p.step}:{p.status}" for p in plan],
+            logger,
+            20,
+            "research.completed",
+            engine=self._engine.name,
+            num_results=len(results),
+            num_sources=len(sources),
+            workspace=workspace,
+            steps=[f"{p.step}:{p.status}" for p in plan],
         )
         return ResearchReport(
-            query=query, engine=self._engine.name, plan=plan, results=results[:_MAX_CANDIDATES],
-            sources=sources, workspace=workspace,
+            query=query,
+            engine=self._engine.name,
+            plan=plan,
+            results=results[:_MAX_CANDIDATES],
+            sources=sources,
+            workspace=workspace,
         )

@@ -6,6 +6,7 @@ audio file, and keeping them separate means a future wake-word listener
 (continuous capture) can reuse `SpeechToTextProvider` unchanged and just
 swap out how the audio file is produced.
 """
+
 from __future__ import annotations
 
 import os
@@ -44,9 +45,7 @@ class MicrophoneRecorder:
         try:
             import sounddevice as sd
         except ImportError as exc:
-            raise SpeechToTextError(
-                "sounddevice is not installed. Run: pip install sounddevice"
-            ) from exc
+            raise SpeechToTextError("sounddevice is not installed. Run: pip install sounddevice") from exc
 
         self._frames = queue.Queue()
 

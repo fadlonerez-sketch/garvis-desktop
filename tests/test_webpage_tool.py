@@ -4,6 +4,7 @@ DNS/network are faked (via monkeypatched `socket.getaddrinfo` and a
 patched `httpx.AsyncClient` transport) so these tests are hermetic and
 don't depend on real internet access or real internal hosts.
 """
+
 from __future__ import annotations
 
 import socket
@@ -100,9 +101,7 @@ async def test_follows_safe_redirect_to_public_host(monkeypatch):
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "public.example.com":
-            return httpx.Response(
-                302, headers={"location": "http://public-2.example.com/final"}
-            )
+            return httpx.Response(302, headers={"location": "http://public-2.example.com/final"})
         return httpx.Response(200, html="<html><body>Final page</body></html>")
 
     _patch_transport(monkeypatch, handler)
@@ -128,9 +127,7 @@ async def test_blocks_redirect_to_private_target(monkeypatch):
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.host == "public.example.com":
-            return httpx.Response(
-                302, headers={"location": "http://internal.example.com/secret"}
-            )
+            return httpx.Response(302, headers={"location": "http://internal.example.com/secret"})
         raise AssertionError("must not follow the redirect to the internal host")
 
     _patch_transport(monkeypatch, handler)
@@ -251,9 +248,7 @@ async def test_pinned_backend_tries_each_validated_address(monkeypatch):
                 raise httpcore.ConnectError("unreachable")
             return _RecordingStream(self.log)
 
-    pinned = webpage_module._PinnedBackend(
-        "dual.example.com", ["2001:db8::1", "93.184.216.34"], inner=_FlakyBackend()
-    )
+    pinned = webpage_module._PinnedBackend("dual.example.com", ["2001:db8::1", "93.184.216.34"], inner=_FlakyBackend())
     await pinned.connect_tcp("dual.example.com", 443)
     assert attempts == ["2001:db8::1", "93.184.216.34"]
 

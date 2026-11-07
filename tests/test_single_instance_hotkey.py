@@ -1,5 +1,6 @@
 """Single instance + global hotkey (Ctrl+Alt+G): registration, conflicts,
 cleanup, activating the running instance, and never starting a second one."""
+
 from __future__ import annotations
 
 import os
@@ -104,8 +105,13 @@ def test_a_hung_instance_is_reported_not_duplicated():
 
 def test_an_instance_whose_window_never_appears_is_reported():
     now = [0.0]
-    result = forward_activation(FakeInstanceApi(), wait_seconds=1.0, poll_seconds=0.5,
-                                clock=lambda: now[0], sleep=lambda s: now.__setitem__(0, now[0] + s))
+    result = forward_activation(
+        FakeInstanceApi(),
+        wait_seconds=1.0,
+        poll_seconds=0.5,
+        clock=lambda: now[0],
+        sleep=lambda s: now.__setitem__(0, now[0] + s),
+    )
     assert result.status == "no_window"
 
 
@@ -130,15 +136,21 @@ def test_a_stuck_instance_is_explained_to_the_user(monkeypatch, capsys):
 def test_real_mutex_allows_exactly_one_instance_per_session(tmp_path):
     name = f"Local\\Garvis.Test.{uuid.uuid4().hex}"
     holder = subprocess.Popen(
-        [sys.executable, "-c", textwrap.dedent(f"""
+        [
+            sys.executable,
+            "-c",
+            textwrap.dedent(f"""
             import sys, time
             sys.path.insert(0, {str(os.getcwd())!r})
             from app.ui.single_instance import InstanceLock
             lock = InstanceLock(name={name!r})
             print("acquired" if lock.acquire() else "refused", flush=True)
             sys.stdin.readline()
-        """)],
-        stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
+        """),
+        ],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
     )
     try:
         assert holder.stdout.readline().strip() == "acquired"
@@ -169,12 +181,12 @@ def test_registration_success_activation_and_cleanup():
     assert status.registered and api.registered == [(555, HOTKEY_ID, MOD_CONTROL | MOD_ALT, ord("G"))]
     assert hotkey.register(555).registered and len(api.registered) == 1  # no duplicate registration
     assert hotkey.handle_message(WM_HOTKEY, HOTKEY_ID) and activations == [1]
-    assert not hotkey.handle_message(WM_HOTKEY, 999)                     # someone else's hotkey
-    assert hotkey.handle_message(0xC123, 0) and activations == [1, 1]   # a second launch said "activate"
+    assert not hotkey.handle_message(WM_HOTKEY, 999)  # someone else's hotkey
+    assert hotkey.handle_message(0xC123, 0) and activations == [1, 1]  # a second launch said "activate"
     hotkey.unregister()
     hotkey.unregister()  # idempotent
     assert api.unregistered == [(555, HOTKEY_ID)]
-    assert not hotkey.handle_message(WM_HOTKEY, HOTKEY_ID)               # nothing after shutdown
+    assert not hotkey.handle_message(WM_HOTKEY, HOTKEY_ID)  # nothing after shutdown
 
 
 def test_conflicting_registration_is_explained():

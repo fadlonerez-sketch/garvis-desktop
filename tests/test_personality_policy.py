@@ -5,6 +5,7 @@ These test policy *construction and integration*, not LLM creativity: no
 test here depends on a model producing any particular sentence. Providers
 are never called -- ScriptedLLMProvider only records what it was sent.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -179,9 +180,7 @@ def test_build_system_prompt_has_no_duplicated_personality_text():
 
 # --------------------------------------------------------- Agent integration
 @pytest.mark.asyncio
-async def test_agent_sends_exactly_one_system_message_including_personality(
-    make_scripted_llm, memory_store
-):
+async def test_agent_sends_exactly_one_system_message_including_personality(make_scripted_llm, memory_store):
     """One clear source of truth: the Agent must never send multiple/
     competing system messages -- personality is folded into the same single
     system message as the operational rules."""
@@ -203,8 +202,13 @@ async def test_personality_reaches_the_llm_transparently_through_the_router(memo
     TieredLLMRouter -> provider) doesn't drop or duplicate it."""
     simple = make_scripted_llm([final_response("Hello, Sir.")])
     capable = make_scripted_llm([])
-    router = TieredLLMRouter({ModelTier.SMALL: [("small", simple)], ModelTier.MEDIUM: [("medium", capable)],
-                              ModelTier.LARGE: [("large", make_scripted_llm([]))]})
+    router = TieredLLMRouter(
+        {
+            ModelTier.SMALL: [("small", simple)],
+            ModelTier.MEDIUM: [("medium", capable)],
+            ModelTier.LARGE: [("large", make_scripted_llm([]))],
+        }
+    )
     agent = Agent(llm=router, registry=ToolRegistry(), memory=memory_store, events=EventBus())
 
     await agent.handle_user_message("hi")

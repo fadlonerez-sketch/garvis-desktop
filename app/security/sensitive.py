@@ -12,6 +12,7 @@ the LLM:
   keys, bearer tokens) in tool output before it reaches the LLM, i.e. before
   it can leave this PC.
 """
+
 from __future__ import annotations
 
 import re
@@ -19,15 +20,69 @@ from pathlib import PurePath
 
 _CONSEQUENTIAL_WORDS = (
     # English
-    "send", "send now", "submit", "delete", "delete permanently", "remove", "erase", "wipe",
-    "uninstall", "install", "buy", "buy now", "purchase", "pay", "pay now", "checkout", "check out",
-    "place order", "place your order", "order now", "transfer", "publish", "post", "tweet", "upload",
-    "confirm", "discard", "empty recycle bin", "reset", "factory reset", "overwrite",
-    "unsubscribe", "deactivate", "close account", "change password", "sign out everywhere",
+    "send",
+    "send now",
+    "submit",
+    "delete",
+    "delete permanently",
+    "remove",
+    "erase",
+    "wipe",
+    "uninstall",
+    "install",
+    "buy",
+    "buy now",
+    "purchase",
+    "pay",
+    "pay now",
+    "checkout",
+    "check out",
+    "place order",
+    "place your order",
+    "order now",
+    "transfer",
+    "publish",
+    "post",
+    "tweet",
+    "upload",
+    "confirm",
+    "discard",
+    "empty recycle bin",
+    "reset",
+    "factory reset",
+    "overwrite",
+    "unsubscribe",
+    "deactivate",
+    "close account",
+    "change password",
+    "sign out everywhere",
     # Hebrew
-    "שלח", "שליחה", "לשלוח", "לשליחה", "מחק", "מחיקה", "למחוק", "הסר", "הסרה", "קנה", "קנייה", "רכישה", "לרכישה",
-    "תשלום", "לתשלום", "שלם", "העבר", "העברה", "פרסם", "פרסום", "אשר", "אישור", "הזמן", "הזמנה",
-    "התקן", "התקנה",
+    "שלח",
+    "שליחה",
+    "לשלוח",
+    "לשליחה",
+    "מחק",
+    "מחיקה",
+    "למחוק",
+    "הסר",
+    "הסרה",
+    "קנה",
+    "קנייה",
+    "רכישה",
+    "לרכישה",
+    "תשלום",
+    "לתשלום",
+    "שלם",
+    "העבר",
+    "העברה",
+    "פרסם",
+    "פרסום",
+    "אשר",
+    "אישור",
+    "הזמן",
+    "הזמנה",
+    "התקן",
+    "התקנה",
 )
 _CONSEQUENTIAL_RE = re.compile(
     r"(?<!\w)(" + "|".join(re.escape(w) for w in sorted(_CONSEQUENTIAL_WORDS, key=len, reverse=True)) + r")(?!\w)",
@@ -52,17 +107,62 @@ def consequential_reason(*labels: str | None) -> str | None:
 
 # ------------------------------------------------------------- credentials
 _SENSITIVE_NAMES = {
-    ".env", ".netrc", "_netrc", ".git-credentials", ".pgpass", "credentials", "credentials.json",
-    "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "known_hosts", "login data", "login data for account",
-    "cookies", "web data", "local state", "key3.db", "key4.db", "logins.json", "cert9.db",
-    "gmail_token.json", "gmail_client_secret.json", "devices.json", "token.json", "ca.key", "server.key", "keys.dpapi",
+    ".env",
+    ".netrc",
+    "_netrc",
+    ".git-credentials",
+    ".pgpass",
+    "credentials",
+    "credentials.json",
+    "id_rsa",
+    "id_dsa",
+    "id_ecdsa",
+    "id_ed25519",
+    "known_hosts",
+    "login data",
+    "login data for account",
+    "cookies",
+    "web data",
+    "local state",
+    "key3.db",
+    "key4.db",
+    "logins.json",
+    "cert9.db",
+    "gmail_token.json",
+    "gmail_client_secret.json",
+    "devices.json",
+    "token.json",
+    "ca.key",
+    "server.key",
+    "keys.dpapi",
     # package-registry / CLI tokens and other plaintext secret files
-    ".npmrc", ".pypirc", ".yarnrc.yml", ".htpasswd", ".vault-token", ".credentials.json",
-    "secrets.json", "secrets.yaml", "secrets.yml", "wallet.dat", "sitemanager.xml", "recentservers.xml",
+    ".npmrc",
+    ".pypirc",
+    ".yarnrc.yml",
+    ".htpasswd",
+    ".vault-token",
+    ".credentials.json",
+    "secrets.json",
+    "secrets.yaml",
+    "secrets.yml",
+    "wallet.dat",
+    "sitemanager.xml",
+    "recentservers.xml",
 }
 _SENSITIVE_SUFFIXES = {".pem", ".key", ".pfx", ".p12", ".kdbx", ".keystore", ".jks", ".ppk", ".asc", ".gpg"}
-_SENSITIVE_DIRS = {".ssh", ".gnupg", ".aws", ".azure", ".kube", ".docker", "microsoft\\credentials", "protect",
-                   ".config\\gh", ".claude", ".omniroute"}
+_SENSITIVE_DIRS = {
+    ".ssh",
+    ".gnupg",
+    ".aws",
+    ".azure",
+    ".kube",
+    ".docker",
+    "microsoft\\credentials",
+    "protect",
+    ".config\\gh",
+    ".claude",
+    ".omniroute",
+}
 
 
 def sensitive_path_reason(path: str | PurePath) -> str | None:
@@ -82,14 +182,14 @@ def sensitive_path_reason(path: str | PurePath) -> str | None:
 
 _SECRET_PATTERNS = [
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(-----END [A-Z ]*PRIVATE KEY-----|$)", re.DOTALL),
-    re.compile(r"\b(sk|rk|pk)-[A-Za-z0-9_\-]{20,}"),           # OpenAI/Anthropic/Stripe-style keys
-    re.compile(r"\bAIza[0-9A-Za-z_\-]{30,}"),                     # Google API keys
-    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}"),                  # GitHub tokens
-    re.compile(r"\bgsk_[A-Za-z0-9]{30,}"),                        # Groq keys
-    re.compile(r"\bnpm_[A-Za-z0-9]{30,}"),                        # npm tokens
-    re.compile(r"\bpypi-[A-Za-z0-9_\-]{40,}"),                    # PyPI tokens
-    re.compile(r"\bxox[abprs]-[A-Za-z0-9\-]{10,}"),               # Slack tokens
-    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),                          # AWS access key ids
+    re.compile(r"\b(sk|rk|pk)-[A-Za-z0-9_\-]{20,}"),  # OpenAI/Anthropic/Stripe-style keys
+    re.compile(r"\bAIza[0-9A-Za-z_\-]{30,}"),  # Google API keys
+    re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}"),  # GitHub tokens
+    re.compile(r"\bgsk_[A-Za-z0-9]{30,}"),  # Groq keys
+    re.compile(r"\bnpm_[A-Za-z0-9]{30,}"),  # npm tokens
+    re.compile(r"\bpypi-[A-Za-z0-9_\-]{40,}"),  # PyPI tokens
+    re.compile(r"\bxox[abprs]-[A-Za-z0-9\-]{10,}"),  # Slack tokens
+    re.compile(r"\bAKIA[0-9A-Z]{16}\b"),  # AWS access key ids
     re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}"),  # JWTs
     re.compile(r"(?i)\b(bearer)\s+[A-Za-z0-9._\-]{20,}"),
     re.compile(

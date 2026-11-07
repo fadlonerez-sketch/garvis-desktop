@@ -3,6 +3,7 @@ results (app/tools/sources.py + the agent's TOOL_FINISHED payload), the
 display-only playback listener (VoicePipeline.add_playback_listener), the
 bridge relaying both, and the read-only usage summary (app/ui/usage_view.py).
 All with fakes -- no audio device, model or network."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -33,8 +34,14 @@ def test_web_search_results_keep_their_exact_titles_and_urls():
     ]
     sources = extract_sources("web_search", data)
     assert [s["url"] for s in sources] == ["https://www.nasa.gov/artemis", "https://example.org/b"]
-    assert sources[0] == {"tool": "web_search", "kind": "search_result", "title": "Artemis II crew named",
-                          "url": "https://www.nasa.gov/artemis", "publisher": "nasa.gov", "snippet": "The crew..."}
+    assert sources[0] == {
+        "tool": "web_search",
+        "kind": "search_result",
+        "title": "Artemis II crew named",
+        "url": "https://www.nasa.gov/artemis",
+        "publisher": "nasa.gov",
+        "snippet": "The crew...",
+    }
 
 
 def test_web_research_lists_read_pages_first_and_dedupes_their_search_listing():
@@ -55,13 +62,16 @@ def test_page_readers_report_the_page_they_read():
     assert len(sources[0]["snippet"]) <= 320
 
 
-@pytest.mark.parametrize("tool, data", [
-    ("calculator", 42),
-    ("web_search", [{"title": "x", "url": "javascript:alert(1)"}, {"title": "y", "url": "file:///C:/x"}]),
-    ("web_research", {"sources": "not a list"}),
-    ("web_search", None),
-    ("open_website", {"url": "https://example.com"}),  # navigation, not an information source
-])
+@pytest.mark.parametrize(
+    "tool, data",
+    [
+        ("calculator", 42),
+        ("web_search", [{"title": "x", "url": "javascript:alert(1)"}, {"title": "y", "url": "file:///C:/x"}]),
+        ("web_research", {"sources": "not a list"}),
+        ("web_search", None),
+        ("open_website", {"url": "https://example.com"}),  # navigation, not an information source
+    ],
+)
 def test_no_sources_are_invented(tool, data):
     assert extract_sources(tool, data) == []
 
@@ -91,7 +101,8 @@ class _FakeWebSearch(Tool):
 
 @pytest.mark.asyncio
 async def test_tool_finished_event_carries_the_sources_but_the_model_sees_the_same_result(
-        memory_store, make_scripted_llm):
+    memory_store, make_scripted_llm
+):
     registry = ToolRegistry()
     registry.register(_FakeWebSearch())
     llm = make_scripted_llm([tool_call_response("web_search", {"query": "q"}), final_response("done")])
@@ -103,24 +114,36 @@ async def test_tool_finished_event_carries_the_sources_but_the_model_sees_the_sa
     await agent.handle_user_message("search")
 
     finished = [e for e in seen if e.type == EventType.TOOL_FINISHED]
-    assert finished[0].payload["sources"] == [{"tool": "web_search", "kind": "search_result", "title": "Result",
-                                               "url": "https://example.com/r", "publisher": "example.com",
-                                               "snippet": "s"}]
+    assert finished[0].payload["sources"] == [
+        {
+            "tool": "web_search",
+            "kind": "search_result",
+            "title": "Result",
+            "url": "https://example.com/r",
+            "publisher": "example.com",
+            "snippet": "s",
+        }
+    ]
     tool_message = next(m for m in agent._context.messages if m.role.value == "tool")
     assert "publisher" not in tool_message.content  # display metadata never reaches the model
 
 
 def test_bridge_relays_sources_only_when_present():
     fake = Mock()
-    payload = {"name": "web_search", "success": True, "error": None,
-               "sources": [{"url": "https://example.com", "title": "t"}]}
+    payload = {
+        "name": "web_search",
+        "success": True,
+        "error": None,
+        "sources": [{"url": "https://example.com", "title": "t"}],
+    }
     AgentBridge._on_event(fake, AgentEvent(type=EventType.TOOL_FINISHED, payload=payload))
     fake.tool_finished.emit.assert_called_once_with("web_search", True, "")
     fake.tool_sources.emit.assert_called_once_with("web_search", payload["sources"])
 
     fake = Mock()
-    AgentBridge._on_event(fake, AgentEvent(type=EventType.TOOL_FINISHED,
-                                           payload={"name": "calculator", "success": True}))
+    AgentBridge._on_event(
+        fake, AgentEvent(type=EventType.TOOL_FINISHED, payload={"name": "calculator", "success": True})
+    )
     fake.tool_sources.emit.assert_not_called()
 
 
@@ -179,11 +202,25 @@ def test_usage_summary_reads_the_real_ledger(tmp_path):
     ledger = UsageLedger(db)
     now = datetime(2026, 10, 23, 15, 0, 0)
     task = TaskMeter()
-    ledger.record(status="ok", model_requested="claude-haiku-5-5", provider="anthropic", tier="small", task=task,
-                  usage=TokenUsage(input_tokens=1000, output_tokens=50, cache_read_tokens=400),
-                  cost_usd=0.002, latency_ms=900, now=now)
-    ledger.record(status="error", model_requested="claude-haiku-5-5", provider="anthropic", tier="small",
-                  error_type="LLMRateLimitError", now=now)
+    ledger.record(
+        status="ok",
+        model_requested="claude-haiku-5-5",
+        provider="anthropic",
+        tier="small",
+        task=task,
+        usage=TokenUsage(input_tokens=1000, output_tokens=50, cache_read_tokens=400),
+        cost_usd=0.002,
+        latency_ms=900,
+        now=now,
+    )
+    ledger.record(
+        status="error",
+        model_requested="claude-haiku-5-5",
+        provider="anthropic",
+        tier="small",
+        error_type="LLMRateLimitError",
+        now=now,
+    )
     ledger.record(status="ok", model_requested="claude-haiku-5-5", cost_usd=0.5, now=datetime(2026, 10, 2, 9))
 
     summary = read_usage_summary(db, now=now)
@@ -215,7 +252,10 @@ def test_system_info_reads_real_settings_and_never_the_key_itself():
     assert info["model"] == "claude-haiku-5-5" and info["provider"] == "Anthropic API"
     assert info["api_key_configured"] is True
     assert secret not in repr(info)
-    assert AgentBridge.system_info(SimpleNamespace(_settings=Settings(anthropic_api_key="")))["api_key_configured"] is False
+    assert (
+        AgentBridge.system_info(SimpleNamespace(_settings=Settings(anthropic_api_key="")))["api_key_configured"]
+        is False
+    )
 
 
 @pytest.mark.asyncio

@@ -22,6 +22,7 @@ sharing a base). Gemini-specific differences, all handled here:
   - Errors: an invalid API key comes back as HTTP 400 ("API key not
     valid"), not 401, so it's mapped to LLMAuthenticationError explicitly.
 """
+
 from __future__ import annotations
 
 import json
@@ -46,8 +47,18 @@ DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai"
 SKIP_SIGNATURE = "skip_thought_signature_validator"
 
 _SCHEMA_KEYS = {
-    "type", "description", "properties", "required", "items", "enum",
-    "minimum", "maximum", "minItems", "maxItems", "format", "nullable",
+    "type",
+    "description",
+    "properties",
+    "required",
+    "items",
+    "enum",
+    "minimum",
+    "maximum",
+    "minItems",
+    "maxItems",
+    "format",
+    "nullable",
 }
 _ERROR_TEXT_MAX = 300
 

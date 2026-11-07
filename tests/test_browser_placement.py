@@ -1,5 +1,6 @@
 """Tests for BrowserWindowPlacer (app/desktop/browser_placement.py): the
 page hook that moves Garvis's browser window onto the Garvis desktop."""
+
 from __future__ import annotations
 
 import pytest
@@ -38,8 +39,9 @@ class FakeBrowserPage:
 
 def _setup(rect=_OFFSCREEN, workspace_factory=None):
     backend = FakeDesktopBackend()
-    backend.windows.append(WindowInfo(handle=_BROWSER, title="about:blank - Google Chrome",
-                                      process_name="chrome.exe", pid=900, rect=rect))
+    backend.windows.append(
+        WindowInfo(handle=_BROWSER, title="about:blank - Google Chrome", process_name="chrome.exe", pid=900, rect=rect)
+    )
     backend.foreground = _BROWSER  # launching Chrome activated it
     desktop = DesktopController(backend_factory=lambda: backend, screenshot_dir=None, own_pid=GARVIS_PID)
     vd = FakeVirtualDesktops()
@@ -71,7 +73,8 @@ async def test_new_browser_window_is_moved_placed_and_focus_returned():
     vd = _MovesWindowAway(backend)
     original_list = backend.list_windows
     backend.list_windows = lambda include_other_desktops=False: [
-        w for w in original_list(include_other_desktops)
+        w
+        for w in original_list(include_other_desktops)
         if include_other_desktops or w.handle not in getattr(backend, "hidden", set())
     ]
     workspace = WorkspaceManager(backend_factory=lambda: vd, name="Garvis")
@@ -117,6 +120,7 @@ async def test_window_already_on_garvis_is_left_alone():
 async def test_workspace_unavailable_is_an_error_not_a_visible_window():
     """Never silently change target: background browsing that can't go to
     the workspace must not end up on the user's screen instead."""
+
     def unsupported():
         raise NotImplementedError("no virtual desktop API on this build")
 
@@ -143,8 +147,13 @@ async def test_missing_window_is_logged_not_raised():
 # ------------------------------------------------------------ user desktop
 async def _user_setup(start_on_workspace=False, rect=_OFFSCREEN):
     backend, vd, workspace, desktop = await make_desktops()
-    backend.open_window(_BROWSER, "about:blank - Google Chrome", "chrome.exe", 900,
-                        desktop_id=garvis_id(vd) if start_on_workspace else None)
+    backend.open_window(
+        _BROWSER,
+        "about:blank - Google Chrome",
+        "chrome.exe",
+        900,
+        desktop_id=garvis_id(vd) if start_on_workspace else None,
+    )
     backend.windows[0] = backend.windows[0].model_copy(update={"rect": rect})
     placer = BrowserWindowPlacer(workspace, desktop, find_timeout_seconds=0.3)
     return backend, vd, workspace, placer
@@ -158,15 +167,20 @@ async def test_user_target_window_is_shown_focused_and_verified_on_users_desktop
         assert vd.moves == []
         assert [c for c in backend.calls if c[0] == "place"][0][1] == _BROWSER  # brought on-screen
         assert backend.foreground == _BROWSER
-        assert placer.last_placement == {"target_desktop": "user_desktop", "visible": True, "focused": True,
-                                         "moved_from_other_desktop": False}
+        assert placer.last_placement == {
+            "target_desktop": "user_desktop",
+            "visible": True,
+            "focused": True,
+            "moved_from_other_desktop": False,
+        }
     finally:
         workspace.shutdown()
 
 
 async def test_user_target_brings_window_over_from_the_workspace():
-    backend, vd, workspace, placer = await _user_setup(start_on_workspace=True,
-                                                       rect=Rect(left=80, top=60, right=1480, bottom=1060))
+    backend, vd, workspace, placer = await _user_setup(
+        start_on_workspace=True, rect=Rect(left=80, top=60, right=1480, bottom=1060)
+    )
     try:
         await placer(FakeBrowserPage(backend), "user_desktop")
         assert vd.window_desktops[_BROWSER] == vd.current_id

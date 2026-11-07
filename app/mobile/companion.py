@@ -2,6 +2,7 @@
 Agent and TaskManager: reminders, images and phone actions. Built once by
 AgentBridge (app/mobile/build.py:build_companion) and handed both to the
 Agent (as tools) and to the native API (as routes)."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -39,8 +40,11 @@ class Companion:
         return {
             "reminders": True,
             "calls": True,
-            "images": {"available": self.images.available, "provider": self.images.provider_name,
-                       "reason": self.images.unavailable_reason},
+            "images": {
+                "available": self.images.available,
+                "provider": self.images.provider_name,
+                "reason": self.images.unavailable_reason,
+            },
             "phone_actions": True,
             "remote_access": self.remote_access,
         }

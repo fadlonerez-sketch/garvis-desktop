@@ -16,6 +16,7 @@ low-quality input, since this project's own upstream VAD (app/voice/vad.py)
 is a simple RMS-threshold detector with no cross-check against what
 Whisper's own internal (Silero-based) VAD would consider speech.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -45,9 +46,7 @@ class FasterWhisperProvider(SpeechToTextProvider):
         try:
             from faster_whisper import WhisperModel
         except ImportError as exc:
-            raise SpeechToTextError(
-                "faster-whisper is not installed. Run: pip install faster-whisper"
-            ) from exc
+            raise SpeechToTextError("faster-whisper is not installed. Run: pip install faster-whisper") from exc
         return WhisperModel(self._model_size, device=self._device, compute_type=self._compute_type)
 
     def _audio_duration_seconds(self, audio_path: str) -> float | None:
@@ -59,17 +58,13 @@ class FasterWhisperProvider(SpeechToTextProvider):
                 if rate <= 0:
                     return None
                 return wav_file.getnframes() / rate
-        except (wave.Error, OSError):
+        except wave.Error, OSError:
             return None
 
     async def transcribe(self, audio_path: str) -> TranscriptionResult:
         def _run() -> TranscriptionResult:
             duration = self._audio_duration_seconds(audio_path)
-            if (
-                duration is not None
-                and self._min_duration_seconds > 0
-                and duration < self._min_duration_seconds
-            ):
+            if duration is not None and self._min_duration_seconds > 0 and duration < self._min_duration_seconds:
                 return TranscriptionResult(text="", language=self._language)
 
             if self._model is None:

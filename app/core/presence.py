@@ -19,6 +19,7 @@ This module only *publishes* state. It's fed by the existing view-model
 voice events) and by attention events; it has no idea how a face animates,
 and nothing in the conversation logic depends on it.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -38,8 +39,13 @@ class PresenceState(StrEnum):
     ERROR = "error"
 
 
-_FROM_MODE = {"idle": PresenceState.IDLE, "listening": PresenceState.LISTENING,
-              "thinking": PresenceState.THINKING, "speaking": PresenceState.SPEAKING, "error": PresenceState.ERROR}
+_FROM_MODE = {
+    "idle": PresenceState.IDLE,
+    "listening": PresenceState.LISTENING,
+    "thinking": PresenceState.THINKING,
+    "speaking": PresenceState.SPEAKING,
+    "error": PresenceState.ERROR,
+}
 
 
 @dataclass(frozen=True)

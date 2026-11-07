@@ -9,6 +9,7 @@ useless.
 
 Not Windows -> `available()` is False and callers keep their old behaviour.
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -35,11 +36,25 @@ if sys.platform == "win32":
     _crypt32 = ctypes.WinDLL("crypt32", use_last_error=True)
     _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
     _BLOB_P = ctypes.POINTER(_Blob)
-    _crypt32.CryptProtectData.argtypes = [_BLOB_P, wintypes.LPCWSTR, _BLOB_P, ctypes.c_void_p, ctypes.c_void_p,
-                                          wintypes.DWORD, _BLOB_P]
+    _crypt32.CryptProtectData.argtypes = [
+        _BLOB_P,
+        wintypes.LPCWSTR,
+        _BLOB_P,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        _BLOB_P,
+    ]
     _crypt32.CryptProtectData.restype = wintypes.BOOL
-    _crypt32.CryptUnprotectData.argtypes = [_BLOB_P, ctypes.c_void_p, _BLOB_P, ctypes.c_void_p, ctypes.c_void_p,
-                                            wintypes.DWORD, _BLOB_P]
+    _crypt32.CryptUnprotectData.argtypes = [
+        _BLOB_P,
+        ctypes.c_void_p,
+        _BLOB_P,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        _BLOB_P,
+    ]
     _crypt32.CryptUnprotectData.restype = wintypes.BOOL
     _kernel32.LocalFree.argtypes = [ctypes.c_void_p]
     _kernel32.LocalFree.restype = ctypes.c_void_p
@@ -53,11 +68,19 @@ if sys.platform == "win32":
         entropy, _keep_entropy = _blob(_ENTROPY)
         result = _Blob()
         if protecting:
-            ok = _crypt32.CryptProtectData(ctypes.byref(source), "Garvis mobile TLS keys", ctypes.byref(entropy),
-                                           None, None, _UI_FORBIDDEN, ctypes.byref(result))
+            ok = _crypt32.CryptProtectData(
+                ctypes.byref(source),
+                "Garvis mobile TLS keys",
+                ctypes.byref(entropy),
+                None,
+                None,
+                _UI_FORBIDDEN,
+                ctypes.byref(result),
+            )
         else:
-            ok = _crypt32.CryptUnprotectData(ctypes.byref(source), None, ctypes.byref(entropy),
-                                             None, None, _UI_FORBIDDEN, ctypes.byref(result))
+            ok = _crypt32.CryptUnprotectData(
+                ctypes.byref(source), None, ctypes.byref(entropy), None, None, _UI_FORBIDDEN, ctypes.byref(result)
+            )
         if not ok:
             raise KeyProtectionError(f"DPAPI error {ctypes.get_last_error()}")
         try:

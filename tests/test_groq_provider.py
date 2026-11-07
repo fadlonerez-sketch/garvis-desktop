@@ -130,9 +130,7 @@ async def test_chat_sends_tool_call_id_and_json_arguments(monkeypatch):
         import json
 
         captured["body"] = json.loads(request.content)
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": "done"}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "done"}}]})
 
     from app.llm.base import ToolCall
 
@@ -294,9 +292,7 @@ async def test_chat_response_log_carries_content_fingerprint_not_full_text(monke
     reply = "Acknowledged, Sir. Your name is Alex."
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": reply}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": reply}}]})
 
     provider = GroqProvider(api_key="test-key", model="test-model")
     _patch_transport(monkeypatch, handler)
@@ -323,9 +319,7 @@ async def test_chat_response_log_excerpt_is_truncated_for_long_content(monkeypat
     long_reply = "x" * 500
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": long_reply}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": long_reply}}]})
 
     provider = GroqProvider(api_key="test-key", model="test-model")
     _patch_transport(monkeypatch, handler)

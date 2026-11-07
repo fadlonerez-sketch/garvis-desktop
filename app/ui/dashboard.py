@@ -8,6 +8,7 @@ summary. Nothing on these pages is sample data: every empty state says so.
 Pages rebuild lazily -- a change while a page is hidden only marks it dirty,
 and it is rebuilt (debounced) the next time it is shown.
 """
+
 from __future__ import annotations
 
 import math
@@ -55,11 +56,28 @@ from app.ui.state import MODE_LABELS, GarvisState, Mode, Turn
 from app.ui.visuals import CoreVisual, Dynamics
 
 PAGES = ("overview", "activity", "protocols", "system", "sources", "voice", "usage", "tools", "settings")
-PAGE_TITLES = {"overview": "Overview", "activity": "Activity", "protocols": "Protocols", "system": "System",
-               "sources": "Sources", "voice": "Voice", "usage": "Usage", "tools": "Tools", "settings": "Settings"}
-PAGE_ICONS = {"overview": "space_dashboard", "activity": "monitoring", "protocols": "account_tree", "system": "memory",
-              "sources": "library_books", "voice": "graphic_eq", "usage": "bar_chart", "tools": "widgets",
-              "settings": "settings"}
+PAGE_TITLES = {
+    "overview": "Overview",
+    "activity": "Activity",
+    "protocols": "Protocols",
+    "system": "System",
+    "sources": "Sources",
+    "voice": "Voice",
+    "usage": "Usage",
+    "tools": "Tools",
+    "settings": "Settings",
+}
+PAGE_ICONS = {
+    "overview": "space_dashboard",
+    "activity": "monitoring",
+    "protocols": "account_tree",
+    "system": "memory",
+    "sources": "library_books",
+    "voice": "graphic_eq",
+    "usage": "bar_chart",
+    "tools": "widgets",
+    "settings": "settings",
+}
 """Material Symbols for the navigation rail (approved mockup)."""
 
 MODE_DESCRIPTIONS = {
@@ -71,15 +89,20 @@ MODE_DESCRIPTIONS = {
 }
 STANDBY_DESCRIPTION = "Standing by — say “Hey Garvis” to wake me."
 
-GiB = 1024 ** 3
-MiB = 1024 ** 2
+GiB = 1024**3
+MiB = 1024**2
 
 
 # --------------------------------------------------------------------------
 # Small helpers
 # --------------------------------------------------------------------------
-def label(text: str = "", role: str | None = None, parent: QWidget | None = None, wrap: bool = False,
-          spacing: float | None = None) -> QLabel:
+def label(
+    text: str = "",
+    role: str | None = None,
+    parent: QWidget | None = None,
+    wrap: bool = False,
+    spacing: float | None = None,
+) -> QLabel:
     widget = QLabel(text, parent)
     if role:
         widget.setProperty("role", role)
@@ -130,8 +153,7 @@ def icon_label(name: str, pixel_size: int = 18, color: str = theme.ACCENT_TEXT, 
         # The style sheet (not setFont): the window-wide QWidget rule would override a plain font.
         family = fonts.ICONS_FILLED if filled else fonts.ICONS
         widget.setText(char)
-        widget.setStyleSheet(f"color: {color}; font-family: '{family}'; font-size: {pixel_size}px; "
-                             "font-weight: 400;")
+        widget.setStyleSheet(f"color: {color}; font-family: '{family}'; font-size: {pixel_size}px; font-weight: 400;")
         widget.setFixedSize(pixel_size + 2, pixel_size + 2)
         widget.setAlignment(Qt.AlignmentFlag.AlignCenter)
     else:
@@ -250,19 +272,51 @@ def open_url(url: str) -> bool:
 CARD_RADIUS = 18.0
 
 _PANEL_ICONS = {
-    "status": "bolt", "this computer": "memory", "ai usage · estimated": "bar_chart", "alerts": "notifications",
-    "current task": "task_alt", "conversation": "forum", "tool log": "receipt_long", "tasks": "checklist",
-    "requests": "history", "sources": "library_books", "live state": "graphic_eq", "controls": "tune",
-    "engine": "settings_voice", "timeline": "timeline", "estimated spend": "payments", "today": "today",
-    "estimated cost per day · last 14 days": "bar_chart", "recent requests": "list", "model": "neurology",
-    "voice": "record_voice_over", "desktop & browser": "desktop_windows", "phone": "smartphone",
-    "interface": "palette", "system monitor": "monitor_heart", "processor": "memory", "memory": "memory_alt",
-    "garvis process": "deployed_code", "storage": "hard_drive", "graphics": "developer_board",
-    "machine & monitoring": "computer", "integrations": "hub", "library": "folder_open", "protocol": "account_tree",
-    "steps": "format_list_numbered", "checks": "fact_check", "latest run": "play_circle",
-    "planned — not implemented yet": "schedule", "web & research": "travel_explore",
-    "browser automation": "web", "desktop control": "mouse", "applications & system": "apps", "files": "folder",
-    "communication": "mail", "memory & utilities": "lightbulb", "other tools": "extension",
+    "status": "bolt",
+    "this computer": "memory",
+    "ai usage · estimated": "bar_chart",
+    "alerts": "notifications",
+    "current task": "task_alt",
+    "conversation": "forum",
+    "tool log": "receipt_long",
+    "tasks": "checklist",
+    "requests": "history",
+    "sources": "library_books",
+    "live state": "graphic_eq",
+    "controls": "tune",
+    "engine": "settings_voice",
+    "timeline": "timeline",
+    "estimated spend": "payments",
+    "today": "today",
+    "estimated cost per day · last 14 days": "bar_chart",
+    "recent requests": "list",
+    "model": "neurology",
+    "voice": "record_voice_over",
+    "desktop & browser": "desktop_windows",
+    "phone": "smartphone",
+    "interface": "palette",
+    "system monitor": "monitor_heart",
+    "processor": "memory",
+    "memory": "memory_alt",
+    "garvis process": "deployed_code",
+    "storage": "hard_drive",
+    "graphics": "developer_board",
+    "machine & monitoring": "computer",
+    "integrations": "hub",
+    "library": "folder_open",
+    "protocol": "account_tree",
+    "steps": "format_list_numbered",
+    "checks": "fact_check",
+    "latest run": "play_circle",
+    "planned — not implemented yet": "schedule",
+    "web & research": "travel_explore",
+    "browser automation": "web",
+    "desktop control": "mouse",
+    "applications & system": "apps",
+    "files": "folder",
+    "communication": "mail",
+    "memory & utilities": "lightbulb",
+    "other tools": "extension",
 }
 """Card-title icons (approved mockup style), by title; titles not listed have none."""
 
@@ -279,8 +333,15 @@ def card_path(rect: QRectF, radius: float = CARD_RADIUS) -> QPainterPath:
     return path
 
 
-def paint_card(painter: QPainter, rect: QRectF, radius: float = CARD_RADIUS, alpha: float = 0.78,
-               top: QColor | None = None, bottom: QColor | None = None, border: QColor | None = None) -> None:
+def paint_card(
+    painter: QPainter,
+    rect: QRectF,
+    radius: float = CARD_RADIUS,
+    alpha: float = 0.78,
+    top: QColor | None = None,
+    bottom: QColor | None = None,
+    border: QColor | None = None,
+) -> None:
     """The approved card: a soft vertical gradient around #102440 -> #0B1A2F,
     a hairline border and a faint top highlight."""
     painter.save()
@@ -294,8 +355,9 @@ def paint_card(painter: QPainter, rect: QRectF, radius: float = CARD_RADIUS, alp
     painter.drawPath(path)
     painter.setClipPath(path)
     painter.setPen(QPen(QColor(255, 255, 255, 11), 1))
-    painter.drawLine(QPointF(rect.left() + radius * 0.6, rect.top() + 1.0),
-                     QPointF(rect.right() - radius * 0.6, rect.top() + 1.0))
+    painter.drawLine(
+        QPointF(rect.left() + radius * 0.6, rect.top() + 1.0), QPointF(rect.right() - radius * 0.6, rect.top() + 1.0)
+    )
     painter.restore()
 
 
@@ -421,8 +483,9 @@ def _bar_fill(rect: QRectF, color: QColor | None) -> QBrush:
     return QBrush(gradient)
 
 
-def paint_bar(painter: QPainter, width: float, height: float, ratio: float, color: QColor | None,
-              thickness: float = 6.0) -> None:
+def paint_bar(
+    painter: QPainter, width: float, height: float, ratio: float, color: QColor | None, thickness: float = 6.0
+) -> None:
     """A rounded track with a filled share (Electric Blue gradient unless a tone colour is given)."""
     painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
     thickness = min(thickness, height)
@@ -441,8 +504,9 @@ def paint_bar(painter: QPainter, width: float, height: float, ratio: float, colo
 class BudgetBar(QWidget):
     """Spend vs. limit, as a rounded meter (amber from `warn`, red from `error`)."""
 
-    def __init__(self, parent: QWidget | None = None, warn: float = 0.75, error: float = 1.0,
-                 segments: int = 40) -> None:
+    def __init__(
+        self, parent: QWidget | None = None, warn: float = 0.75, error: float = 1.0, segments: int = 40
+    ) -> None:
         super().__init__(parent)
         self._ratio = 0.0
         self._warn, self._error = warn, error
@@ -492,8 +556,14 @@ class Sparkline(QWidget):
     """A real time series (app/ui/telemetry.py Series) over the last
     `span` seconds. Gaps in sampling stay gaps; nothing is interpolated."""
 
-    def __init__(self, color: str, ceiling: float | None = 100.0, span: float = 120.0, height: int = 34,
-                 parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        color: str,
+        ceiling: float | None = 100.0,
+        span: float = 120.0,
+        height: int = 34,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self._color = QColor(color)
         self._ceiling = ceiling
@@ -602,8 +672,11 @@ class ArcGauge(QWidget):
             painter.drawArc(rect, int(start * 16), int(sweep * value / 100 * 16))
         painter.setPen(QColor(theme.TEXT_1) if value is not None else QColor(theme.TEXT_3))
         painter.setFont(theme.display_font(17, QFont.Weight.Bold))
-        painter.drawText(QRectF(0, c.y() - 24, self.width(), 32), Qt.AlignmentFlag.AlignCenter,
-                         "—" if value is None else f"{value:.0f}%")
+        painter.drawText(
+            QRectF(0, c.y() - 24, self.width(), 32),
+            Qt.AlignmentFlag.AlignCenter,
+            "—" if value is None else f"{value:.0f}%",
+        )
         painter.setPen(QColor(theme.TEXT_2))
         painter.setFont(theme.text_font(11, QFont.Weight.Medium))
         painter.drawText(QRectF(0, c.y() + 8, self.width(), 15), Qt.AlignmentFlag.AlignCenter, self._caption)
@@ -638,8 +711,11 @@ class CoreGrid(QWidget):
         if not loads:
             painter.setPen(QColor(theme.TEXT_3))
             painter.setFont(theme.text_font(12))
-            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
-                             "Per-core load appears after the second sample.")
+            painter.drawText(
+                self.rect(),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                "Per-core load appears after the second sample.",
+            )
             painter.end()
             return
         n = len(loads)
@@ -722,8 +798,9 @@ class UsageTrend(QWidget):
                 painter.drawRoundedRect(QRectF(x, chart_h - 2, width, 2), 1, 1)
             if i in (0, n - 1) or (n > 7 and i == n // 2):
                 painter.setPen(QColor(theme.TEXT_3))
-                painter.drawText(QRectF(x - 20, chart_h + 3, width + 40, 13), Qt.AlignmentFlag.AlignCenter,
-                                 day["day"][5:])
+                painter.drawText(
+                    QRectF(x - 20, chart_h + 3, width + 40, 13), Qt.AlignmentFlag.AlignCenter, day["day"][5:]
+                )
         painter.setPen(QColor(theme.TEXT_2))
         painter.drawText(QRectF(0, 0, 44, 14), Qt.AlignmentFlag.AlignLeft, money(peak))
         painter.drawText(QRectF(0, chart_h - 14, 44, 14), Qt.AlignmentFlag.AlignLeft, "$0")
@@ -811,8 +888,12 @@ _NAV_ICONS = PAGES
 def _mix(a: str | QColor, b: str | QColor, t: float) -> QColor:
     ca, cb = QColor(a), QColor(b)
     t = max(0.0, min(1.0, t))
-    return QColor(int(ca.red() + (cb.red() - ca.red()) * t), int(ca.green() + (cb.green() - ca.green()) * t),
-                  int(ca.blue() + (cb.blue() - ca.blue()) * t), int(ca.alpha() + (cb.alpha() - ca.alpha()) * t))
+    return QColor(
+        int(ca.red() + (cb.red() - ca.red()) * t),
+        int(ca.green() + (cb.green() - ca.green()) * t),
+        int(ca.blue() + (cb.blue() - ca.blue()) * t),
+        int(ca.alpha() + (cb.alpha() - ca.alpha()) * t),
+    )
 
 
 def _paint_icon(painter: QPainter, kind: str, center: QPointF, size: float, color: QColor) -> None:
@@ -834,8 +915,9 @@ def _paint_icon(painter: QPainter, kind: str, center: QPointF, size: float, colo
         painter.drawPath(path)
     elif kind == "sources":
         for k, offset in enumerate((-0.55, 0.0, 0.55)):
-            painter.drawLine(QPointF(x - s * 0.9 + (0.3 if k == 0 else 0) * s, y + offset * s),
-                             QPointF(x + s * 0.9, y + offset * s))
+            painter.drawLine(
+                QPointF(x - s * 0.9 + (0.3 if k == 0 else 0) * s, y + offset * s), QPointF(x + s * 0.9, y + offset * s)
+            )
         painter.drawEllipse(QPointF(x - s * 0.9, y - 0.55 * s), s * 0.12, s * 0.12)
     elif kind == "voice":
         for k, height in enumerate((0.35, 0.75, 1.0, 0.6, 0.3)):
@@ -849,10 +931,12 @@ def _paint_icon(painter: QPainter, kind: str, center: QPointF, size: float, colo
         painter.drawRect(QRectF(x - s * 0.55, y - s * 0.55, s * 1.1, s * 1.1))
         painter.drawRect(QRectF(x - s * 0.2, y - s * 0.2, s * 0.4, s * 0.4))
         for k in (-0.3, 0.0, 0.3):
-            for a, b in (((x + k * s, y - s * 0.55), (x + k * s, y - s * 0.85)),
-                         ((x + k * s, y + s * 0.55), (x + k * s, y + s * 0.85)),
-                         ((x - s * 0.55, y + k * s), (x - s * 0.85, y + k * s)),
-                         ((x + s * 0.55, y + k * s), (x + s * 0.85, y + k * s))):
+            for a, b in (
+                ((x + k * s, y - s * 0.55), (x + k * s, y - s * 0.85)),
+                ((x + k * s, y + s * 0.55), (x + k * s, y + s * 0.85)),
+                ((x - s * 0.55, y + k * s), (x - s * 0.85, y + k * s)),
+                ((x + s * 0.55, y + k * s), (x + s * 0.85, y + k * s)),
+            ):
                 painter.drawLine(QPointF(*a), QPointF(*b))
     elif kind == "protocols":
         nodes = (QPointF(x - s * 0.6, y - s * 0.6), QPointF(x + s * 0.6, y), QPointF(x - s * 0.6, y + s * 0.6))
@@ -871,8 +955,10 @@ def _paint_icon(painter: QPainter, kind: str, center: QPointF, size: float, colo
         painter.drawEllipse(center, s * 0.45, s * 0.45)
         for k in range(8):
             angle = k * math.pi / 4
-            painter.drawLine(QPointF(x + math.cos(angle) * s * 0.68, y + math.sin(angle) * s * 0.68),
-                             QPointF(x + math.cos(angle) * s, y + math.sin(angle) * s))
+            painter.drawLine(
+                QPointF(x + math.cos(angle) * s * 0.68, y + math.sin(angle) * s * 0.68),
+                QPointF(x + math.cos(angle) * s, y + math.sin(angle) * s),
+            )
     painter.restore()
 
 
@@ -1020,8 +1106,11 @@ class GlyphButton(_HoverMixin, QAbstractButton):
             painter.scale(0.98, 0.98)
             painter.translate(-rect.center())
         if self._hover > 0.001:
-            fill = (QColor(240, 106, 106, int(60 * self._hover)) if self.kind == "quit"
-                    else QColor(58, 146, 230, int(30 * self._hover)))
+            fill = (
+                QColor(240, 106, 106, int(60 * self._hover))
+                if self.kind == "quit"
+                else QColor(58, 146, 230, int(30 * self._hover))
+            )
             painter.setPen(Qt.PenStyle.NoPen)
             painter.setBrush(fill)
             painter.drawRoundedRect(rect.adjusted(1, 1, -1, -1), 10, 10)
@@ -1038,8 +1127,9 @@ class GlyphButton(_HoverMixin, QAbstractButton):
             painter.drawRect(QRectF(c.x() - 5, c.y() - 5, 10, 10))
         elif self.kind == "restore":
             painter.drawRect(QRectF(c.x() - 5, c.y() - 3, 8, 8))
-            painter.drawPolyline([QPointF(c.x() - 3, c.y() - 5), QPointF(c.x() + 5, c.y() - 5),
-                                  QPointF(c.x() + 5, c.y() + 3)])
+            painter.drawPolyline(
+                [QPointF(c.x() - 3, c.y() - 5), QPointF(c.x() + 5, c.y() - 5), QPointF(c.x() + 5, c.y() + 3)]
+            )
         elif self.kind == "quit":
             painter.drawLine(QPointF(c.x() - 5, c.y() - 5), QPointF(c.x() + 5, c.y() + 5))
             painter.drawLine(QPointF(c.x() + 5, c.y() - 5), QPointF(c.x() - 5, c.y() + 5))
@@ -1116,8 +1206,10 @@ class TitleBar(QWidget):
         self.key_chip = label(f"{icon}&nbsp; API key missing" if icon else "API key missing", "titleChip")
         self.key_chip.setTextFormat(Qt.TextFormat.RichText)
         self.key_chip.setProperty("tone", "warn")
-        self.key_chip.setToolTip("ANTHROPIC_API_KEY is not set in Garvis's .env: every model request fails until "
-                                 "it is added (python scripts/check_anthropic.py --set-key).")
+        self.key_chip.setToolTip(
+            "ANTHROPIC_API_KEY is not set in Garvis's .env: every model request fails until "
+            "it is added (python scripts/check_anthropic.py --set-key)."
+        )
         self.key_chip.hide()
         layout.addWidget(self.key_chip, 0, Qt.AlignmentFlag.AlignVCenter)
         self.model_chip = label("—", "titleChip")
@@ -1344,8 +1436,9 @@ class StatusMark(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         if self.success == "warn":
-            painter.setPen(QPen(QColor(theme.WARN), 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap,
-                                Qt.PenJoinStyle.RoundJoin))
+            painter.setPen(
+                QPen(QColor(theme.WARN), 1.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+            )
             painter.drawPolygon([QPointF(7, 1.8), QPointF(12.6, 12), QPointF(1.4, 12)])
             painter.drawLine(QPointF(7, 5.2), QPointF(7, 8.4))
             painter.drawPoint(QPointF(7, 10.4))
@@ -1393,8 +1486,10 @@ class ToggleSwitch(QCheckBox):
     def sizeHint(self) -> QSize:  # noqa: N802 (Qt override)
         shown = self.text() and not self.compact
         text_width = QFontMetrics(self.font()).horizontalAdvance(self.text()) + 2 if shown else 0
-        return QSize(int(self.TRACK_W) + (10 + text_width if text_width else 0) + 2,
-                     max(int(self.TRACK_H) + 2, QFontMetrics(self.font()).height() + 4))
+        return QSize(
+            int(self.TRACK_W) + (10 + text_width if text_width else 0) + 2,
+            max(int(self.TRACK_H) + 2, QFontMetrics(self.font()).height() + 4),
+        )
 
     def minimumSizeHint(self) -> QSize:  # noqa: N802 (Qt override)
         return self.sizeHint()
@@ -1433,8 +1528,11 @@ class ToggleSwitch(QCheckBox):
         if self.text() and not self.compact:
             painter.setPen(QColor(theme.TEXT_2 if enabled else theme.TEXT_3))
             painter.setFont(self.font())
-            painter.drawText(QRectF(track.right() + 10, 0, self.width() - track.right() - 10, h),
-                             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter, self.text())
+            painter.drawText(
+                QRectF(track.right() + 10, 0, self.width() - track.right() - 10, h),
+                Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                self.text(),
+            )
         painter.end()
 
 
@@ -1507,8 +1605,13 @@ class _MeterBar(QWidget):
 
     def paintEvent(self, event) -> None:  # noqa: N802 (Qt override)
         painter = QPainter(self)
-        paint_bar(painter, self.width(), self.height(), self.ratio,
-                  QColor(TONE_COLORS[self.tone]) if self.tone in ("warn", "error") else None)
+        paint_bar(
+            painter,
+            self.width(),
+            self.height(),
+            self.ratio,
+            QColor(TONE_COLORS[self.tone]) if self.tone in ("warn", "error") else None,
+        )
         painter.end()
 
 
@@ -1537,8 +1640,9 @@ class MeterLine(QWidget):
         grid.setColumnStretch(1, 1)
         self.series = None
 
-    def set(self, value: str, detail: str = "", series=None, tone: str | None = None,
-            percent: float | None = None) -> None:
+    def set(
+        self, value: str, detail: str = "", series=None, tone: str | None = None, percent: float | None = None
+    ) -> None:
         self.value_label.setText(value)
         set_text_color(self.value_label, TONE_COLORS.get(tone or "", ""))
         self.detail_label.setText(detail)
@@ -1577,8 +1681,9 @@ class OverviewPage(Page):
     LEFT_MIN, RIGHT_MIN, CENTER_MIN = 232, 250, 300
     GAP = 16
 
-    def __init__(self, state: GarvisState, info: dict, level_source, conversation_view: QTextEdit,
-                 parent: QWidget | None = None) -> None:
+    def __init__(
+        self, state: GarvisState, info: dict, level_source, conversation_view: QTextEdit, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         self._state = state
         self._info = info
@@ -1665,8 +1770,7 @@ class OverviewPage(Page):
         links.addStretch(1)
         self._links_row = links
         self.quick_links: dict[str, QPushButton] = {}
-        for key, text in (("activity", "Activity"), ("sources", "Sources"), ("tools", "Tools"),
-                          ("voice", "Voice")):
+        for key, text in (("activity", "Activity"), ("sources", "Sources"), ("tools", "Tools"), ("voice", "Voice")):
             button = chip_button(text)
             button.clicked.connect(lambda _checked=False, k=key: self.open_page.emit(k))
             links.addWidget(button)
@@ -1711,8 +1815,14 @@ class OverviewPage(Page):
         self._elapsed_timer = QTimer(self)
         self._elapsed_timer.setInterval(1000)
         self._elapsed_timer.timeout.connect(self._render_task)
-        for signal in (state.mode_changed, state.status_changed, state.activity_changed, state.errors_changed,
-                       state.voice_changed, state.sources_changed):
+        for signal in (
+            state.mode_changed,
+            state.status_changed,
+            state.activity_changed,
+            state.errors_changed,
+            state.voice_changed,
+            state.sources_changed,
+        ):
             signal.connect(self.mark_dirty)
         state.mode_changed.connect(self.core.set_mode)
         state.voice_changed.connect(lambda: self.core.set_standby(state.standby))
@@ -1782,8 +1892,11 @@ class OverviewPage(Page):
         self.status.set("Model", info.get("model", "—"))
         if "api_key_configured" in info:
             configured = info["api_key_configured"]
-            self.status.set("API key", "Configured" if configured else "Not set — requests will fail",
-                            "ok" if configured else "warn")
+            self.status.set(
+                "API key",
+                "Configured" if configured else "Not set — requests will fail",
+                "ok" if configured else "warn",
+            )
         self.status.set("Requests", f"{plural(len(state.turns), 'request')} · {plural(state.tool_calls, 'tool step')}")
 
         sources = self.quick_links["sources"]
@@ -1796,11 +1909,14 @@ class OverviewPage(Page):
         usage, info = self._usage, self._info
         if usage and usage.get("available"):
             today, month = usage["today"], usage["month"]
-            hint = ("Estimated from provider-reported tokens × config/models.json prices (local ledger). "
-                    "Not a bill — the Anthropic Console is authoritative.")
+            hint = (
+                "Estimated from provider-reported tokens × config/models.json prices (local ledger). "
+                "Not a bill — the Anthropic Console is authoritative."
+            )
             self.tile_cost.set_value(money(today["cost_usd"]), hint)
-            self.tile_requests.set_value(str(today["calls"]), "Model requests today, from the local ledger.",
-                                         "warn" if today["errors"] else None)
+            self.tile_requests.set_value(
+                str(today["calls"]), "Model requests today, from the local ledger.", "warn" if today["errors"] else None
+            )
             self.tile_month.set_value(money(month["cost_usd"]), hint)
             daily = info.get("daily_budget_usd")
             if daily and info.get("budget_enabled", True):
@@ -1840,8 +1956,13 @@ class OverviewPage(Page):
         gpu = None
         if latest_detail is not None and snap.at - latest_detail.at <= 15.0:
             gpu = latest_detail.gpu_percent
-        self.gpu_line.set(fmt_percent(gpu), "" if gpu is not None else "Live on the System page", series.get("gpu"),
-                          load_tone(gpu), percent=gpu)
+        self.gpu_line.set(
+            fmt_percent(gpu),
+            "" if gpu is not None else "Live on the System page",
+            series.get("gpu"),
+            load_tone(gpu),
+            percent=gpu,
+        )
         self.gpu_line.setToolTip(self._GPU_NOTE)
         process = []
         if snap.process_memory is not None:
@@ -1858,7 +1979,9 @@ class OverviewPage(Page):
             self._elapsed_timer.stop()
             last = state.turns[-1] if state.turns else None
             if last is None:
-                self.task_body.addWidget(label("No task yet. Type below, or start a voice session.", "empty", wrap=True))
+                self.task_body.addWidget(
+                    label("No task yet. Type below, or start a voice session.", "empty", wrap=True)
+                )
                 return
             outcome = "failed" if last.error else "done"
             head = QHBoxLayout()
@@ -1872,8 +1995,9 @@ class OverviewPage(Page):
                 error.setStyleSheet(f"color: {theme.ERROR};")
                 self.task_body.addWidget(error)
             elif last.tools:
-                self.task_body.addWidget(label(f"{plural(len(last.tools), 'tool step')} · details in Activity",
-                                               "faint"))
+                self.task_body.addWidget(
+                    label(f"{plural(len(last.tools), 'tool step')} · details in Activity", "faint")
+                )
             self._add_sources_link(last)
             return
         if not self._elapsed_timer.isActive() and self.isVisible():
@@ -2013,15 +2137,21 @@ class ActivityPage(Page):
     open_sources = Signal(int)
     _MAX_CARDS = 60
 
-    def __init__(self, state: GarvisState, activity_list: QListWidget | None = None,
-                 parent: QWidget | None = None) -> None:
+    def __init__(
+        self, state: GarvisState, activity_list: QListWidget | None = None, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         self._state = state
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        layout.addWidget(PageHeader("Activity", "Every request this session — desktop, voice and phone — with "
-                                    "its tool steps, results and sources. Newest first."))
+        layout.addWidget(
+            PageHeader(
+                "Activity",
+                "Every request this session — desktop, voice and phone — with "
+                "its tool steps, results and sources. Newest first.",
+            )
+        )
         summary = QHBoxLayout()
         summary.setSpacing(28)
         self.stat_requests = Readout("Requests")
@@ -2045,8 +2175,9 @@ class ActivityPage(Page):
         self.log_panel = Panel("Tool log", "")
         if activity_list is not None:
             self.log_panel.body.addWidget(activity_list, 1)
-            self.log_panel.body.addWidget(label("Each tool call as it started and finished, in order.", "faint",
-                                                wrap=True))
+            self.log_panel.body.addWidget(
+                label("Each tool call as it started and finished, in order.", "faint", wrap=True)
+            )
         self.log_panel.setMinimumWidth(240)
         side.addWidget(self.log_panel, 2)
         row.addLayout(side, 2)
@@ -2067,10 +2198,11 @@ class ActivityPage(Page):
         self.stat_sources.set_value(str(state.source_count))
 
         clear_layout(self._column)
-        turns = turns_all[-self._MAX_CARDS:]
+        turns = turns_all[-self._MAX_CARDS :]
         if not turns:
-            self._column.addWidget(label("Nothing yet. Requests appear here as soon as Garvis receives them.", "empty",
-                                         wrap=True))
+            self._column.addWidget(
+                label("Nothing yet. Requests appear here as soon as Garvis receives them.", "empty", wrap=True)
+            )
         for turn in reversed(turns):
             card = TurnCard(turn)
             card.open_sources.connect(self.open_sources)
@@ -2099,8 +2231,11 @@ class SourceCard(QFrame):
             meta.addWidget(chip(source["publisher"]))
         read = source.get("kind") == "read"
         kind_chip = chip("Read by Garvis" if read else "Search result", "ok" if read else None)
-        kind_chip.setToolTip("Garvis opened this page and read its text." if read
-                             else "Listed by the search engine; Garvis saw only this snippet.")
+        kind_chip.setToolTip(
+            "Garvis opened this page and read its text."
+            if read
+            else "Listed by the search engine; Garvis saw only this snippet."
+        )
         meta.addWidget(kind_chip)
         meta.addWidget(label(source.get("tool", ""), "faint"))
         meta.addStretch(1)
@@ -2130,8 +2265,10 @@ class SourcesPage(Page):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        self.header = PageHeader("Sources", "Exactly what Garvis's search and page-reading tools returned — "
-                                 "real titles and links, grouped by request.")
+        self.header = PageHeader(
+            "Sources",
+            "Exactly what Garvis's search and page-reading tools returned — real titles and links, grouped by request.",
+        )
         layout.addWidget(self.header)
         row = QHBoxLayout()
         row.setSpacing(14)
@@ -2143,8 +2280,9 @@ class SourcesPage(Page):
         row.addWidget(self.turn_panel)
         self.detail_panel = Panel("Sources", "")
         self.detail_heading = label("", wrap=True)
-        self.detail_heading.setStyleSheet(f"color: {theme.TEXT_1}; font-family: '{theme.display_family()}'; "
-                                          "font-size: 15px; font-weight: 600;")
+        self.detail_heading.setStyleSheet(
+            f"color: {theme.TEXT_1}; font-family: '{theme.display_family()}'; font-size: 15px; font-weight: 600;"
+        )
         self.detail_panel.body.addWidget(self.detail_heading)
         self.detail_summary = label("", "faint")
         self.detail_panel.body.addWidget(self.detail_summary)
@@ -2173,8 +2311,9 @@ class SourcesPage(Page):
         self.turn_list.blockSignals(True)
         self.turn_list.clear()
         for turn in turns:
-            item = QListWidgetItem(f"{clock_time(turn.started_at)}  ·  {elide(turn.request, 60)}\n"
-                                   f"{len(turn.sources)} sources")
+            item = QListWidgetItem(
+                f"{clock_time(turn.started_at)}  ·  {elide(turn.request, 60)}\n{len(turn.sources)} sources"
+            )
             item.setData(Qt.ItemDataRole.UserRole, turn.id)
             item.setToolTip(turn.request)
             self.turn_list.addItem(item)
@@ -2194,9 +2333,11 @@ class SourcesPage(Page):
         if turn is None or not turn.sources:
             self.detail_heading.setText("No sources yet")
             self.detail_summary.setText("")
-            message = ("When Garvis searches the web or reads a page, the exact titles and links it used "
-                       "appear here, linked to the request they answered. Answers that needed no lookup "
-                       "have no sources.")
+            message = (
+                "When Garvis searches the web or reads a page, the exact titles and links it used "
+                "appear here, linked to the request they answered. Answers that needed no lookup "
+                "have no sources."
+            )
             if turn is not None:
                 message = "This request used no web sources."
             self._cards.addWidget(label(message, "empty", wrap=True))
@@ -2205,24 +2346,37 @@ class SourcesPage(Page):
         self.detail_heading.setText(turn.request)
         read = sum(1 for s in turn.sources if s.get("kind") == "read")
         listed = len(turn.sources) - read
-        self.detail_summary.setText(f"{clock_time(turn.started_at)}  ·  {read} read by Garvis  ·  "
-                                    f"{listed} search results")
+        self.detail_summary.setText(
+            f"{clock_time(turn.started_at)}  ·  {read} read by Garvis  ·  {listed} search results"
+        )
         for index, source in enumerate(turn.sources, start=1):
             self._cards.addWidget(SourceCard(index, source))
         self._cards.addStretch(1)
 
 
 class VoicePage(Page):
-    def __init__(self, state: GarvisState, info: dict, level_source, standby_setter: Callable[[bool], None] | None,
-                 speak_replies: QCheckBox, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        state: GarvisState,
+        info: dict,
+        level_source,
+        standby_setter: Callable[[bool], None] | None,
+        speak_replies: QCheckBox,
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self._state = state
         self._info = info
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        layout.addWidget(PageHeader("Voice", "Local speech: faster-whisper listens, Piper speaks. This page "
-                                    "shows the live state of that pipeline; it does not run one of its own."))
+        layout.addWidget(
+            PageHeader(
+                "Voice",
+                "Local speech: faster-whisper listens, Piper speaks. This page "
+                "shows the live state of that pipeline; it does not run one of its own.",
+            )
+        )
         grid = QGridLayout()
         grid.setHorizontalSpacing(14)
         grid.setVerticalSpacing(12)
@@ -2244,10 +2398,16 @@ class VoicePage(Page):
         if standby_setter is not None:
             self.standby_checkbox.toggled.connect(standby_setter)
         self.controls_panel.body.addWidget(self.standby_checkbox)
-        self.controls_panel.body.addWidget(label("Listens locally for the wake phrase whenever no session or "
-                                                 "push-to-talk turn holds the microphone -- and only while no other "
-                                                 "Garvis device (phone, Eye Station) has the voice. Off at every "
-                                                 "launch: tick it to ask for standby.", "faint", wrap=True))
+        self.controls_panel.body.addWidget(
+            label(
+                "Listens locally for the wake phrase whenever no session or "
+                "push-to-talk turn holds the microphone -- and only while no other "
+                "Garvis device (phone, Eye Station) has the voice. Off at every "
+                "launch: tick it to ask for standby.",
+                "faint",
+                wrap=True,
+            )
+        )
         self.voice_owner_label = label("No device is listening for “Hey Garvis”.", "faint", wrap=True)
         self.voice_owner_label.setObjectName("voiceOwner")
         self.controls_panel.body.addWidget(self.voice_owner_label)
@@ -2295,12 +2455,17 @@ class VoicePage(Page):
         state, info = self._state, self._info
         mode = state.mode
         self.mode_label.setText("Standby" if mode == Mode.IDLE and state.standby else MODE_LABELS[mode])
-        self.state.set("Playback", "Speaking on the PC speakers" if state.playing else "Silent",
-                       "live" if state.playing else None)
-        self.state.set("Push-to-talk", "Recording" if state.push_to_talk else "Off",
-                       "live" if state.push_to_talk else None)
-        self.state.set("Session", state.session_state if state.session_active else "Not running",
-                       "live" if state.session_active else None)
+        self.state.set(
+            "Playback", "Speaking on the PC speakers" if state.playing else "Silent", "live" if state.playing else None
+        )
+        self.state.set(
+            "Push-to-talk", "Recording" if state.push_to_talk else "Off", "live" if state.push_to_talk else None
+        )
+        self.state.set(
+            "Session",
+            state.session_state if state.session_active else "Not running",
+            "live" if state.session_active else None,
+        )
         self.state.set("Wake word", "Armed" if state.standby else "Not listening")
         self.engine.set("Speech to text", info.get("stt", "—"))
         self.engine.set("Language", info.get("stt_language", "—"))
@@ -2326,9 +2491,12 @@ class UsagePage(Page):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        self.header = PageHeader("Usage", "Claude API requests from Garvis's local ledger. Costs are estimates "
-                                 "(provider-reported tokens × config/models.json prices), not a bill — the "
-                                 "Anthropic Console is authoritative.")
+        self.header = PageHeader(
+            "Usage",
+            "Claude API requests from Garvis's local ledger. Costs are estimates "
+            "(provider-reported tokens × config/models.json prices), not a bill — the "
+            "Anthropic Console is authoritative.",
+        )
         self.refresh_button = QPushButton("Refresh")
         set_button_icon(self.refresh_button, "refresh", theme.TEXT_1, 18)
         self.refresh_button.clicked.connect(self.refresh_requested)
@@ -2400,23 +2568,31 @@ class UsagePage(Page):
         if daily_rows:
             total = sum(d["cost_usd"] for d in daily_rows)
             calls = sum(d["calls"] for d in daily_rows)
-            self.trend_caption.setText(f"{money(total)} over {len(daily_rows)} days · {calls} requests · "
-                                       "estimates from the local ledger, not a bill")
+            self.trend_caption.setText(
+                f"{money(total)} over {len(daily_rows)} days · {calls} requests · "
+                "estimates from the local ledger, not a bill"
+            )
         today, month = usage["today"], usage["month"]
         daily, monthly = info.get("daily_budget_usd"), info.get("monthly_budget_usd")
         self.day_caption.setText(f"Today  {money(today['cost_usd'])}" + (f"  /  {money(daily)}" if daily else ""))
-        self.month_caption.setText(f"This month  {money(month['cost_usd'])}"
-                                   + (f"  /  {money(monthly)}" if monthly else ""))
+        self.month_caption.setText(
+            f"This month  {money(month['cost_usd'])}" + (f"  /  {money(monthly)}" if monthly else "")
+        )
         self.day_bar.set_ratio(today["cost_usd"] / daily if daily else 0)
         self.month_bar.set_ratio(month["cost_usd"] / monthly if monthly else 0)
         if info.get("budget_enabled") is False:
             self.budget_note.setText("Local spending limits are off (GARVIS_LLM_BUDGET_ENABLED=false).")
         elif daily or monthly:
-            self.budget_note.setText(f"Garvis stops sending requests at its local limits (per task "
-                                     f"{money(info.get('max_cost_per_task_usd'))}). Set a hard limit in the "
-                                     "Anthropic Console too.")
-        self.today.set("Requests", f"{today['calls']}  ({today['ok']} ok · {today['errors']} failed)",
-                       "warn" if today["errors"] else None)
+            self.budget_note.setText(
+                f"Garvis stops sending requests at its local limits (per task "
+                f"{money(info.get('max_cost_per_task_usd'))}). Set a hard limit in the "
+                "Anthropic Console too."
+            )
+        self.today.set(
+            "Requests",
+            f"{today['calls']}  ({today['ok']} ok · {today['errors']} failed)",
+            "warn" if today["errors"] else None,
+        )
         self.today.set("Tasks", str(today["tasks"]))
         self.today.set("Input tokens", tokens(today["input_tokens"]))
         self.today.set("Output tokens", tokens(today["output_tokens"]))
@@ -2453,9 +2629,14 @@ class SettingsPage(Page):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        layout.addWidget(PageHeader("Settings", "Values below come from Garvis's .env (secrets are never shown). "
-                                    "Edit .env and restart Garvis to change them. Interface preferences apply "
-                                    "immediately."))
+        layout.addWidget(
+            PageHeader(
+                "Settings",
+                "Values below come from Garvis's .env (secrets are never shown). "
+                "Edit .env and restart Garvis to change them. Interface preferences apply "
+                "immediately.",
+            )
+        )
         area, column = scroll_column(self)
         layout.addWidget(area, 1)
         grid = QGridLayout()
@@ -2493,13 +2674,20 @@ class SettingsPage(Page):
         self.corner_combo = QComboBox()
         for corner in CORNERS:
             self.corner_combo.addItem(CORNER_LABELS[corner], corner)
-        self.corner_combo.activated.connect(lambda index: self.orb_corner_changed.emit(self.corner_combo.itemData(index)))
+        self.corner_combo.activated.connect(
+            lambda index: self.orb_corner_changed.emit(self.corner_combo.itemData(index))
+        )
         corner_row.addWidget(self.corner_combo)
         corner_row.addStretch(1)
         self.interface_panel.body.addLayout(corner_row)
-        self.interface_panel.body.addWidget(label("Choosing a corner moves the orb there (on the primary screen); "
-                                                  "drag the orb anywhere, on any monitor, and it stays put.",
-                                                  "faint", wrap=True))
+        self.interface_panel.body.addWidget(
+            label(
+                "Choosing a corner moves the orb there (on the primary screen); "
+                "drag the orb anywhere, on any monitor, and it stays put.",
+                "faint",
+                wrap=True,
+            )
+        )
         self.animations_checkbox = ToggleSwitch("Orb ↔ dashboard animation")
         self.animations_checkbox.setChecked(True)
         self.animations_checkbox.toggled.connect(self.animations_changed)
@@ -2515,8 +2703,7 @@ class SettingsPage(Page):
         self.telemetry.set("Sampling", "Background thread · 1 s on System · 2 s elsewhere · off when collapsed")
         self.telemetry.set("Model calls", "None — telemetry never uses the API")
         self.telemetry_panel.body.addWidget(self.telemetry)
-        self.telemetry_panel.body.addWidget(label("Planned features are listed on the Tools page.", "faint",
-                                                  wrap=True))
+        self.telemetry_panel.body.addWidget(label("Planned features are listed on the Tools page.", "faint", wrap=True))
         self.telemetry_panel.body.addStretch(1)
         grid.addWidget(self.telemetry_panel, 2, 1)
         grid.setColumnStretch(0, 1)
@@ -2537,8 +2724,9 @@ class SettingsPage(Page):
                 widget.setChecked(value)
                 widget.blockSignals(False)
             self.corner_combo.setCurrentIndex(max(0, self.corner_combo.findData(prefs.orb_corner)))
-        self.interface_note.setText(f"Saved in {state_path}" if available and state_path
-                                    else "Available when Garvis runs with its desktop orb.")
+        self.interface_note.setText(
+            f"Saved in {state_path}" if available and state_path else "Available when Garvis runs with its desktop orb."
+        )
 
     def refresh(self) -> None:
         info = self._info
@@ -2549,12 +2737,18 @@ class SettingsPage(Page):
         self.model.set("Provider", info.get("provider", "—"))
         self.model.set("Model", info.get("model", "—"))
         if "api_key_configured" in info:
-            self.model.set("API key", "Configured" if info["api_key_configured"] else "Not set",
-                           "ok" if info["api_key_configured"] else "warn")
+            self.model.set(
+                "API key",
+                "Configured" if info["api_key_configured"] else "Not set",
+                "ok" if info["api_key_configured"] else "warn",
+            )
         self.model.set("Spending limits", yes_no("budget_enabled"))
         if "daily_budget_usd" in info:
-            self.model.set("Limits", f"{money(info['max_cost_per_task_usd'])} / task · "
-                           f"{money(info['daily_budget_usd'])} / day · {money(info['monthly_budget_usd'])} / month")
+            self.model.set(
+                "Limits",
+                f"{money(info['max_cost_per_task_usd'])} / task · "
+                f"{money(info['daily_budget_usd'])} / day · {money(info['monthly_budget_usd'])} / month",
+            )
         self.model.set("Usage ledger", info.get("usage_db", "—"))
         self.voice.set("Speech to text", info.get("stt", "—"))
         self.voice.set("Language", info.get("stt_language", "—"))
@@ -2584,8 +2778,11 @@ class SystemPage(Page):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        self.header = PageHeader("System", "Live measurements of this computer from Windows' own performance "
-                                 "interfaces — sampled in the background, once a second while this page is open.")
+        self.header = PageHeader(
+            "System",
+            "Live measurements of this computer from Windows' own performance "
+            "interfaces — sampled in the background, once a second while this page is open.",
+        )
         self.live_chip = chip("Paused")
         self.live_chip.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.refreshed_label = label("", "faint")
@@ -2702,8 +2899,10 @@ class SystemPage(Page):
         snap = snap or latest
 
         # Processor
-        self.cpu_gauge.set_value(snap.cpu_percent if snap else None,
-                                 f"{static.logical_cpus} threads" if static and static.logical_cpus else "")
+        self.cpu_gauge.set_value(
+            snap.cpu_percent if snap else None,
+            f"{static.logical_cpus} threads" if static and static.logical_cpus else "",
+        )
         self.cpu_spark.set_series(series.get("cpu"))
         self.cpu_info.set("Model", (static.cpu_model if static else None) or "Unavailable")
         self.cpu_info.set("Logical processors", str(static.logical_cpus) if static and static.logical_cpus else "—")
@@ -2715,8 +2914,9 @@ class SystemPage(Page):
         self.core_grid.set_loads(snap.per_core if snap else None)
 
         # Memory
-        self.ram_gauge.set_value(snap.ram_percent if snap else None,
-                                 fmt_bytes(snap.ram_total, 0) if snap and snap.ram_total else "")
+        self.ram_gauge.set_value(
+            snap.ram_percent if snap else None, fmt_bytes(snap.ram_total, 0) if snap and snap.ram_total else ""
+        )
         self.ram_spark.set_series(series.get("ram"))
         self.ram_info.set("In use", fmt_bytes(snap.ram_used) if snap else "—")
         self.ram_info.set("Available", fmt_bytes(snap.ram_available) if snap else "—")
@@ -2727,8 +2927,12 @@ class SystemPage(Page):
 
         # Garvis process
         proc_cpu = snap.process_cpu_percent if snap else None
-        self.process_cpu.set(f"{proc_cpu:.1f}%" if proc_cpu is not None else "—", "", series.get("process_cpu"),
-                             load_tone(proc_cpu, 50.0, 80.0))
+        self.process_cpu.set(
+            f"{proc_cpu:.1f}%" if proc_cpu is not None else "—",
+            "",
+            series.get("process_cpu"),
+            load_tone(proc_cpu, 50.0, 80.0),
+        )
         self.process_memory.set(fmt_bytes(snap.process_memory) if snap else "—", "", series.get("process_memory"))
         self.process_info.set("Private memory", fmt_bytes(snap.process_private) if snap else "—")
         self.process_info.set("Measured", "This process only — the app, its agent loop and voice pipeline")
@@ -2737,8 +2941,9 @@ class SystemPage(Page):
         disks = snap.disks if snap is not None else None
         if not disks:
             if not self._disk_widgets and self.disk_rows.count() == 0:
-                self.disk_rows.addWidget(label("Drive capacity appears with the first detailed sample.", "empty",
-                                               wrap=True))
+                self.disk_rows.addWidget(
+                    label("Drive capacity appears with the first detailed sample.", "empty", wrap=True)
+                )
         else:
             if not self._disk_widgets:
                 clear_layout(self.disk_rows)
@@ -2758,22 +2963,24 @@ class SystemPage(Page):
                     self.disk_rows.addLayout(row)
                     widgets = self._disk_widgets[disk.root] = (name, bar, text)
                 widgets[1].set_ratio(disk.used / disk.total if disk.total else 0)
-                widgets[2].setText(f"{fmt_bytes(disk.used, 0)} / {fmt_bytes(disk.total, 0)} · "
-                                   f"{fmt_bytes(disk.free, 0)} free")
+                widgets[2].setText(
+                    f"{fmt_bytes(disk.used, 0)} / {fmt_bytes(disk.total, 0)} · {fmt_bytes(disk.free, 0)} free"
+                )
         self.disk_read.set(fmt_rate(snap.disk_read_bps) if snap else "—", "", series.get("disk_read"))
         self.disk_write.set(fmt_rate(snap.disk_write_bps) if snap else "—", "", series.get("disk_write"))
 
         # Graphics
         gpus = static.gpus if static else ()
         gpu = snap.gpu_percent if snap else None
-        self.gpu_line.set(fmt_percent(gpu) if gpu is not None else "Unavailable", "", series.get("gpu"),
-                          load_tone(gpu))
+        self.gpu_line.set(fmt_percent(gpu) if gpu is not None else "Unavailable", "", series.get("gpu"), load_tone(gpu))
         self.gpu_info.set("Adapter", "  ·  ".join(g.name for g in gpus) if gpus else "Unavailable")
         dedicated_total = next((g.dedicated_bytes for g in gpus if g.dedicated_bytes), None)
         used = snap.gpu_memory_used if snap else None
         if used is not None:
-            self.gpu_info.set("Dedicated memory", f"{fmt_bytes(used)} in use"
-                              + (f" of {fmt_bytes(dedicated_total)}" if dedicated_total else ""))
+            self.gpu_info.set(
+                "Dedicated memory",
+                f"{fmt_bytes(used)} in use" + (f" of {fmt_bytes(dedicated_total)}" if dedicated_total else ""),
+            )
         else:
             self.gpu_info.set("Dedicated memory", "Unavailable")
         shared = snap.gpu_shared_used if snap else None
@@ -2787,8 +2994,7 @@ class SystemPage(Page):
         cadence = "1 s on this page · 2 s elsewhere in the dashboard · stopped while collapsed"
         self.machine_info.set("Sampling", cadence)
         errors = latest.errors if latest is not None else ()
-        self.machine_info.set("Sampling errors", "; ".join(errors) if errors else "None",
-                              "warn" if errors else None)
+        self.machine_info.set("Sampling errors", "; ".join(errors) if errors else "None", "warn" if errors else None)
 
 
 # --------------------------------------------------------------------------
@@ -2797,13 +3003,42 @@ class SystemPage(Page):
 TOOL_GROUPS: tuple[tuple[str, str, tuple[str, ...]], ...] = (
     ("web", "Web & research", ("web_research", "web_search", "fetch_webpage_text", "open_website")),
     ("browser", "Browser automation", ("browser_",)),
-    ("desktop", "Desktop control", ("mouse_", "keyboard_", "scroll", "screen_", "list_windows", "focus_window",
-                                    "switch_window", "window_action", "wait_for_window", "read_screen_text",
-                                    "inspect_ui", "click_ui_element", "switch_workspace")),
-    ("apps", "Applications & system", ("open_application", "list_installed_apps", "list_processes",
-                                        "system_status", "recent_system_errors", "run_powershell")),
-    ("files", "Files", ("open_path", "list_directory", "read_text_file", "find_files", "write_text_file",
-                        "edit_text_file")),
+    (
+        "desktop",
+        "Desktop control",
+        (
+            "mouse_",
+            "keyboard_",
+            "scroll",
+            "screen_",
+            "list_windows",
+            "focus_window",
+            "switch_window",
+            "window_action",
+            "wait_for_window",
+            "read_screen_text",
+            "inspect_ui",
+            "click_ui_element",
+            "switch_workspace",
+        ),
+    ),
+    (
+        "apps",
+        "Applications & system",
+        (
+            "open_application",
+            "list_installed_apps",
+            "list_processes",
+            "system_status",
+            "recent_system_errors",
+            "run_powershell",
+        ),
+    ),
+    (
+        "files",
+        "Files",
+        ("open_path", "list_directory", "read_text_file", "find_files", "write_text_file", "edit_text_file"),
+    ),
     ("mail", "Communication", ("gmail_",)),
     ("memory", "Memory & utilities", ("remember_fact", "recall_facts", "calculator", "get_current_datetime")),
 )
@@ -2847,54 +3082,105 @@ def integration_rows(info: dict, telemetry_supported: bool = True) -> list[dict]
 
     if "api_key_configured" in info:
         ok = info["api_key_configured"]
-        add(f"{info.get('model', 'Claude')} · Anthropic API", "Configured" if ok else "API key missing",
-            "ok" if ok else "warn", "The only model Garvis uses — no other model or provider.")
+        add(
+            f"{info.get('model', 'Claude')} · Anthropic API",
+            "Configured" if ok else "API key missing",
+            "ok" if ok else "warn",
+            "The only model Garvis uses — no other model or provider.",
+        )
     if "stt" in info:
-        add("Local speech", "Available", "ok", f"Listens with {info['stt']} · speaks with {info.get('tts', '—')}",
-            ("Voice", "voice"))
+        add(
+            "Local speech",
+            "Available",
+            "ok",
+            f"Listens with {info['stt']} · speaks with {info.get('tts', '—')}",
+            ("Voice", "voice"),
+        )
     if "wake_word_enabled" in info:
-        add("Wake word “Hey Garvis”", "Tick to listen", None,
+        add(
+            "Wake word “Hey Garvis”",
+            "Tick to listen",
+            None,
             "Never claimed at startup: tick it on the Voice page. Only one Garvis device listens at a time.",
-            ("Voice", "voice"))
+            ("Voice", "voice"),
+        )
     if "research_engine" in info:
-        add("Web research", "Available", "ok", f"Searches with {info['research_engine']}, reads pages in Chrome.",
-            ("Sources", "sources"))
+        add(
+            "Web research",
+            "Available",
+            "ok",
+            f"Searches with {info['research_engine']}, reads pages in Chrome.",
+            ("Sources", "sources"),
+        )
         add("Browser automation", "Available", "ok", "Chrome through Playwright, opened on first use.")
     if "desktop_control_enabled" in info:
         on = info["desktop_control_enabled"]
-        add("Desktop control", "Available" if on else "Disabled", "ok" if on else None,
-            "Mouse, keyboard, windows and screen reading — risky steps ask first." if on
-            else "Turned off in Garvis's .env (desktop_control_enabled).")
+        add(
+            "Desktop control",
+            "Available" if on else "Disabled",
+            "ok" if on else None,
+            "Mouse, keyboard, windows and screen reading — risky steps ask first."
+            if on
+            else "Turned off in Garvis's .env (desktop_control_enabled).",
+        )
     if "workspace_enabled" in info:
         on = info["workspace_enabled"]
-        add("Garvis workspace", "Available" if on else "Disabled", "ok" if on else None,
-            "A separate virtual desktop for Garvis's own windows." if on else "Turned off in Garvis's .env.")
+        add(
+            "Garvis workspace",
+            "Available" if on else "Disabled",
+            "ok" if on else None,
+            "A separate virtual desktop for Garvis's own windows." if on else "Turned off in Garvis's .env.",
+        )
     if "gmail_status" in info:
         status = info["gmail_status"]
         label_text, tone, detail = {
             "signed_in": ("Signed in", "ok", "Google sign-in saved on this PC. Sending always asks first."),
-            "sign_in_needed": ("Sign-in on first use", "warn", "Client file present; Google asks you to sign in "
-                                                               "the first time Garvis uses Gmail."),
+            "sign_in_needed": (
+                "Sign-in on first use",
+                "warn",
+                "Client file present; Google asks you to sign in the first time Garvis uses Gmail.",
+            ),
         }.get(status, ("Not configured", None, "No Google OAuth client file — see the README to set Gmail up."))
         add("Gmail", label_text, tone, detail)
     if "mobile_enabled" in info:
         on = info["mobile_enabled"]
-        add("iPhone interface", "Available" if on else "Disabled", "ok" if on else None,
+        add(
+            "iPhone interface",
+            "Available" if on else "Disabled",
+            "ok" if on else None,
             "The same Garvis from Safari on your iPhone." if on else "Turned off in Garvis's .env (mobile_enabled).",
-            ("Pair iPhone…", "pair") if on else None)
-        add("Android interface", "Available" if on else "Disabled", "ok" if on else None,
-            "The same Garvis from Chrome on your Android phone (e.g. Samsung Galaxy)." if on
+            ("Pair iPhone…", "pair") if on else None,
+        )
+        add(
+            "Android interface",
+            "Available" if on else "Disabled",
+            "ok" if on else None,
+            "The same Garvis from Chrome on your Android phone (e.g. Samsung Galaxy)."
+            if on
             else "Turned off in Garvis's .env (mobile_enabled).",
-            ("Pair Android phone…", "pair") if on else None)
+            ("Pair Android phone…", "pair") if on else None,
+        )
     if "budget_enabled" in info:
         on = info["budget_enabled"]
-        add("Spending limits", "On" if on else "Off", "ok" if on else "warn",
+        add(
+            "Spending limits",
+            "On" if on else "Off",
+            "ok" if on else "warn",
             f"Local limits: {money(info.get('max_cost_per_task_usd'))} per task · "
-            f"{money(info.get('daily_budget_usd'))} per day." if on else "Garvis will not stop at a local limit.",
-            ("Usage", "usage"))
-    add("System telemetry", "Live" if telemetry_supported else "Unavailable", "ok" if telemetry_supported else None,
-        "CPU, memory, disks and GPU from Windows' own interfaces." if telemetry_supported
-        else "Live telemetry is only implemented on Windows.", ("System", "system"))
+            f"{money(info.get('daily_budget_usd'))} per day."
+            if on
+            else "Garvis will not stop at a local limit.",
+            ("Usage", "usage"),
+        )
+    add(
+        "System telemetry",
+        "Live" if telemetry_supported else "Unavailable",
+        "ok" if telemetry_supported else None,
+        "CPU, memory, disks and GPU from Windows' own interfaces."
+        if telemetry_supported
+        else "Live telemetry is only implemented on Windows.",
+        ("System", "system"),
+    )
     return rows
 
 
@@ -2988,8 +3274,11 @@ class ToolsPage(Page):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        self.header = PageHeader("Tools", "Everything Garvis can actually do, read from its live tool registry and "
-                                 "configuration. Tools marked “Asks first” never run without your confirmation.")
+        self.header = PageHeader(
+            "Tools",
+            "Everything Garvis can actually do, read from its live tool registry and "
+            "configuration. Tools marked “Asks first” never run without your confirmation.",
+        )
         self.search = QLineEdit()
         self.search.setPlaceholderText("Filter tools…")
         search_icon = fonts.icon("search", theme.TEXT_3, 18)
@@ -3034,8 +3323,9 @@ class ToolsPage(Page):
         catalog = self._catalog
         if catalog is None:
             panel = Panel("Tools", "02")
-            panel.body.addWidget(label("The tool list comes from the running Agent and isn't available here.",
-                                       "empty", wrap=True))
+            panel.body.addWidget(
+                label("The tool list comes from the running Agent and isn't available here.", "empty", wrap=True)
+            )
             self._column.addWidget(panel)
         else:
             grouped: dict[str, list[dict]] = {}
@@ -3093,11 +3383,26 @@ class ToolsPage(Page):
 # --------------------------------------------------------------------------
 # Tasks panel (Activity page): the TaskManager's records, live
 # --------------------------------------------------------------------------
-TASK_STATUS_TONE = {"queued": None, "running": "live", "waiting_confirmation": "warn", "cancelling": "live",
-                    "completed": "ok", "failed": "error", "cancelled": None, "interrupted": "error"}
-TASK_STATUS_TEXT = {"queued": "Queued", "running": "Running", "waiting_confirmation": "Needs approval",
-                    "cancelling": "Stopping", "completed": "Done", "failed": "Failed", "cancelled": "Cancelled",
-                    "interrupted": "Interrupted"}
+TASK_STATUS_TONE = {
+    "queued": None,
+    "running": "live",
+    "waiting_confirmation": "warn",
+    "cancelling": "live",
+    "completed": "ok",
+    "failed": "error",
+    "cancelled": None,
+    "interrupted": "error",
+}
+TASK_STATUS_TEXT = {
+    "queued": "Queued",
+    "running": "Running",
+    "waiting_confirmation": "Needs approval",
+    "cancelling": "Stopping",
+    "completed": "Done",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "interrupted": "Interrupted",
+}
 
 
 class TaskRow(QFrame):
@@ -3132,7 +3437,8 @@ class TaskRow(QFrame):
         line = task.get("note") or ""
         if not line and progress.get("total") and status in ("running", "waiting_confirmation", "cancelling"):
             line = f"Step {progress.get('step', 0)} of {progress['total']}" + (
-                f" — {progress['label']}" if progress.get("label") else "")
+                f" — {progress['label']}" if progress.get("label") else ""
+            )
         if not line:
             line = task.get("error") if status in ("failed", "interrupted") else task.get("result_preview", "")
         if line:
@@ -3145,7 +3451,6 @@ class TaskRow(QFrame):
         painter.setPen(QPen(QColor(160, 200, 245, 16), 1))
         painter.drawLine(QPointF(0, self.height() - 0.5), QPointF(self.width(), self.height() - 0.5))
         painter.end()
-
 
 
 class TasksPanel(Panel):
@@ -3184,8 +3489,9 @@ class TasksPanel(Panel):
     def _render(self) -> None:
         clear_layout(self.rows)
         if not self._order:
-            self.rows.addWidget(label("No tasks yet. Phone instructions and protocol runs appear here.", "empty",
-                                      wrap=True))
+            self.rows.addWidget(
+                label("No tasks yet. Phone instructions and protocol runs appear here.", "empty", wrap=True)
+            )
             return
         for task_id in self._order[:12]:
             row = TaskRow(self._tasks[task_id])

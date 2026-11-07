@@ -6,6 +6,7 @@ written to disk; a failure keeps the provider's (secret-free) reason.
 Jobs that were running when Garvis closed are marked failed on restart,
 never retried silently. A client `request_id` makes submission idempotent.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -218,8 +219,11 @@ class ImageService:
             self._dir.mkdir(parents=True, exist_ok=True)
             fd, tmp = tempfile.mkstemp(dir=self._dir, prefix=".index-", suffix=".tmp")
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                json.dump({"version": self.version, "images": [asdict(j) for j in self._jobs.values()]}, handle,
-                          ensure_ascii=False)
+                json.dump(
+                    {"version": self.version, "images": [asdict(j) for j in self._jobs.values()]},
+                    handle,
+                    ensure_ascii=False,
+                )
             os.replace(tmp, self._dir / "index.json")
         except OSError:
             log_extra(logger, 40, "images.index_save_failed")
@@ -229,7 +233,7 @@ class ImageService:
             data = json.loads((self._dir / "index.json").read_text(encoding="utf-8"))
         except FileNotFoundError:
             return
-        except (OSError, ValueError):
+        except OSError, ValueError:
             log_extra(logger, 30, "images.index_unreadable")
             return
         fields = set(ImageJob.__dataclass_fields__)

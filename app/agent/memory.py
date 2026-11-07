@@ -4,6 +4,7 @@ Deliberately simple for v0.1 -- a SQLite table with substring search, no
 vector database. `MemoryStore` is an abstraction so the backend can be
 swapped later if a concrete need for semantic recall shows up.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -59,9 +60,7 @@ class SQLiteMemoryStore(MemoryStore):
     def _remember_sync(self, content: str) -> MemoryItem:
         created_at = datetime.now(UTC).isoformat()
         with self._connect() as conn:
-            cursor = conn.execute(
-                "INSERT INTO memory (content, created_at) VALUES (?, ?)", (content, created_at)
-            )
+            cursor = conn.execute("INSERT INTO memory (content, created_at) VALUES (?, ?)", (content, created_at))
             item_id = cursor.lastrowid
         return MemoryItem(id=item_id, content=content, created_at=created_at)
 
@@ -72,8 +71,7 @@ class SQLiteMemoryStore(MemoryStore):
         with self._connect() as conn:
             if query:
                 rows = conn.execute(
-                    "SELECT id, content, created_at FROM memory WHERE content LIKE ? "
-                    "ORDER BY id DESC LIMIT ?",
+                    "SELECT id, content, created_at FROM memory WHERE content LIKE ? ORDER BY id DESC LIMIT ?",
                     (f"%{query}%", limit),
                 ).fetchall()
             else:

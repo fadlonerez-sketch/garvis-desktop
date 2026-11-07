@@ -9,6 +9,7 @@ a registered tool. This module has no Qt/voice dependencies -- it
 communicates status purely through the EventBus, so it can run headlessly
 (tests, a future API layer) or drive the desktop UI unchanged.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -208,8 +209,9 @@ class Agent:
         content = "\n\n".join([stable, per_turn]) if per_turn else stable
         self._context.set_system_prompt(content, cacheable_prefix_chars=len(stable))
 
-    async def handle_user_message(self, text: str, *, source: str | None = None,
-                                  cancel: CancelToken | None = None) -> str:
+    async def handle_user_message(
+        self, text: str, *, source: str | None = None, cancel: CancelToken | None = None
+    ) -> str:
         """Run one full user turn through the agent loop, returning the final reply.
 
         Turns are serialized (see `_turn_lock`): a call made while another
@@ -306,9 +308,14 @@ class Agent:
                 if turn.cancel is not None and turn.cancel.requested:
                     # Every tool call needs a result for the history to stay valid.
                     for skipped in assistant_message.tool_calls[index:]:
-                        self._context.add(Message(role=Role.TOOL, content=_tool_message_content(
-                            ToolResult.fail("Not run: the user cancelled the task.")),
-                            tool_call_id=skipped.id, name=skipped.name))
+                        self._context.add(
+                            Message(
+                                role=Role.TOOL,
+                                content=_tool_message_content(ToolResult.fail("Not run: the user cancelled the task.")),
+                                tool_call_id=skipped.id,
+                                name=skipped.name,
+                            )
+                        )
                     raise _TurnCancelled
                 await self._handle_tool_call(tool_call, turn)
 
@@ -322,10 +329,7 @@ class Agent:
                 )
 
         log_extra(logger, 30, "agent.max_iterations_reached")
-        return (
-            "I wasn't able to finish that within my step limit. "
-            "Could you narrow down the request?"
-        )
+        return "I wasn't able to finish that within my step limit. Could you narrow down the request?"
 
     @staticmethod
     def _check_cancel(turn: _TurnState) -> None:
@@ -344,8 +348,9 @@ class Agent:
             result = ToolResult.fail(refusal)
         else:
             turn.call_counts[key] = turn.call_counts.get(key, 0) + 1
-            result = await self._execute_and_publish(tool_call.name, tool_call.arguments,
-                                                     source=getattr(turn, "source", None), from_model=True)
+            result = await self._execute_and_publish(
+                tool_call.name, tool_call.arguments, source=getattr(turn, "source", None), from_model=True
+            )
             if result.success:
                 turn.failures.pop(key, None)
                 turn.completed.append(tool_call.name)
@@ -374,9 +379,16 @@ class Agent:
             )
         return None
 
-    async def _execute_and_publish(self, name: str, arguments: dict, *, source: str | None = None,
-                                   presentation_override: str | None = None,
-                                   task_id: str | None = None, from_model: bool = False) -> ToolResult:
+    async def _execute_and_publish(
+        self,
+        name: str,
+        arguments: dict,
+        *,
+        source: str | None = None,
+        presentation_override: str | None = None,
+        task_id: str | None = None,
+        from_model: bool = False,
+    ) -> ToolResult:
         """TOOL_STARTED, the permission-checked call, TOOL_FINISHED (with any
         sources) and, for a result the user should see, one PRESENTATION.
         Shared by chat turns and protocol steps, so both go through exactly
@@ -384,8 +396,9 @@ class Agent:
         marks a call the model asked for (vs. a user-authored protocol step),
         which also gets the egress taint check (app/security/egress.py)."""
         await self._publish(EventType.TOOL_STARTED, name=name, arguments=arguments)
-        result = await self._execute_tool_call(ToolCall(id=f"call_{name}", name=name, arguments=arguments),
-                                               from_model=from_model)
+        result = await self._execute_tool_call(
+            ToolCall(id=f"call_{name}", name=name, arguments=arguments), from_model=from_model
+        )
         # For the desktop Sources view only; the model's tool message is unchanged.
         sources = extract_sources(name, result.data) if result.success else []
         await self._publish(
@@ -402,22 +415,31 @@ class Agent:
                 tool_level = "none"
             level = presentation.level_for(tool_level, result.data, presentation_override)
             if level != presentation.Presentation.NONE:
-                await self._events.publish(AgentEvent(
-                    type=EventType.PRESENTATION,
-                    payload=presentation.describe(name, result.data, level, source=source, task_id=task_id),
-                ))
+                await self._events.publish(
+                    AgentEvent(
+                        type=EventType.PRESENTATION,
+                        payload=presentation.describe(name, result.data, level, source=source, task_id=task_id),
+                    )
+                )
         return result
 
-    async def run_tool(self, name: str, arguments: dict, *, source: str | None = None,
-                       presentation_override: str | None = None, task_id: str | None = None) -> ToolResult:
+    async def run_tool(
+        self,
+        name: str,
+        arguments: dict,
+        *,
+        source: str | None = None,
+        presentation_override: str | None = None,
+        task_id: str | None = None,
+    ) -> ToolResult:
         """Run one registered tool outside a chat turn (a protocol step):
         the same validation, PermissionChecker decision and confirmation as
         when the model asks for it, serialized with turns by the turn lock.
         Nothing is added to the conversation and no model is called."""
         async with self._turn_lock:
-            return await self._execute_and_publish(name, arguments, source=source,
-                                                   presentation_override=presentation_override,
-                                                   task_id=task_id)
+            return await self._execute_and_publish(
+                name, arguments, source=source, presentation_override=presentation_override, task_id=task_id
+            )
 
     def has_tool(self, name: str) -> bool:
         try:
@@ -431,8 +453,13 @@ class Agent:
         (desktop dialog or phone card, first answer wins). Returns
         "approved", "denied", "timeout" or "cancelled"."""
         request = self._confirmations.create_request(tool_name=title, arguments=arguments or {}, reason=reason)
-        await self._publish(EventType.CONFIRMATION_REQUESTED, id=request.id, tool_name=request.tool_name,
-                            arguments=request.arguments, reason=request.reason)
+        await self._publish(
+            EventType.CONFIRMATION_REQUESTED,
+            id=request.id,
+            tool_name=request.tool_name,
+            arguments=request.arguments,
+            reason=request.reason,
+        )
         outcome = "cancelled"
         try:
             await self._confirmations.wait_for_decision(request.id)
@@ -492,9 +519,7 @@ class Agent:
             finally:
                 # Lets every interface showing this request (desktop dialog,
                 # mobile card) close it, whichever one answered it.
-                await self._publish(
-                    EventType.CONFIRMATION_RESOLVED, id=request.id, outcome=outcome
-                )
+                await self._publish(EventType.CONFIRMATION_RESOLVED, id=request.id, outcome=outcome)
 
         try:
             return await tool.execute(args)

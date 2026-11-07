@@ -14,6 +14,7 @@ the result says exactly what was shown. Whether to show it comes from the
 user's own wording first (app/desktop/routing.py), then the model's
 `show_on_user_desktop`.
 """
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
@@ -35,8 +36,9 @@ class WebResearchInput(BaseModel):
         default=None, ge=1, le=5, description="How many result pages to open and read (default 3)."
     )
     show_on_user_desktop: bool | None = Field(
-        default=None, description="After researching, open the best source on the user's screen. True when the "
-        "user wants to see it ('show me the news'); false/omitted when they only want the answer."
+        default=None,
+        description="After researching, open the best source on the user's screen. True when the "
+        "user wants to see it ('show me the news'); false/omitted when they only want the answer.",
     )
 
 
@@ -53,8 +55,9 @@ class WebResearchTool(Tool):
     risk_level = RiskLevel.LOW
     input_model = WebResearchInput
 
-    def __init__(self, researcher: WebResearcher, browser=None, routing: DesktopRouting | None = None,
-                 placer=None) -> None:
+    def __init__(
+        self, researcher: WebResearcher, browser=None, routing: DesktopRouting | None = None, placer=None
+    ) -> None:
         """`browser` (the shared BrowserManager) and `placer` (its
         BrowserWindowPlacer) are needed to show a result on the user's
         desktop; without them research still works, showing doesn't."""
@@ -66,11 +69,11 @@ class WebResearchTool(Tool):
     def _wants_to_show(self, requested: bool | None) -> tuple[bool, str]:
         intent = self._routing.intent
         if intent.placement:
-            return intent.explicit_target == DesktopTarget.USER, f"you said \"{intent.phrase}\""
+            return intent.explicit_target == DesktopTarget.USER, f'you said "{intent.phrase}"'
         if requested is not None:
             return requested, "chosen for this task"
         if intent.wants_to_see:
-            return True, f"you asked to see it (\"{intent.phrase}\")"
+            return True, f'you asked to see it ("{intent.phrase}")'
         return False, "only the answer was asked for"
 
     async def _show(self, report: ResearchReport) -> dict:
@@ -99,7 +102,9 @@ class WebResearchTool(Tool):
             return ToolResult.fail(f"Research found nothing usable ({failed or 'no results'}).")
         data = report.model_dump()
         data["results"] = data["results"][:_MAX_RESULTS_RETURNED]
-        data["researched_on"] = DesktopTarget.WORKSPACE.value if report.workspace == "garvis desktop" else "user_desktop"
+        data["researched_on"] = (
+            DesktopTarget.WORKSPACE.value if report.workspace == "garvis desktop" else "user_desktop"
+        )
         show, reason = self._wants_to_show(args.show_on_user_desktop)
         if show:
             try:

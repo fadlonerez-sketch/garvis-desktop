@@ -1,4 +1,5 @@
 """The assistant's image tool: "generate an image of ..." from chat or voice."""
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
@@ -33,9 +34,20 @@ class GenerateImageTool(Tool):
             return ToolResult.fail(str(exc))
         job = await self._images.wait(job.id, self._timeout)
         if job.status == COMPLETED:
-            return ToolResult.ok({"image_id": job.id, "status": job.status, "mime": job.mime,
-                                  "note": "Shown in the phone app's Images gallery."})
+            return ToolResult.ok(
+                {
+                    "image_id": job.id,
+                    "status": job.status,
+                    "mime": job.mime,
+                    "note": "Shown in the phone app's Images gallery.",
+                }
+            )
         if job.status in ("queued", "running"):
-            return ToolResult.ok({"image_id": job.id, "status": job.status,
-                                  "note": "Still being made; it will appear in the phone app's gallery when done."})
+            return ToolResult.ok(
+                {
+                    "image_id": job.id,
+                    "status": job.status,
+                    "note": "Still being made; it will appear in the phone app's gallery when done.",
+                }
+            )
         return ToolResult.fail(job.error or f"The image was not made ({job.status}).")

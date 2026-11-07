@@ -9,6 +9,7 @@ small transparent child (`_Tint`) faded by `HoverTints`, an event filter
 installed once on the application. Custom-painted controls (navigation,
 title-bar buttons, switches) use `Fader` directly.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -42,8 +43,9 @@ class Fader(QObject):
     """A 0..1 level that eases toward a target in MOTION_MS (or jumps there
     under reduced motion), calling `on_change` with each value."""
 
-    def __init__(self, on_change: Callable[[float], None], duration: int = theme.MOTION_MS,
-                 parent: QObject | None = None) -> None:
+    def __init__(
+        self, on_change: Callable[[float], None], duration: int = theme.MOTION_MS, parent: QObject | None = None
+    ) -> None:
         super().__init__(parent)
         self.value = 0.0
         self._target = 0.0
@@ -58,8 +60,9 @@ class Fader(QObject):
         return self._target
 
     def to(self, target: float) -> None:
-        if target == self._target and (self._animation.state() == QVariantAnimation.State.Running
-                                       or self.value == target):
+        if target == self._target and (
+            self._animation.state() == QVariantAnimation.State.Running or self.value == target
+        ):
             return
         self._target = target
         self._animation.stop()

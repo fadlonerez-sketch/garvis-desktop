@@ -5,6 +5,7 @@ Nothing else in the codebase should hardcode a model name, API key, or
 machine-specific path. Values are sourced from environment variables / a
 .env file, with sensible local-first defaults.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -63,9 +64,7 @@ class Settings(BaseSettings):
     groq_model: str = Field(default="openai/gpt-oss-120b")
     groq_request_timeout_seconds: float = Field(default=60.0)
 
-    openrouter_api_key: str = Field(
-        default="", description="Secret. Never log or print this value."
-    )
+    openrouter_api_key: str = Field(default="", description="Secret. Never log or print this value.")
     openrouter_model: str = Field(
         default="",
         description="OpenRouter model id, e.g. 'anthropic/claude-haiku-4.5'. Required when "
@@ -100,7 +99,8 @@ class Settings(BaseSettings):
         description="Pinned explicitly so a stray ANTHROPIC_BASE_URL in the environment can't redirect the key.",
     )
     anthropic_request_timeout_seconds: float = Field(
-        default=45.0, gt=0,
+        default=45.0,
+        gt=0,
         description="Per-request timeout. A timed-out request is not resent (it may have been processed "
         "and billed); the error is reported instead.",
     )
@@ -122,16 +122,20 @@ class Settings(BaseSettings):
     llm_daily_budget_usd: float = Field(default=0.50, ge=0)
     llm_monthly_budget_usd: float = Field(default=5.00, ge=0)
     llm_max_prompt_tokens: int = Field(
-        default=60_000, ge=1000,
+        default=60_000,
+        ge=1000,
         description="Refuse a request whose estimated prompt is larger. Claude Haiku 5.5 charges 5x for "
         "prompts over 100K tokens; this keeps a wide margin below that.",
     )
     llm_output_reserve_tokens: int = Field(
-        default=2000, ge=0,
+        default=2000,
+        ge=0,
         description="Reply size assumed when projecting the next request's cost for the budget check.",
     )
     llm_max_retries: int = Field(
-        default=1, ge=0, le=5,
+        default=1,
+        ge=0,
+        le=5,
         description="Extra attempts on the SAME model after a rate-limit/unavailable error (exponential "
         "backoff). OmniRoute already retries a 429 twice and a 5xx once on its side.",
     )
@@ -240,9 +244,7 @@ class Settings(BaseSettings):
         description="At most this much of one speech segment is transcribed in standby -- "
         "bounds Whisper's cost per segment.",
     )
-    wake_min_silence_seconds: float = Field(
-        default=0.6, description="Silence that ends a standby speech segment."
-    )
+    wake_min_silence_seconds: float = Field(default=0.6, description="Silence that ends a standby speech segment.")
     wake_match_threshold: float = Field(
         default=0.75,
         description="Per-word fuzzy similarity (0-1) required to accept a wake phrase.",
@@ -279,9 +281,7 @@ class Settings(BaseSettings):
     )
 
     # --- Gmail (OAuth) ---------------------------------------------------
-    gmail_client_secret_path: Path = Field(
-        default=_PROJECT_ROOT / "config" / "gmail_client_secret.json"
-    )
+    gmail_client_secret_path: Path = Field(default=_PROJECT_ROOT / "config" / "gmail_client_secret.json")
     gmail_token_path: Path = Field(default=_PROJECT_ROOT / "data" / "gmail_token.json")
 
     # --- Web search -------------------------------------------------------
@@ -316,9 +316,7 @@ class Settings(BaseSettings):
         default="duckduckgo", description="'duckduckgo' or 'bing' -- see app/browser/research.py."
     )
     research_max_sources: int = Field(default=3, description="Result pages opened and read per research task.")
-    research_source_chars: int = Field(
-        default=1500, description="Max characters of relevant text returned per source."
-    )
+    research_source_chars: int = Field(default=1500, description="Max characters of relevant text returned per source.")
 
     # --- Desktop control (mouse / keyboard / windows / screen) ------------
     desktop_control_enabled: bool = Field(
@@ -357,9 +355,7 @@ class Settings(BaseSettings):
     )
     desktop_max_type_chars: int = Field(default=2000)
     desktop_screenshot_dir: Path = Field(default=_PROJECT_ROOT / "data" / "screenshots")
-    desktop_screenshot_keep: int = Field(
-        default=20, description="Only the newest N screenshots are kept on disk."
-    )
+    desktop_screenshot_keep: int = Field(default=20, description="Only the newest N screenshots are kept on disk.")
 
     # --- Mobile interface (iPhone / Android over the local network, app/mobile) -----
     mobile_enabled: bool = Field(
@@ -401,9 +397,7 @@ class Settings(BaseSettings):
         default=30, description="A paired phone must pair again after this many days."
     )
     mobile_max_message_chars: int = Field(default=4000)
-    mobile_max_audio_bytes: int = Field(
-        default=8 * 1024 * 1024, description="Upload limit for one voice recording."
-    )
+    mobile_max_audio_bytes: int = Field(default=8 * 1024 * 1024, description="Upload limit for one voice recording.")
     mobile_max_audio_seconds: float = Field(default=60.0)
     mobile_stt_timeout_seconds: float = Field(default=120.0)
     mobile_tts_timeout_seconds: float = Field(default=120.0)
@@ -433,10 +427,12 @@ class Settings(BaseSettings):
         "phone reports, else this PC's current UTC offset.",
     )
     user_name: str = Field(default="", description="Your name as Garvis says it in English reminder calls (e.g. Alex).")
-    user_name_he: str = Field(default="", description="Your name in Hebrew, for Hebrew reminder calls (e.g. אלכס). "
-                              "Empty = user_name.")
+    user_name_he: str = Field(
+        default="", description="Your name in Hebrew, for Hebrew reminder calls (e.g. אלכס). Empty = user_name."
+    )
     user_gender: Literal["male", "female"] = Field(
-        default="male", description="Grammatical gender Garvis uses when it speaks Hebrew to you (תזכור / תזכרי).")
+        default="male", description="Grammatical gender Garvis uses when it speaks Hebrew to you (תזכור / תזכרי)."
+    )
     reminders_model_phrasing: bool = Field(
         default=True,
         description="Let the assistant's model (the same Claude Haiku, no other model) word each scheduled call "

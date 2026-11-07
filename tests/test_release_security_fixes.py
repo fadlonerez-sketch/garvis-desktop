@@ -3,6 +3,7 @@
 Each check only escalates (refuses or asks first) -- nothing that asked before runs silently now.
 Pure logic: no PowerShell, network, desktop input or file outside tmp_path.
 """
+
 from __future__ import annotations
 
 import socket
@@ -43,11 +44,14 @@ def test_foreach_object_script_block_is_still_read_only():
     assert classify("Get-Process | ForEach-Object { $_.Name }", _cmd("ForEach-Object", "{ $_.Name }")) is None
 
 
-@pytest.mark.parametrize("command", [
-    "$env:GIT_EXTERNAL_DIFF='cmd /c calc'; git diff",
-    "${env:GIT_CONFIG_PARAMETERS} = 'x'; git status",
-    "$Env:PATH += ';C:\\evil'; git log",
-])
+@pytest.mark.parametrize(
+    "command",
+    [
+        "$env:GIT_EXTERNAL_DIFF='cmd /c calc'; git diff",
+        "${env:GIT_CONFIG_PARAMETERS} = 'x'; git status",
+        "$Env:PATH += ';C:\\evil'; git log",
+    ],
+)
 def test_environment_variable_assignment_needs_confirmation(command):
     assert classify(command, _cmd("git", "status")) is not None
 
@@ -56,13 +60,16 @@ def test_reading_an_environment_variable_is_still_read_only():
     assert classify("if ($env:USERNAME -eq 'x') { git status }", _cmd("git", "status")) is None
 
 
-@pytest.mark.parametrize("args", [
-    ["grep", "--no-index", "-Ocalc.exe", "x"],
-    ["grep", "--open-files-in-pager=calc", "x"],
-    ["diff", "--output=C:\\Users\\me\\file.txt"],
-    ["diff", "--ext-diff"],
-    ["log", "--output", "out.txt"],
-])
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["grep", "--no-index", "-Ocalc.exe", "x"],
+        ["grep", "--open-files-in-pager=calc", "x"],
+        ["diff", "--output=C:\\Users\\me\\file.txt"],
+        ["diff", "--ext-diff"],
+        ["log", "--output", "out.txt"],
+    ],
+)
 def test_git_flags_that_run_programs_or_write_files_need_confirmation(args):
     assert classify("git " + " ".join(args), _cmd("git", *args)) is not None
 
@@ -111,8 +118,21 @@ def test_unc_paths_are_refused_before_they_are_resolved(tmp_path, monkeypatch, r
     assert "UNC" in open_path.refusal(open_path.expand(raw))
 
 
-@pytest.mark.parametrize("name", ["setup.iso", "disk.vhdx", "work.rdp", "dark.theme", "sandbox.wsb",
-                                  "update.msu", "app.appinstaller", "run.sh", "budget.xlsm", "notes.docm"])
+@pytest.mark.parametrize(
+    "name",
+    [
+        "setup.iso",
+        "disk.vhdx",
+        "work.rdp",
+        "dark.theme",
+        "sandbox.wsb",
+        "update.msu",
+        "app.appinstaller",
+        "run.sh",
+        "budget.xlsm",
+        "notes.docm",
+    ],
+)
 def test_open_path_refuses_mounting_and_launching_types(tmp_path, name):
     target = tmp_path / name
     target.write_bytes(b"x")

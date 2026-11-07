@@ -6,6 +6,7 @@ Deny / Allow. Behaviour is the old QMessageBox's: modal, Deny is the default
 (Enter and Escape both deny), and `button(QMessageBox.StandardButton.Yes /
 .No)` returns Allow / Deny, so callers and tests drive it the same way.
 """
+
 from __future__ import annotations
 
 from PySide6.QtCore import QPoint, QPointF, QRect, QRectF, QSize, Qt
@@ -115,8 +116,15 @@ class _Details(QFrame):
 class ApprovalDialog(QDialog):
     """Modal confirmation for one tool call. `approved` after exec()."""
 
-    def __init__(self, tool_name: str, arguments: dict, reason: str, parent: QWidget | None = None,
-                 title: str | None = None, subtitle: str = "Approve this step to continue the task.") -> None:
+    def __init__(
+        self,
+        tool_name: str,
+        arguments: dict,
+        reason: str,
+        parent: QWidget | None = None,
+        title: str | None = None,
+        subtitle: str = "Approve this step to continue the task.",
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Garvis needs your confirmation")
         self.setObjectName("ApprovalDialog")
@@ -150,8 +158,9 @@ class ApprovalDialog(QDialog):
         titles.setSpacing(2)
         self.title_label = QLabel(title or f"Garvis wants to run “{_humanize(tool_name)}”", self.card)
         self.title_label.setWordWrap(True)
-        self.title_label.setStyleSheet(f"color: {theme.TEXT_1}; font-family: '{theme.display_family()}'; "
-                                       "font-size: 18px; font-weight: 700;")
+        self.title_label.setStyleSheet(
+            f"color: {theme.TEXT_1}; font-family: '{theme.display_family()}'; font-size: 18px; font-weight: 700;"
+        )
         self.subtitle_label = QLabel(subtitle, self.card)
         self.subtitle_label.setWordWrap(True)
         self.subtitle_label.setStyleSheet(f"color: {theme.TEXT_2}; font-size: 13px;")
@@ -202,8 +211,10 @@ class ApprovalDialog(QDialog):
         self.allow_button.clicked.connect(self.accept)
         self.deny_button.clicked.connect(self.reject)
         body.addLayout(actions)
-        self._buttons = {QMessageBox.StandardButton.Yes: self.allow_button,
-                         QMessageBox.StandardButton.No: self.deny_button}
+        self._buttons = {
+            QMessageBox.StandardButton.Yes: self.allow_button,
+            QMessageBox.StandardButton.No: self.deny_button,
+        }
         self._place()
 
     # ------------------------------------------------------------- API
@@ -235,7 +246,7 @@ class ApprovalDialog(QDialog):
             return
         screen = (window.screen() if window is not None else None) or QGuiApplication.primaryScreen()
         area = screen.availableGeometry() if screen is not None else QRect(0, 0, 1280, 800)
-        anchor = (window.frameGeometry() if window is not None and window.isVisible() else area)
+        anchor = window.frameGeometry() if window is not None and window.isVisible() else area
         rect = QRect(QPoint(0, 0), size)
         rect.moveCenter(anchor.center())
         self.setGeometry(rect)
@@ -248,10 +259,15 @@ class ApprovalDialog(QDialog):
             return None
         if shot.isNull():
             return None
-        small = shot.scaled(max(1, shot.width() // 5), max(1, shot.height() // 5),
-                            Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        return small.scaled(shot.size(), Qt.AspectRatioMode.IgnoreAspectRatio,
-                            Qt.TransformationMode.SmoothTransformation)
+        small = shot.scaled(
+            max(1, shot.width() // 5),
+            max(1, shot.height() // 5),
+            Qt.AspectRatioMode.IgnoreAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        return small.scaled(
+            shot.size(), Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation
+        )
 
     def paintEvent(self, event) -> None:  # noqa: N802 (Qt override)
         painter = QPainter(self)

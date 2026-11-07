@@ -4,6 +4,7 @@ single-model policy end to end: Claude Haiku 5.5 only, never another model.
 Requests go through the real `anthropic` SDK into an httpx2 MockTransport,
 so the wire format and response parsing are the SDK's own -- no network,
 no key, nothing billed."""
+
 from __future__ import annotations
 
 import json
@@ -42,21 +43,41 @@ from app.tools.calculator import CalculatorTool
 from app.tools.registry import ToolRegistry
 
 _KEY = "sk-ant-test-key-never-real"
-_PRICES = PriceCard(input=0.10, output=0.50, cache_read=0.01, cache_write_5m=0.125, cache_write_1h=0.20,
-                    long_context_threshold=100_000, long_input=0.50, long_output=2.50)
-_CALC = ToolSpec(name="calculator", description="Evaluate arithmetic.",
-                 parameters={"type": "object", "properties": {"expression": {"type": "string"}},
-                             "required": ["expression"]})
+_PRICES = PriceCard(
+    input=0.10,
+    output=0.50,
+    cache_read=0.01,
+    cache_write_5m=0.125,
+    cache_write_1h=0.20,
+    long_context_threshold=100_000,
+    long_input=0.50,
+    long_output=2.50,
+)
+_CALC = ToolSpec(
+    name="calculator",
+    description="Evaluate arithmetic.",
+    parameters={"type": "object", "properties": {"expression": {"type": "string"}}, "required": ["expression"]},
+)
 
 
 # ------------------------------------------------------------------ helpers
 def _message(content, stop_reason="end_turn", model="claude-haiku-5-5", usage=None, msg_id="msg_01", **extra):
     return {
-        "id": msg_id, "type": "message", "role": "assistant", "model": model, "content": content,
-        "stop_reason": stop_reason, "stop_sequence": None,
-        "usage": usage or {"input_tokens": 1200, "output_tokens": 30, "cache_read_input_tokens": 9000,
-                           "cache_creation_input_tokens": 400,
-                           "cache_creation": {"ephemeral_5m_input_tokens": 400, "ephemeral_1h_input_tokens": 0}},
+        "id": msg_id,
+        "type": "message",
+        "role": "assistant",
+        "model": model,
+        "content": content,
+        "stop_reason": stop_reason,
+        "stop_sequence": None,
+        "usage": usage
+        or {
+            "input_tokens": 1200,
+            "output_tokens": 30,
+            "cache_read_input_tokens": 9000,
+            "cache_creation_input_tokens": 400,
+            "cache_creation": {"ephemeral_5m_input_tokens": 400, "ephemeral_1h_input_tokens": 0},
+        },
         **extra,
     }
 
@@ -84,15 +105,18 @@ class FakeAnthropicAPI:
 
     def client(self) -> anthropic.AsyncAnthropic:
         return anthropic.AsyncAnthropic(
-            api_key=_KEY, base_url="https://api.anthropic.com", max_retries=0,
+            api_key=_KEY,
+            base_url="https://api.anthropic.com",
+            max_retries=0,
             http_client=anthropic.DefaultAsyncHttpxClient(transport=httpx2.MockTransport(self.handler)),
         )
 
 
 def _provider(api: FakeAnthropicAPI, **kw) -> AnthropicProvider:
     kw.setdefault("reasoning_effort", "low")
-    return AnthropicProvider(api_key=_KEY, model="claude-haiku-5-5", client=api.client(), pricing=_PRICES,
-                             max_output_tokens=8192, **kw)
+    return AnthropicProvider(
+        api_key=_KEY, model="claude-haiku-5-5", client=api.client(), pricing=_PRICES, max_output_tokens=8192, **kw
+    )
 
 
 def _error(status, message, error_type="invalid_request_error"):
@@ -119,8 +143,9 @@ async def test_request_uses_the_messages_api_shape_for_haiku_with_cache_breakpoi
         {"type": "text", "text": "Current desktop: notepad"},
     ]
     assert body["cache_control"] == {"type": "ephemeral"}  # automatic breakpoint for the tool-loop tail
-    assert body["tools"] == [{"name": "calculator", "description": "Evaluate arithmetic.",
-                              "input_schema": _CALC.parameters}]
+    assert body["tools"] == [
+        {"name": "calculator", "description": "Evaluate arithmetic.", "input_schema": _CALC.parameters}
+    ]
     assert body["messages"] == [{"role": "user", "content": [{"type": "text", "text": "17*24?"}]}]
     assert response.message.content == "408." and response.finish_reason == "stop"
 
@@ -138,8 +163,9 @@ async def test_one_hour_cache_and_no_cache_options():
 
 async def test_without_a_stable_system_prefix_the_tool_definitions_get_the_breakpoint():
     api = FakeAnthropicAPI([_message([{"type": "text", "text": "ok"}])])
-    await _provider(api).chat([Message(role=Role.SYSTEM, content="all volatile"), Message(role=Role.USER, content="x")],
-                              tools=[_CALC])
+    await _provider(api).chat(
+        [Message(role=Role.SYSTEM, content="all volatile"), Message(role=Role.USER, content="x")], tools=[_CALC]
+    )
     body = api.body()
     assert body["tools"][-1]["cache_control"] == {"type": "ephemeral"}
     assert "cache_control" not in body["system"][0]
@@ -149,13 +175,18 @@ def test_history_translation_pairs_every_tool_call_with_its_result():
     history = [
         Message(role=Role.SYSTEM, content="sys"),
         Message(role=Role.USER, content="do two things"),
-        Message(role=Role.ASSISTANT, content="On it.", tool_calls=[
-            ToolCall(id="toolu_a", name="calculator", arguments={"expression": "1+1"}),
-            ToolCall(id="call:b.7", name="inspect_ui", arguments={}),  # id from a fallback provider
-        ]),
+        Message(
+            role=Role.ASSISTANT,
+            content="On it.",
+            tool_calls=[
+                ToolCall(id="toolu_a", name="calculator", arguments={"expression": "1+1"}),
+                ToolCall(id="call:b.7", name="inspect_ui", arguments={}),  # id from a fallback provider
+            ],
+        ),
         Message(role=Role.TOOL, content='{"success":true,"data":2}', tool_call_id="toolu_a", name="calculator"),
-        Message(role=Role.TOOL, content='{"success":false,"error":"no window"}', tool_call_id="call:b.7",
-                name="inspect_ui"),
+        Message(
+            role=Role.TOOL, content='{"success":false,"error":"no window"}', tool_call_id="call:b.7", name="inspect_ui"
+        ),
         Message(role=Role.ASSISTANT, content="Done."),
         Message(role=Role.USER, content="thanks"),
     ]
@@ -178,8 +209,10 @@ def test_interrupted_or_orphaned_steps_are_repaired_instead_of_breaking_the_requ
     ]
     messages = to_anthropic_messages(history)
     # The orphaned result has no call to answer: it is kept as plain text, not as a tool_result.
-    assert messages[0] == {"role": "user", "content": [{"type": "text", "text": "[Earlier tool output] {}"},
-                                                       {"type": "text", "text": "go"}]}
+    assert messages[0] == {
+        "role": "user",
+        "content": [{"type": "text", "text": "[Earlier tool output] {}"}, {"type": "text", "text": "go"}],
+    }
     last = messages[-1]["content"]
     assert last[0]["type"] == "tool_result" and last[0]["tool_use_id"] == "toolu_1" and last[0]["is_error"]
     assert last[1] == {"type": "text", "text": "never mind"}
@@ -187,43 +220,71 @@ def test_interrupted_or_orphaned_steps_are_repaired_instead_of_breaking_the_requ
 
 # --------------------------------------------------------- response parsing
 async def test_tool_use_response_and_usage_are_parsed():
-    api = FakeAnthropicAPI([_message(
-        [{"type": "text", "text": "Checking."},
-         {"type": "tool_use", "id": "toolu_01X", "name": "calculator", "input": {"expression": "17*24"}}],
-        stop_reason="tool_use", msg_id="msg_tool")])
+    api = FakeAnthropicAPI(
+        [
+            _message(
+                [
+                    {"type": "text", "text": "Checking."},
+                    {"type": "tool_use", "id": "toolu_01X", "name": "calculator", "input": {"expression": "17*24"}},
+                ],
+                stop_reason="tool_use",
+                msg_id="msg_tool",
+            )
+        ]
+    )
     response = await _provider(api).chat([Message(role=Role.USER, content="17*24")], tools=[_CALC])
     assert response.finish_reason == "tool_calls"
-    assert response.message.tool_calls == [ToolCall(id="toolu_01X", name="calculator",
-                                                    arguments={"expression": "17*24"})]
+    assert response.message.tool_calls == [
+        ToolCall(id="toolu_01X", name="calculator", arguments={"expression": "17*24"})
+    ]
     assert response.served_model == "claude-haiku-5-5" and response.request_id == "msg_tool"
-    assert response.usage == TokenUsage(input_tokens=1200, output_tokens=30, cache_read_tokens=9000,
-                                        cache_write_5m_tokens=400, cache_write_1h_tokens=0,
-                                        cache_write_unknown_ttl_tokens=0)
+    assert response.usage == TokenUsage(
+        input_tokens=1200,
+        output_tokens=30,
+        cache_read_tokens=9000,
+        cache_write_5m_tokens=400,
+        cache_write_1h_tokens=0,
+        cache_write_unknown_ttl_tokens=0,
+    )
     assert _PRICES.cost(response.usage) == pytest.approx((1200 * 0.10 + 30 * 0.50 + 9000 * 0.01 + 400 * 0.125) / 1e6)
 
 
 async def test_usage_without_the_ttl_split_is_kept_as_unsplit_and_missing_cache_fields_are_zero():
-    api = FakeAnthropicAPI([_message([{"type": "text", "text": "x"}],
-                                     usage={"input_tokens": 50, "output_tokens": 5, "cache_creation_input_tokens": 700})])
+    api = FakeAnthropicAPI(
+        [
+            _message(
+                [{"type": "text", "text": "x"}],
+                usage={"input_tokens": 50, "output_tokens": 5, "cache_creation_input_tokens": 700},
+            )
+        ]
+    )
     usage = (await _provider(api).chat([Message(role=Role.USER, content="x")])).usage
     assert usage.cache_write_unknown_ttl_tokens == 700 and usage.cache_write_5m_tokens == 0
     assert usage.cache_read_tokens == 0
 
 
 async def test_a_tool_call_cut_off_by_max_tokens_is_never_returned_for_execution():
-    api = FakeAnthropicAPI([_message(
-        [{"type": "tool_use", "id": "toolu_1", "name": "write_text_file", "input": {"path": "a.txt"}}],
-        stop_reason="max_tokens")])
+    api = FakeAnthropicAPI(
+        [
+            _message(
+                [{"type": "tool_use", "id": "toolu_1", "name": "write_text_file", "input": {"path": "a.txt"}}],
+                stop_reason="max_tokens",
+            )
+        ]
+    )
     response = await _provider(api).chat([Message(role=Role.USER, content="write a long file")])
     assert response.finish_reason == "length" and response.message.tool_calls == []
 
 
 async def test_refusal_and_model_mismatch_are_raised_with_their_billed_usage():
-    api = FakeAnthropicAPI([
-        _message([], stop_reason="refusal", stop_details={"type": "refusal", "category": "cyber",
-                                                          "explanation": None}),
-        _message([{"type": "text", "text": "hi"}], model="claude-sonnet-5-5"),
-    ])
+    api = FakeAnthropicAPI(
+        [
+            _message(
+                [], stop_reason="refusal", stop_details={"type": "refusal", "category": "cyber", "explanation": None}
+            ),
+            _message([{"type": "text", "text": "hi"}], model="claude-sonnet-5-5"),
+        ]
+    )
     with pytest.raises(LLMRefusalError, match="cyber") as refusal:
         await _provider(api).chat([Message(role=Role.USER, content="x")])
     assert refusal.value.usage.input_tokens == 1200
@@ -233,18 +294,21 @@ async def test_refusal_and_model_mismatch_are_raised_with_their_billed_usage():
 
 
 # ------------------------------------------------------------------- errors
-@pytest.mark.parametrize("reply, error_type, match", [
-    (_error(401, "invalid x-api-key", "authentication_error"), LLMAuthenticationError, "ANTHROPIC_API_KEY"),
-    (_error(403, "not allowed", "permission_error"), LLMAuthenticationError, "403"),
-    (_error(429, "slow down", "rate_limit_error"), LLMRateLimitError, "retry after 7s"),
-    (_error(529, "Overloaded", "overloaded_error"), LLMUnavailableError, "529"),
-    (_error(500, "boom", "api_error"), LLMUnavailableError, "500"),
-    (_error(404, "model: claude-haiku-5-5", "not_found_error"), LLMUnavailableError, "404"),
-    (_error(400, "tools.0.input_schema: invalid"), LLMBadRequestError, "input_schema"),
-    (_error(400, "Your credit balance is too low to access the Anthropic API."), LLMBillingError, "billing"),
-    (httpx2.ReadTimeout("slow"), LLMTimeoutError, "didn't answer within 45s"),
-    (httpx2.ConnectError("offline"), LLMUnavailableError, "can't reach the Anthropic API"),
-])
+@pytest.mark.parametrize(
+    "reply, error_type, match",
+    [
+        (_error(401, "invalid x-api-key", "authentication_error"), LLMAuthenticationError, "ANTHROPIC_API_KEY"),
+        (_error(403, "not allowed", "permission_error"), LLMAuthenticationError, "403"),
+        (_error(429, "slow down", "rate_limit_error"), LLMRateLimitError, "retry after 7s"),
+        (_error(529, "Overloaded", "overloaded_error"), LLMUnavailableError, "529"),
+        (_error(500, "boom", "api_error"), LLMUnavailableError, "500"),
+        (_error(404, "model: claude-haiku-5-5", "not_found_error"), LLMUnavailableError, "404"),
+        (_error(400, "tools.0.input_schema: invalid"), LLMBadRequestError, "input_schema"),
+        (_error(400, "Your credit balance is too low to access the Anthropic API."), LLMBillingError, "billing"),
+        (httpx2.ReadTimeout("slow"), LLMTimeoutError, "didn't answer within 45s"),
+        (httpx2.ConnectError("offline"), LLMUnavailableError, "can't reach the Anthropic API"),
+    ],
+)
 async def test_api_errors_map_to_garvis_errors_without_sdk_retries(reply, error_type, match):
     api = FakeAnthropicAPI([reply])
     with pytest.raises(error_type, match=match) as info:
@@ -305,6 +369,7 @@ def no_other_provider(monkeypatch):
         async def chat(self, *args, **kwargs):
             calls.append(name)
             raise _OtherProviderCalled(f"{name}.chat was called")
+
         return chat
 
     for cls in (OmniRouteProvider, GeminiProvider, GroqProvider, OpenRouterProvider):
@@ -321,11 +386,20 @@ def no_other_provider(monkeypatch):
 def _real_router(api: FakeAnthropicAPI, tmp_path, **settings):
     """The shipped registry, built the way Garvis builds it -- with keys for
     every other provider present -- and the Anthropic SDK pointed at `api`."""
-    router = build_llm_provider(Settings(
-        _env_file=None, llm_provider="tiered", anthropic_api_key=_KEY, omniroute_api_key="k", gemini_api_key="g",
-        groq_api_key="q", openrouter_api_key="o", openrouter_model="x/y", llm_usage_db_path=tmp_path / "u.db",
-        **settings,
-    ))
+    router = build_llm_provider(
+        Settings(
+            _env_file=None,
+            llm_provider="tiered",
+            anthropic_api_key=_KEY,
+            omniroute_api_key="k",
+            gemini_api_key="g",
+            groq_api_key="q",
+            openrouter_api_key="o",
+            openrouter_model="x/y",
+            llm_usage_db_path=tmp_path / "u.db",
+            **settings,
+        )
+    )
     client = api.client()
     for tier in ModelTier:
         ((_, provider),) = router.pools[tier]
@@ -334,8 +408,9 @@ def _real_router(api: FakeAnthropicAPI, tmp_path, **settings):
 
 
 def _ledger_rows(router):
-    return router._ledger.query("SELECT provider, model_requested, model_served, status, error_type FROM llm_calls "
-                                "ORDER BY id")
+    return router._ledger.query(
+        "SELECT provider, model_requested, model_served, status, error_type FROM llm_calls ORDER BY id"
+    )
 
 
 async def test_a_successful_request_goes_to_haiku_and_is_recorded_as_haiku(tmp_path, no_other_provider):
@@ -350,19 +425,23 @@ async def test_a_successful_request_goes_to_haiku_and_is_recorded_as_haiku(tmp_p
     assert no_other_provider == []
 
 
-@pytest.mark.parametrize("replies, error_type, requests_sent", [
-    ([_error(429, "slow down", "rate_limit_error")] * 2, LLMRateLimitError, 2),     # 1 retry, same model
-    ([_error(529, "Overloaded", "overloaded_error")] * 2, LLMUnavailableError, 2),
-    ([_error(500, "boom", "api_error")] * 2, LLMUnavailableError, 2),
-    ([httpx2.ReadTimeout("slow")], LLMTimeoutError, 1),                                 # never resent
-    ([_error(401, "invalid x-api-key", "authentication_error")], LLMAuthenticationError, 1),
-    ([_error(400, "Your credit balance is too low to access the Anthropic API.")], LLMBillingError, 1),
-    ([_error(400, "messages.1: invalid")], LLMBadRequestError, 1),
-    ([_message([], stop_reason="refusal")], LLMRefusalError, 1),
-    ([_message([{"type": "text", "text": "x"}], model="claude-sonnet-5-5")], LLMModelMismatchError, 1),
-])
+@pytest.mark.parametrize(
+    "replies, error_type, requests_sent",
+    [
+        ([_error(429, "slow down", "rate_limit_error")] * 2, LLMRateLimitError, 2),  # 1 retry, same model
+        ([_error(529, "Overloaded", "overloaded_error")] * 2, LLMUnavailableError, 2),
+        ([_error(500, "boom", "api_error")] * 2, LLMUnavailableError, 2),
+        ([httpx2.ReadTimeout("slow")], LLMTimeoutError, 1),  # never resent
+        ([_error(401, "invalid x-api-key", "authentication_error")], LLMAuthenticationError, 1),
+        ([_error(400, "Your credit balance is too low to access the Anthropic API.")], LLMBillingError, 1),
+        ([_error(400, "messages.1: invalid")], LLMBadRequestError, 1),
+        ([_message([], stop_reason="refusal")], LLMRefusalError, 1),
+        ([_message([{"type": "text", "text": "x"}], model="claude-sonnet-5-5")], LLMModelMismatchError, 1),
+    ],
+)
 async def test_when_haiku_fails_the_error_is_reported_and_no_other_model_is_called(
-        tmp_path, no_other_provider, replies, error_type, requests_sent):
+    tmp_path, no_other_provider, replies, error_type, requests_sent
+):
     api = FakeAnthropicAPI(list(replies))
     router = _real_router(api, tmp_path, llm_max_retries=1, llm_retry_backoff_seconds=0)
     events = EventBus()
@@ -402,8 +481,10 @@ def _tool_agent(router, tmp_path):
     return Agent(llm=router, registry=registry, memory=SQLiteMemoryStore(tmp_path / "m.db"), events=EventBus()), tool
 
 
-_CLICK = _message([{"type": "tool_use", "id": "toolu_click", "name": "click_button", "input": {"expression": "ok"}}],
-                  stop_reason="tool_use")
+_CLICK = _message(
+    [{"type": "tool_use", "id": "toolu_click", "name": "click_button", "input": {"expression": "ok"}}],
+    stop_reason="tool_use",
+)
 
 
 async def test_a_failure_after_a_tool_ran_stops_the_turn_and_the_tool_never_reruns(tmp_path, no_other_provider):
@@ -416,27 +497,43 @@ async def test_a_failure_after_a_tool_ran_stops_the_turn_and_the_tool_never_reru
 
 
 async def test_a_same_model_retry_after_a_tool_ran_resends_the_result_not_the_action(tmp_path, no_other_provider):
-    api = FakeAnthropicAPI([_CLICK, _error(529, "Overloaded", "overloaded_error"),
-                            _message([{"type": "text", "text": "Clicked it, Sir."}])])
+    api = FakeAnthropicAPI(
+        [
+            _CLICK,
+            _error(529, "Overloaded", "overloaded_error"),
+            _message([{"type": "text", "text": "Clicked it, Sir."}]),
+        ]
+    )
     router = _real_router(api, tmp_path, llm_max_retries=1, llm_retry_backoff_seconds=0)
     agent, tool = _tool_agent(router, tmp_path)
     assert await agent.handle_user_message("click it") == "Clicked it, Sir."
     assert tool.runs == 1 and len(api.requests) == 3
     retried = api.body(2)["messages"]
     assert api.body(1)["messages"] == retried  # the retry is the identical request, same model
-    assert retried[-1]["content"][0] == {"type": "tool_result", "tool_use_id": "toolu_click",
-                                         "content": '{"success":true,"data":{"clicked":true}}'}
+    assert retried[-1]["content"][0] == {
+        "type": "tool_result",
+        "tool_use_id": "toolu_click",
+        "content": '{"success":true,"data":{"clicked":true}}',
+    }
     assert no_other_provider == []
 
 
 async def test_multi_step_tool_loop_runs_entirely_on_haiku(tmp_path, no_other_provider):
-    api = FakeAnthropicAPI([
-        _message([{"type": "tool_use", "id": "toolu_1", "name": "calculator", "input": {"expression": "17*24"}}],
-                 stop_reason="tool_use", msg_id="msg_1"),
-        _message([{"type": "tool_use", "id": "toolu_2", "name": "calculator", "input": {"expression": "408+1"}}],
-                 stop_reason="tool_use", msg_id="msg_2"),
-        _message([{"type": "text", "text": "409."}], msg_id="msg_3"),
-    ])
+    api = FakeAnthropicAPI(
+        [
+            _message(
+                [{"type": "tool_use", "id": "toolu_1", "name": "calculator", "input": {"expression": "17*24"}}],
+                stop_reason="tool_use",
+                msg_id="msg_1",
+            ),
+            _message(
+                [{"type": "tool_use", "id": "toolu_2", "name": "calculator", "input": {"expression": "408+1"}}],
+                stop_reason="tool_use",
+                msg_id="msg_2",
+            ),
+            _message([{"type": "text", "text": "409."}], msg_id="msg_3"),
+        ]
+    )
     router = _real_router(api, tmp_path)
     registry = ToolRegistry()
     registry.register(CalculatorTool())

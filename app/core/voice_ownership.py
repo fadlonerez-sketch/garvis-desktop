@@ -46,6 +46,7 @@ Rules:
 Thread-safe: the Desktop's UI thread, its asyncio loop (the /api/v1 handlers)
 and tests all call in.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -287,33 +288,48 @@ class VoiceOwnershipManager:
         self._resolve()
         now = self._clock()
         if mode == "active":
-            foreign_priority = [c for c in self._claims.values()
-                                if c.mode == "priority" and c.endpoint != endpoint_id]
+            foreign_priority = [c for c in self._claims.values() if c.mode == "priority" and c.endpoint != endpoint_id]
             if foreign_priority:
                 holder = self._endpoints.get(foreign_priority[0].endpoint)
                 raise VoiceClaimRefused(
                     f"Garvis is busy with a {foreign_priority[0].reason or 'priority task'} on "
-                    f"{holder.label if holder else 'another device'}.", "priority_elsewhere")
+                    f"{holder.label if holder else 'another device'}.",
+                    "priority_elsewhere",
+                )
             if not explicit and endpoint.state not in LISTENING_STATES:
                 raise VoiceClaimRefused("This device isn't the one listening for Garvis right now.", "not_owner")
             for other in [c for c in self._claims.values() if c.mode == "active"]:
                 # One conversation at a time: a new one (here, or explicitly started elsewhere) replaces it.
-                log_extra(logger, 20, "voice.claim_replaced", claim=other.id, endpoint=other.endpoint,
-                          by=endpoint_id)
+                log_extra(logger, 20, "voice.claim_replaced", claim=other.id, endpoint=other.endpoint, by=endpoint_id)
                 del self._claims[other.id]
             expires_at = None
         else:
             for other in [c for c in self._claims.values() if c.mode == "active" and c.endpoint != endpoint_id]:
-                log_extra(logger, 20, "voice.conversation_preempted", claim=other.id, endpoint=other.endpoint,
-                          by=endpoint_id, reason=reason)
+                log_extra(
+                    logger,
+                    20,
+                    "voice.conversation_preempted",
+                    claim=other.id,
+                    endpoint=other.endpoint,
+                    by=endpoint_id,
+                    reason=reason,
+                )
                 del self._claims[other.id]
             limit = self.max_priority_seconds if max_seconds is None else min(max_seconds, self.max_priority_seconds)
             expires_at = now + max(1.0, limit)
-        claim = VoiceClaim(secrets.token_hex(8), endpoint_id, mode, reason[:32], ref[:64], next(self._seq),
-                           expires_at)
+        claim = VoiceClaim(secrets.token_hex(8), endpoint_id, mode, reason[:32], ref[:64], next(self._seq), expires_at)
         self._claims[claim.id] = claim
-        log_extra(logger, 20, "voice.claimed", endpoint=endpoint_id, kind=endpoint.kind, mode=mode,
-                  reason=claim.reason, claim=claim.id, explicit=explicit)
+        log_extra(
+            logger,
+            20,
+            "voice.claimed",
+            endpoint=endpoint_id,
+            kind=endpoint.kind,
+            mode=mode,
+            reason=claim.reason,
+            claim=claim.id,
+            explicit=explicit,
+        )
         self._resolve(force=True)
         return claim, self._view(endpoint)
 
@@ -325,8 +341,9 @@ class VoiceOwnershipManager:
             if claim is None or claim.endpoint != endpoint_id:
                 return False
             del self._claims[claim_id]
-            log_extra(logger, 20, "voice.released", endpoint=endpoint_id, mode=claim.mode, reason=claim.reason,
-                      claim=claim_id)
+            log_extra(
+                logger, 20, "voice.released", endpoint=endpoint_id, mode=claim.mode, reason=claim.reason, claim=claim_id
+            )
             changed = self._resolve(force=True)
         self._publish(changed)
         return True
@@ -411,15 +428,26 @@ class VoiceOwnershipManager:
             return
         endpoint.wants_standby = wants
         endpoint.queue_seq = next(self._seq) if wants else None
-        log_extra(logger, 20, "voice.standby_wanted" if wants else "voice.standby_unwanted",
-                  endpoint=endpoint.id, kind=endpoint.kind)
+        log_extra(
+            logger,
+            20,
+            "voice.standby_wanted" if wants else "voice.standby_unwanted",
+            endpoint=endpoint.id,
+            kind=endpoint.kind,
+        )
 
     def _report_mic(self, endpoint: _Endpoint, mic_open: bool, seen_version: int) -> None:
         endpoint.reported_mic = mic_open
         if mic_open:
             if endpoint.state not in LISTENING_STATES and not endpoint.mic_may_be_open:
-                log_extra(logger, 30, "voice.unexpected_microphone", endpoint=endpoint.id, kind=endpoint.kind,
-                          state=endpoint.state.value)
+                log_extra(
+                    logger,
+                    30,
+                    "voice.unexpected_microphone",
+                    endpoint=endpoint.id,
+                    kind=endpoint.kind,
+                    state=endpoint.state.value,
+                )
                 endpoint.sleep_since = endpoint.sleep_since or self._clock()
             endpoint.mic_may_be_open = True
             return
@@ -459,16 +487,16 @@ class VoiceOwnershipManager:
                     log_extra(logger, 40, "voice.release_forced", endpoint=endpoint.id, kind=endpoint.kind)
         for claim in [c for c in self._claims.values() if c.expires_at is not None and now >= c.expires_at]:
             del self._claims[claim.id]
-            log_extra(logger, 30, "voice.claim_expired", endpoint=claim.endpoint, mode=claim.mode,
-                      reason=claim.reason)
+            log_extra(logger, 30, "voice.claim_expired", endpoint=claim.endpoint, mode=claim.mode, reason=claim.reason)
 
         eligible = [e for e in self._endpoints.values() if e.connected and e.wants_standby]
         standby_owner = self._standby_owner
         if standby_owner not in {e.id for e in eligible}:
             standby_owner = min(eligible, key=lambda e: e.queue_seq or 0).id if eligible else None
             if standby_owner != self._standby_owner:
-                log_extra(logger, 20, "voice.standby_owner", endpoint=standby_owner or "",
-                          previous=self._standby_owner or "")
+                log_extra(
+                    logger, 20, "voice.standby_owner", endpoint=standby_owner or "", previous=self._standby_owner or ""
+                )
 
         priorities = sorted((c for c in self._claims.values() if c.mode == "priority"), key=lambda c: c.seq)
         actives = [c for c in self._claims.values() if c.mode == "active"]
@@ -494,8 +522,12 @@ class VoiceOwnershipManager:
                 assigned[endpoint.id] = (VoiceState.SLEEP, "in_use")
         holder = None if blocked else target
 
-        changed = force or holder != self._holder or standby_owner != self._standby_owner or any(
-            (e.state, e.reason) != assigned[e.id] for e in self._endpoints.values())
+        changed = (
+            force
+            or holder != self._holder
+            or standby_owner != self._standby_owner
+            or any((e.state, e.reason) != assigned[e.id] for e in self._endpoints.values())
+        )
         if not changed:
             return False
         self._version += 1
@@ -509,8 +541,16 @@ class VoiceOwnershipManager:
                 endpoint.sleep_version = self._version
                 endpoint.sleep_since = now if endpoint.mic_may_be_open else None
             if state != endpoint.state:
-                log_extra(logger, 20, "voice.state", endpoint=endpoint.id, kind=endpoint.kind, state=state.value,
-                          previous=endpoint.state.value, version=self._version)
+                log_extra(
+                    logger,
+                    20,
+                    "voice.state",
+                    endpoint=endpoint.id,
+                    kind=endpoint.kind,
+                    state=state.value,
+                    previous=endpoint.state.value,
+                    version=self._version,
+                )
             endpoint.state, endpoint.reason = state, reason
         self._standby_owner = standby_owner
         self._holder = holder
@@ -534,15 +574,23 @@ class VoiceOwnershipManager:
             "wants_standby": endpoint.wants_standby,
             "owner": self._public(self._endpoints.get(self._holder)) if self._holder else None,
             "standby_owner": self._public(self._endpoints.get(self._standby_owner)) if self._standby_owner else None,
-            "endpoints": [{**self._public(e), "you": e is endpoint}
-                          for e in self._endpoints.values() if e.connected],
+            "endpoints": [{**self._public(e), "you": e is endpoint} for e in self._endpoints.values() if e.connected],
         }
 
     def _unknown_view(self, endpoint_id: str) -> dict:
-        return {"epoch": self.epoch, "version": self._version, "state": VoiceState.DISCONNECTED.value,
-                "reason": "", "listen": False, "lease_seconds": 0.0, "claims": [], "wants_standby": False,
-                "owner": self._public(self._endpoints.get(self._holder)) if self._holder else None,
-                "standby_owner": None, "endpoints": []}
+        return {
+            "epoch": self.epoch,
+            "version": self._version,
+            "state": VoiceState.DISCONNECTED.value,
+            "reason": "",
+            "listen": False,
+            "lease_seconds": 0.0,
+            "claims": [],
+            "wants_standby": False,
+            "owner": self._public(self._endpoints.get(self._holder)) if self._holder else None,
+            "standby_owner": None,
+            "endpoints": [],
+        }
 
     def _publish(self, changed: bool) -> None:
         if not changed:

@@ -2,6 +2,7 @@
 logged fallback, launch args, the page hook (workspace placement), and the
 structured extraction helpers used by web_research. Reuses the hermetic
 fake Playwright harness from tests/test_browser_manager.py."""
+
 from __future__ import annotations
 
 import logging

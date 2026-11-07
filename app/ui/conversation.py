@@ -7,6 +7,7 @@ raised surface, tool results as small chips. Qt's rich text can't round a
 cell, so the rounded bubbles are painted behind the text from the document
 layout (`paintEvent`).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -83,7 +84,9 @@ class ConversationView(QTextEdit):
         icon = fonts.icon_html("check_circle" if success else "error", theme.OK if success else theme.ERROR, 15)
         mark = icon or ("✓" if success else "✕")
         text = html.escape(name) + (f" · {html.escape(detail)}" if detail else "")
-        self._insert_bubble(TOOL, f'<span style="color:{theme.TEXT_2}; font-size:12px;">{mark}&nbsp;&nbsp;{text}</span>')
+        self._insert_bubble(
+            TOOL, f'<span style="color:{theme.TEXT_2}; font-size:12px;">{mark}&nbsp;&nbsp;{text}</span>'
+        )
 
     def _maybe_day_marker(self) -> None:
         today = date.today()

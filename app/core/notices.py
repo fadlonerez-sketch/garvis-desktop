@@ -6,6 +6,7 @@ reported again only after `quiet_seconds` without it (i.e. it went away and
 came back) or when `clear()` says the situation changed. Suppressed repeats
 are still logged by their callers.
 """
+
 from __future__ import annotations
 
 import time

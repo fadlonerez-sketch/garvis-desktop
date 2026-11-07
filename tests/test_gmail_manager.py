@@ -2,6 +2,7 @@
 modules injected via sys.modules -- no real network, no real OAuth
 consent, and no requirement that the google-* packages even be installed
 (mirrors how test_browser_manager.py fakes Playwright)."""
+
 from __future__ import annotations
 
 import sys
@@ -152,9 +153,7 @@ async def test_first_time_auth_runs_interactive_consent_and_saves_token(tmp_path
     service = FakeGmailService()
     _install_fake_google(monkeypatch, service=service)
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "secret.json").write_text("{}")
     assert not manager.is_authenticated
 
@@ -168,9 +167,7 @@ async def test_first_time_auth_runs_interactive_consent_and_saves_token(tmp_path
 @pytest.mark.asyncio
 async def test_missing_client_secret_raises_gmail_error(tmp_path, monkeypatch):
     _install_fake_google(monkeypatch, service=FakeGmailService())
-    manager = GmailManager(
-        client_secret_path=tmp_path / "does_not_exist.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "does_not_exist.json", token_path=tmp_path / "token.json")
 
     with pytest.raises(GmailError, match="No Gmail OAuth client secret"):
         await manager.search("in:inbox", 5)
@@ -181,9 +178,7 @@ async def test_expired_token_is_refreshed_and_reused_silently(tmp_path, monkeypa
     service = FakeGmailService()
     _install_fake_google(monkeypatch, service=service)
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "token.json").write_text('{"token": "stale"}')
 
     await manager.search("in:inbox", 5)
@@ -207,9 +202,7 @@ async def test_revoked_token_raises_gmail_auth_error(tmp_path, monkeypatch):
     _install_fake_google(monkeypatch, service=FakeGmailService())
     sys.modules["google.oauth2.credentials"].Credentials = _RevokedCredentials
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "token.json").write_text('{"token": "stale"}')
 
     with pytest.raises(GmailAuthError, match="re-authenticate") as excinfo:
@@ -230,9 +223,7 @@ async def test_corrupted_token_file_raises_gmail_auth_error(tmp_path, monkeypatc
 
     sys.modules["google.oauth2.credentials"].Credentials = _CorruptCredentials
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "token.json").write_text("not json")
 
     with pytest.raises(GmailAuthError, match="corrupted or unreadable"):
@@ -250,16 +241,12 @@ async def test_search_returns_message_summaries(tmp_path, monkeypatch):
     service = FakeGmailService(store=store)
     _install_fake_google(monkeypatch, service=service)
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "secret.json").write_text("{}")
 
     results = await manager.search("in:inbox", 10)
 
-    assert results == [
-        {"id": "m1", "subject": "Hi", "from": "a@b.com", "date": "", "snippet": "hello there"}
-    ]
+    assert results == [{"id": "m1", "subject": "Hi", "from": "a@b.com", "date": "", "snippet": "hello there"}]
 
 
 @pytest.mark.asyncio
@@ -283,9 +270,7 @@ async def test_read_message_extracts_plain_text_body(tmp_path, monkeypatch):
     service = FakeGmailService(store=store)
     _install_fake_google(monkeypatch, service=service)
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "secret.json").write_text("{}")
 
     result = await manager.read_message("m1")
@@ -299,9 +284,7 @@ async def test_read_message_extracts_plain_text_body(tmp_path, monkeypatch):
 async def test_read_nonexistent_message_raises_gmail_error(tmp_path, monkeypatch):
     _install_fake_google(monkeypatch, service=FakeGmailService(store={}))
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "secret.json").write_text("{}")
 
     with pytest.raises(GmailError, match="Could not read message"):
@@ -313,9 +296,7 @@ async def test_send_returns_sent_message_id(tmp_path, monkeypatch):
     service = FakeGmailService()
     _install_fake_google(monkeypatch, service=service)
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "secret.json").write_text("{}")
 
     message_id = await manager.send("bob@example.com", "Subject", "Body text")
@@ -328,9 +309,7 @@ async def test_send_api_failure_raises_gmail_error(tmp_path, monkeypatch):
     service = FakeGmailService(fail=True)
     _install_fake_google(monkeypatch, service=service)
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "secret.json").write_text("{}")
 
     with pytest.raises(GmailError, match="Could not send email"):
@@ -342,9 +321,7 @@ async def test_create_draft_returns_draft_id(tmp_path, monkeypatch):
     service = FakeGmailService()
     _install_fake_google(monkeypatch, service=service)
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "secret.json").write_text("{}")
 
     draft_id = await manager.create_draft("bob@example.com", "Subject", "Body text")
@@ -357,9 +334,7 @@ async def test_search_api_failure_raises_gmail_error_not_crash(tmp_path, monkeyp
     service = FakeGmailService(fail=True)
     _install_fake_google(monkeypatch, service=service)
 
-    manager = GmailManager(
-        client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json"
-    )
+    manager = GmailManager(client_secret_path=tmp_path / "secret.json", token_path=tmp_path / "token.json")
     (tmp_path / "secret.json").write_text("{}")
 
     with pytest.raises(GmailError, match="Gmail search failed"):

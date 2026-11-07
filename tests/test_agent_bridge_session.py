@@ -12,6 +12,7 @@ microphone or wait on a real background thread. A real AgentBridge is
 still constructed (not a duck-typed stand-in) so these tests exercise the
 actual guard logic, not a reimplementation of it.
 """
+
 from __future__ import annotations
 
 from app.core.config import Settings
@@ -122,9 +123,7 @@ def test_session_active_flag_suppresses_the_normal_voice_replies_auto_speak_path
         _loop = Mock()
 
     fake = _FakeBridge()
-    AgentBridge._on_event(
-        fake, AgentEvent(type=EventType.ASSISTANT_MESSAGE, payload={"text": "hello"})
-    )
+    AgentBridge._on_event(fake, AgentEvent(type=EventType.ASSISTANT_MESSAGE, payload={"text": "hello"}))
     fake._loop.create_task.assert_not_called()
 
 
@@ -146,9 +145,7 @@ def test_session_active_false_allows_the_normal_voice_replies_auto_speak_path():
         # also a Mock here and never actually runs what's passed to it.
 
     fake = _FakeBridge()
-    AgentBridge._on_event(
-        fake, AgentEvent(type=EventType.ASSISTANT_MESSAGE, payload={"text": "hello"})
-    )
+    AgentBridge._on_event(fake, AgentEvent(type=EventType.ASSISTANT_MESSAGE, payload={"text": "hello"}))
     fake._loop.create_task.assert_called_once()
 
 
@@ -162,11 +159,7 @@ def test_session_state_event_reaches_the_signal_exactly_once(tmp_path):
 
         import asyncio
 
-        asyncio.run(
-            bridge._events.publish(
-                AgentEvent(type=EventType.SESSION_STATE, payload={"state": "listening"})
-            )
-        )
+        asyncio.run(bridge._events.publish(AgentEvent(type=EventType.SESSION_STATE, payload={"state": "listening"})))
 
         assert received == ["listening"]
     finally:

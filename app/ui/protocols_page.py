@@ -13,6 +13,7 @@ File operations go through ProtocolStore (thread-safe); running and
 cancelling go through the bridge (the agent loop). Dialogs that need an
 answer go through `ask`/`inform`, which tests replace.
 """
+
 from __future__ import annotations
 
 import copy
@@ -63,14 +64,35 @@ from app.ui.dashboard import (
     set_button_icon,
 )
 
-PRESENT_CHOICES = (("default", "Default for this action"), ("none", "Don't show me"),
-                   ("subtle", "Small card"), ("prominent", "Animation + card"))
+PRESENT_CHOICES = (
+    ("default", "Default for this action"),
+    ("none", "Don't show me"),
+    ("subtle", "Small card"),
+    ("prominent", "Animation + card"),
+)
 FAILURE_CHOICES = (("stop", "Stop the protocol"), ("continue", "Continue with the next step"))
-_STEP_ICON = {"app": "▣", "web": "◎", "folder": "▤", "window": "▢", "wait": "◷", "notify": "◈", "confirm": "?",
-              "ai": "✦", "step": "•"}
-_STEP_SYMBOL = {"app": "apps", "web": "language", "folder": "folder_open", "window": "select_window",
-                "wait": "hourglass_empty", "notify": "notifications", "confirm": "help", "ai": "auto_awesome",
-                "step": "radio_button_checked"}
+_STEP_ICON = {
+    "app": "▣",
+    "web": "◎",
+    "folder": "▤",
+    "window": "▢",
+    "wait": "◷",
+    "notify": "◈",
+    "confirm": "?",
+    "ai": "✦",
+    "step": "•",
+}
+_STEP_SYMBOL = {
+    "app": "apps",
+    "web": "language",
+    "folder": "folder_open",
+    "window": "select_window",
+    "wait": "hourglass_empty",
+    "notify": "notifications",
+    "confirm": "help",
+    "ai": "auto_awesome",
+    "step": "radio_button_checked",
+}
 """Material Symbols for the step kinds (the characters above are the fallback)."""
 
 
@@ -134,10 +156,12 @@ class StepCard(QFrame):
         self.enabled_box.setChecked(step.enabled)
         self.enabled_box.toggled.connect(self._on_change)
         head.addWidget(self.enabled_box)
-        for text, tip, slot in (("▲", "Move up", lambda: self.move_requested.emit(-1)),
-                                ("▼", "Move down", lambda: self.move_requested.emit(1)),
-                                ("Copy", "Duplicate this step", self.duplicate_requested.emit),
-                                ("×", "Remove this step", self.remove_requested.emit)):
+        for text, tip, slot in (
+            ("▲", "Move up", lambda: self.move_requested.emit(-1)),
+            ("▼", "Move down", lambda: self.move_requested.emit(1)),
+            ("Copy", "Duplicate this step", self.duplicate_requested.emit),
+            ("×", "Remove this step", self.remove_requested.emit),
+        ):
             button = _button(text, tip)
             button.setFixedWidth(46 if len(text) > 1 else 30)
             button.clicked.connect(slot)
@@ -188,8 +212,11 @@ class StepCard(QFrame):
             widget.setPlainText(text)
             widget.setFixedHeight(64 if param.kind == "longtext" else 86)
             widget.textChanged.connect(self._on_change)
-            getter = (lambda w=widget: [ln.strip() for ln in w.toPlainText().splitlines() if ln.strip()]) \
-                if param.kind == "urls" else (lambda w=widget: w.toPlainText())
+            getter = (
+                (lambda w=widget: [ln.strip() for ln in w.toPlainText().splitlines() if ln.strip()])
+                if param.kind == "urls"
+                else (lambda w=widget: w.toPlainText())
+            )
         elif param.kind == "seconds":
             widget = QDoubleSpinBox()
             widget.setRange(param.minimum or 0, param.maximum or 3600)
@@ -197,7 +224,7 @@ class StepCard(QFrame):
             widget.setSuffix(" s")
             try:
                 widget.setValue(float(value if value not in (None, "") else param.default or 0))
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 widget.setValue(float(param.default or 0))
             widget.valueChanged.connect(self._on_change)
             getter = widget.value
@@ -210,8 +237,14 @@ class StepCard(QFrame):
             getter = widget.currentData
         else:
             widget = QLineEdit(str(value or ""))
-            widget.setPlaceholderText({"url": "https://…", "path": "C:\\Users\\…", "app": "e.g. Visual Studio Code",
-                                       "window": "e.g. chrome"}.get(param.kind, ""))
+            widget.setPlaceholderText(
+                {
+                    "url": "https://…",
+                    "path": "C:\\Users\\…",
+                    "app": "e.g. Visual Studio Code",
+                    "window": "e.g. chrome",
+                }.get(param.kind, "")
+            )
             widget.textChanged.connect(self._on_change)
             getter = widget.text
         if param.help:
@@ -292,8 +325,11 @@ class ProtocolsPage(Page):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
-        self.header = PageHeader("Protocols", "Reusable desktop workflows. Each step is an action Garvis really "
-                                 "supports, run with the same permissions and confirmations as a chat request.")
+        self.header = PageHeader(
+            "Protocols",
+            "Reusable desktop workflows. Each step is an action Garvis really "
+            "supports, run with the same permissions and confirmations as a chat request.",
+        )
         self.new_button = QPushButton("New protocol")
         self.new_button.setProperty("accent", True)
         set_button_icon(self.new_button, "add", "#FFFFFF", 18)
@@ -387,21 +423,30 @@ class ProtocolsPage(Page):
             problems = blocking(validate(protocol, self._tools))
             state = "Disabled" if not protocol.enabled else ("Needs attention" if problems else "Ready")
             enabled_steps = sum(1 for s in protocol.steps if s.enabled)
-            item = QListWidgetItem(f"{protocol.name}\n{enabled_steps} step{'s' if enabled_steps != 1 else ''} · {state}")
+            item = QListWidgetItem(
+                f"{protocol.name}\n{enabled_steps} step{'s' if enabled_steps != 1 else ''} · {state}"
+            )
             item.setData(Qt.ItemDataRole.UserRole, protocol.id)
             item.setToolTip(protocol.description or protocol.name)
             self.library.addItem(item)
             if protocol.id == select:
                 chosen = item
         self.library.blockSignals(False)
-        self.library_note.setText((f"{invalid} file{'s' if invalid != 1 else ''} couldn't be loaded and won't run."
-                                   if invalid else "") or ("No protocols yet — create one with New protocol."
-                                                           if not entries else ""))
+        self.library_note.setText(
+            (f"{invalid} file{'s' if invalid != 1 else ''} couldn't be loaded and won't run." if invalid else "")
+            or ("No protocols yet — create one with New protocol." if not entries else "")
+        )
         if chosen is not None:
             self.library.setCurrentItem(chosen)
         elif self._current is None:
-            first = next((self.library.item(i) for i in range(self.library.count())
-                          if self.library.item(i).data(Qt.ItemDataRole.UserRole)), None)
+            first = next(
+                (
+                    self.library.item(i)
+                    for i in range(self.library.count())
+                    if self.library.item(i).data(Qt.ItemDataRole.UserRole)
+                ),
+                None,
+            )
             if first is not None:
                 self.library.setCurrentItem(first)
             else:
@@ -559,9 +604,13 @@ class ProtocolsPage(Page):
     def _on_details_changed(self, *_args) -> None:
         if self._current is None:
             return
-        self._current = self._current.model_copy(update={
-            "name": self.name_edit.text(), "description": self.description_edit.text(),
-            "enabled": self.enabled_box.isChecked()})
+        self._current = self._current.model_copy(
+            update={
+                "name": self.name_edit.text(),
+                "description": self.description_edit.text(),
+                "enabled": self.enabled_box.isChecked(),
+            }
+        )
         self._validate_timer.start()
         self._update_buttons()
 
@@ -645,8 +694,10 @@ class ProtocolsPage(Page):
                 if problem.step == index and problem.blocking:
                     status = f"can't run: {problem.message}"
             show = {"none": "", "subtle": " · then a small card", "prominent": " · then the attention animation"}
-            lines.append(f"  {number}. {describe_step(step)} — {status}{show.get(step.presentation(), '')}"
-                         + ("" if step.on_failure == "stop" else " · continues if it fails"))
+            lines.append(
+                f"  {number}. {describe_step(step)} — {status}{show.get(step.presentation(), '')}"
+                + ("" if step.on_failure == "stop" else " · continues if it fails")
+            )
         stopping = blocking(problems)
         lines += ["", "Ready to run." if not stopping else f"It can't run yet: {stopping[0].text()}"]
         self.last_test_report = "\n".join(lines)
@@ -722,8 +773,9 @@ class ProtocolsPage(Page):
         clear_layout(self.run_body)
         task = self._latest_task
         if task is None:
-            self.run_body.addWidget(label("Not run since Garvis started. Runs from the phone appear here too.", "empty",
-                                          wrap=True))
+            self.run_body.addWidget(
+                label("Not run since Garvis started. Runs from the phone appear here too.", "empty", wrap=True)
+            )
             return
         head = QHBoxLayout()
         status = task.get("status", "")

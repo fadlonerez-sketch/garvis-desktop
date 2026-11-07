@@ -2,6 +2,7 @@
 rules' wording, the checks a model-written sentence must pass, and that the
 one stored sentence is what every path speaks. The model is always faked
 here -- no real API call."""
+
 from __future__ import annotations
 
 import asyncio
@@ -28,28 +29,34 @@ ROBOTIC = ("אני מתקשר", "בשביל להזכיר", "להזכיר לך:",
 
 
 # ------------------------------------------------------------------ the rules
-@pytest.mark.parametrize("text, expected", [
-    ("להתקשר לאמא", "היי אלכס, רק תזכור להתקשר לאמא שלך."),
-    ("להגיש את העבודה בהיסטוריה", "היי אלכס, אל תשכח להגיש היום את העבודה בהיסטוריה."),
-    ("פגישה עם דניאל בשעה 17:00", "היי אלכס, רק תזכורת שיש לך פגישה עם דניאל בחמש."),
-    ("לקנות חלב בדרך הביתה", "היי אלכס, כשתחזור הביתה, תזכור לעצור ולקנות חלב."),
-])
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("להתקשר לאמא", "היי אלכס, רק תזכור להתקשר לאמא שלך."),
+        ("להגיש את העבודה בהיסטוריה", "היי אלכס, אל תשכח להגיש היום את העבודה בהיסטוריה."),
+        ("פגישה עם דניאל בשעה 17:00", "היי אלכס, רק תזכורת שיש לך פגישה עם דניאל בחמש."),
+        ("לקנות חלב בדרך הביתה", "היי אלכס, כשתחזור הביתה, תזכור לעצור ולקנות חלב."),
+    ],
+)
 def test_the_users_own_examples(text, expected):
     assert compose(text, name="אלכס").text == expected
 
 
-@pytest.mark.parametrize("text, category, must_have", [
-    ("תזכיר לי להתקשר לאבא שלי", "call", "להתקשר לאבא שלך"),
-    ("להתקשר לרופא בשעה 9:30", "call", "בתשע וחצי"),
-    ("לקחת כדור", "medicine", "לקחת כדור"),
-    ("ללמוד למבחן במתמטיקה", "task", "ללמוד למבחן במתמטיקה"),
-    ("מבחן בפיזיקה מחר בשעה 8:45", "event", "ברבע לתשע"),
-    ("לשלם חשבון חשמל עד יום חמישי", "deadline", "לשלם חשבון חשמל עד יום חמישי"),
-    ("לשלוח לי את הקובץ", "deadline", "לשלוח היום לך את הקובץ"),
-    ("תור לרופא שיניים בשעה 16:15", "event", "יש לך תור לרופא שיניים בארבע ורבע"),
-    ("לקנות מתנה לנועה", "shopping", "לקנות מתנה לנועה"),
-    ("לחם וחלב", "other", "לחם וחלב"),
-])
+@pytest.mark.parametrize(
+    "text, category, must_have",
+    [
+        ("תזכיר לי להתקשר לאבא שלי", "call", "להתקשר לאבא שלך"),
+        ("להתקשר לרופא בשעה 9:30", "call", "בתשע וחצי"),
+        ("לקחת כדור", "medicine", "לקחת כדור"),
+        ("ללמוד למבחן במתמטיקה", "task", "ללמוד למבחן במתמטיקה"),
+        ("מבחן בפיזיקה מחר בשעה 8:45", "event", "ברבע לתשע"),
+        ("לשלם חשבון חשמל עד יום חמישי", "deadline", "לשלם חשבון חשמל עד יום חמישי"),
+        ("לשלוח לי את הקובץ", "deadline", "לשלוח היום לך את הקובץ"),
+        ("תור לרופא שיניים בשעה 16:15", "event", "יש לך תור לרופא שיניים בארבע ורבע"),
+        ("לקנות מתנה לנועה", "shopping", "לקנות מתנה לנועה"),
+        ("לחם וחלב", "other", "לחם וחלב"),
+    ],
+)
 def test_hebrew_reminders_of_every_kind(text, category, must_have):
     composed = compose(text, name="אלכס")
     assert composed.lang == "he" and composed.category == category
@@ -79,20 +86,26 @@ def test_no_name_configured():
     assert compose("להתקשר לאמא").text == "היי, רק תזכור להתקשר לאמא שלך."
 
 
-@pytest.mark.parametrize("text, expected", [
-    ("remind me to call mom", "Hey Alex, just a reminder to call your mom."),
-    ("meeting with Daniel at 17:00", "Hey Alex, just a heads-up: you have a meeting with Daniel at five."),
-    ("buy milk on the way home", "Hey Alex, on your way home, remember to stop and buy milk."),
-    ("submit the history paper", "Hey Alex, don't forget to submit the history paper today."),
-    ("take my pills", "Hey Alex, it's time to take your pills."),
-])
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("remind me to call mom", "Hey Alex, just a reminder to call your mom."),
+        ("meeting with Daniel at 17:00", "Hey Alex, just a heads-up: you have a meeting with Daniel at five."),
+        ("buy milk on the way home", "Hey Alex, on your way home, remember to stop and buy milk."),
+        ("submit the history paper", "Hey Alex, don't forget to submit the history paper today."),
+        ("take my pills", "Hey Alex, it's time to take your pills."),
+    ],
+)
 def test_english_reminders(text, expected):
     assert compose(text, name="Alex").text == expected
 
 
 def test_call_me_about_is_the_request_not_the_content():
     assert "call you" not in compose("Call me about the meeting").text
-    assert compose("E2E call me", name="Alex").text in ("Hey Alex, a quick reminder: E2E.", "Hey Alex, just reminding you: E2E.")
+    assert compose("E2E call me", name="Alex").text in (
+        "Hey Alex, a quick reminder: E2E.",
+        "Hey Alex, just reminding you: E2E.",
+    )
     assert compose("dentist appointment at 16:15").category == "event"
     assert compose("Dentist, call me").text.endswith("Dentist.")
     assert compose("רופא שיניים, תתקשר אליי", name="אלכס").text.endswith("רופא שיניים.")
@@ -107,7 +120,9 @@ def test_consecutive_reminders_dont_sound_the_same():
     openings = [s.split(" ", 3)[2] for s in sentences]
     assert all(a != b for a, b in pairwise(openings)), sentences
     # The stable form (what a phone asks for again later) is the same every time.
-    assert phraser.compose("id0", texts[0], remember=False).text == phraser.compose("id0", texts[0], remember=False).text
+    assert (
+        phraser.compose("id0", texts[0], remember=False).text == phraser.compose("id0", texts[0], remember=False).text
+    )
 
 
 def test_clock_words():
@@ -125,16 +140,19 @@ def test_language_and_voice_language():
 
 
 # --------------------------------------------------------- faithfulness checks
-@pytest.mark.parametrize("candidate, problem", [
-    ("היי אלכס, רק לא לשכוח: בחמש יש לך פגישה עם דניאל.", None),
-    ("היי אלכס, רק תזכורת שיש לך פגישה עם דניאל ויוסי בחמש במשרד בתל אביב ליד הים.", "added_details"),
-    ("היי אלכס, רק תזכורת שיש לך פגישה עם דניאל בשש.", "time_dropped"),
-    ("היי אלכס, רק תזכורת שיש לך פגישה עם דניאל ב-18:00.", "new_number"),
-    ("היי אלכס, יש לך משהו בחמש.", "details_dropped"),
-    ("Hey Alex, you have a meeting with Daniel at five.", "language"),
-    ("היי, רק תזכורת שיש לך פגישה עם דניאל בחמש.", "no_name"),
-    ("היי אלכס, " + "פגישה עם דניאל בחמש " * 12, "length"),
-])
+@pytest.mark.parametrize(
+    "candidate, problem",
+    [
+        ("היי אלכס, רק לא לשכוח: בחמש יש לך פגישה עם דניאל.", None),
+        ("היי אלכס, רק תזכורת שיש לך פגישה עם דניאל ויוסי בחמש במשרד בתל אביב ליד הים.", "added_details"),
+        ("היי אלכס, רק תזכורת שיש לך פגישה עם דניאל בשש.", "time_dropped"),
+        ("היי אלכס, רק תזכורת שיש לך פגישה עם דניאל ב-18:00.", "new_number"),
+        ("היי אלכס, יש לך משהו בחמש.", "details_dropped"),
+        ("Hey Alex, you have a meeting with Daniel at five.", "language"),
+        ("היי, רק תזכורת שיש לך פגישה עם דניאל בחמש.", "no_name"),
+        ("היי אלכס, " + "פגישה עם דניאל בחמש " * 12, "length"),
+    ],
+)
 def test_faithful_hebrew(candidate, problem):
     assert faithful("פגישה עם דניאל בשעה 17:00", candidate, name="אלכס") == problem
 
@@ -142,7 +160,9 @@ def test_faithful_hebrew(candidate, problem):
 def test_faithful_refuses_a_story_around_unclear_content():
     # Seen live from the model: the package "arrives today at noon" -- nothing in the reminder says so.
     assert faithful("החבילה של יוסי", "היי אלכס, רק תזכורת שהחבילה של יוסי מגיעה אליך היום בצהריים.", name="אלכס") in (
-        "added_details", "added_time")
+        "added_details",
+        "added_time",
+    )
     assert faithful("החבילה של יוסי", "היי אלכס, רק תזכורת לגבי החבילה של יוסי.", name="אלכס") is None
     assert faithful("להתקשר לאמא", "היי אלכס, תזכור להתקשר לאמא שלך הערב.", name="אלכס") == "added_time"
     assert faithful("להגיש את העבודה", "היי אלכס, אל תשכח להגיש היום את העבודה.", name="אלכס") is None
@@ -180,21 +200,30 @@ async def test_a_model_sentence_that_keeps_the_reminder_is_used():
     model = FakeModel(_reply("היי אלכס, רק לא לשכוח: בחמש יש לך פגישה עם דניאל."))
     phraser = ReminderPhraser(name_he="אלכס", llm=model)
     phraser.compose("a", "להתקשר לאבא")  # a recent sentence the model is asked not to echo
-    assert await phraser.refine("פגישה עם דניאל בשעה 17:00", when="once, Fri 31 Oct 16:30") == \
-        "היי אלכס, רק לא לשכוח: בחמש יש לך פגישה עם דניאל."
+    assert (
+        await phraser.refine("פגישה עם דניאל בשעה 17:00", when="once, Fri 31 Oct 16:30")
+        == "היי אלכס, רק לא לשכוח: בחמש יש לך פגישה עם דניאל."
+    )
     system, user = model.requests[0]
     assert system.role == Role.SYSTEM and "NEVER add anything" in system.content and "היי אלכס" in system.content
     assert "להתקשר לאבא שלך" in system.content  # don't repeat recent wordings
-    assert json.loads(user.content) == {"reminder": "פגישה עם דניאל בשעה 17:00", "type_guess": "event",
-                                        "rings": "once, Fri 31 Oct 16:30", "delivered_as": "a phone call"}
+    assert json.loads(user.content) == {
+        "reminder": "פגישה עם דניאל בשעה 17:00",
+        "type_guess": "event",
+        "rings": "once, Fri 31 Oct 16:30",
+        "delivered_as": "a phone call",
+    }
 
 
-@pytest.mark.parametrize("reply", [
-    _reply("היי אלכס, יש לך פגישה עם דניאל ועם שרה בשש."),   # invented time
-    _reply("Hey Alex, meeting with Daniel at five."),        # wrong language
-    "Sure! Here's a friendly reminder.",                      # not JSON
-    RuntimeError("budget exceeded"),                          # no model right now
-])
+@pytest.mark.parametrize(
+    "reply",
+    [
+        _reply("היי אלכס, יש לך פגישה עם דניאל ועם שרה בשש."),  # invented time
+        _reply("Hey Alex, meeting with Daniel at five."),  # wrong language
+        "Sure! Here's a friendly reminder.",  # not JSON
+        RuntimeError("budget exceeded"),  # no model right now
+    ],
+)
 async def test_a_model_sentence_that_fails_the_checks_is_dropped(reply):
     phraser = ReminderPhraser(name_he="אלכס", llm=FakeModel(reply))
     assert await phraser.refine("פגישה עם דניאל בשעה 17:00") is None
@@ -207,8 +236,7 @@ async def test_no_model_means_rules_only():
 # ------------------------------------------------------------ store + worker
 def _store(tmp_path, phraser=None):
     phraser = phraser or ReminderPhraser(name_he="אלכס")
-    return ReminderStore(tmp_path / "reminders.json",
-                         phrase=lambda r: phraser.compose(r.id, r.text).text), phraser
+    return ReminderStore(tmp_path / "reminders.json", phrase=lambda r: phraser.compose(r.id, r.text).text), phraser
 
 
 def test_the_store_keeps_the_sentence_in_step_with_the_text(tmp_path):
@@ -237,9 +265,17 @@ def test_a_model_sentence_for_old_text_is_refused(tmp_path):
 
 def test_reminders_saved_before_phrasing_get_a_sentence(tmp_path):
     path = tmp_path / "reminders.json"
-    path.write_text(json.dumps({"version": 3, "reminders": [
-        {"id": "old1", "text": "להתקשר לאמא", "kind": "call", "due_at": time.time() + 600, "tz": "UTC"}]}),
-        encoding="utf-8")
+    path.write_text(
+        json.dumps(
+            {
+                "version": 3,
+                "reminders": [
+                    {"id": "old1", "text": "להתקשר לאמא", "kind": "call", "due_at": time.time() + 600, "tz": "UTC"}
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
     store = ReminderStore(path, phrase=lambda r: compose(r.text, name="אלכס").text)
     assert store.get("old1").spoken == "היי אלכס, רק תזכור להתקשר לאמא שלך."
 
@@ -270,8 +306,7 @@ async def test_the_worker_keeps_the_rules_when_the_model_fails(tmp_path):
     ReminderPhrasingWorker(store, phraser, asyncio.get_running_loop(), get_zone).start()
     call = store.create("להתקשר לאמא", tz="UTC", due_at=time.time() + 3600, kind="call")
     await asyncio.sleep(0.05)
-    assert store.get(call.id).spoken == "היי אלכס, רק תזכור להתקשר לאמא שלך." or \
-        store.get(call.id).spoken_by == "rules"
+    assert store.get(call.id).spoken == "היי אלכס, רק תזכור להתקשר לאמא שלך." or store.get(call.id).spoken_by == "rules"
     store.create("להתקשר לאבא", tz="UTC", due_at=time.time() + 3600, kind="call")  # the next change: no retry storm
     await asyncio.sleep(0.05)
     assert len(model.requests) == 2

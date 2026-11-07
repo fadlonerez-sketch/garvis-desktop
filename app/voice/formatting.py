@@ -29,6 +29,7 @@ Deliberately generic: it operates on plain text, not on any tool's output
 shape, so it applies equally to web search, Gmail, browser, or any other
 tool-derived reply -- not just restaurant results.
 """
+
 from __future__ import annotations
 
 import re

@@ -5,6 +5,7 @@ it never calls build_agent() or build_voice_pipeline() itself, so the
 phone and the desktop share one Agent, one conversation and one set of
 providers, tools and permission rules.
 """
+
 from __future__ import annotations
 
 import sys
@@ -44,8 +45,10 @@ def build_companion(settings: Settings) -> Companion:
     provider, reason = build_image_provider(settings)
     phraser = ReminderPhraser(name_en=settings.user_name, name_he=settings.user_name_he, gender=settings.user_gender)
     return Companion(
-        reminders=ReminderStore(settings.data_dir / "reminders" / "reminders.json",
-                                phrase=lambda reminder: phraser.compose(reminder.id, reminder.text).text),
+        reminders=ReminderStore(
+            settings.data_dir / "reminders" / "reminders.json",
+            phrase=lambda reminder: phraser.compose(reminder.id, reminder.text).text,
+        ),
         zone=ReminderZone(settings.reminders_timezone),
         images=ImageService(settings.data_dir / "images", provider, reason),
         phone=PhoneActionBroker(),

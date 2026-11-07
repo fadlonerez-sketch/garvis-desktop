@@ -18,6 +18,7 @@ Cost controls, all deterministic and local (no summarization calls):
   - Dropped turns leave a one-line digest (request -> reply) that the agent
     puts in the system prompt, so the conversation keeps its thread.
 """
+
 from __future__ import annotations
 
 import json
@@ -120,7 +121,7 @@ class ConversationContext:
         has_system = bool(self._messages) and self._messages[0].role == Role.SYSTEM
         head = self._messages[:1] if has_system else []
         turns: list[list[Message]] = []
-        for message in self._messages[len(head):]:
+        for message in self._messages[len(head) :]:
             if message.role == Role.USER or not turns:
                 turns.append([message])
             else:
@@ -164,8 +165,11 @@ class ConversationContext:
     def _elide_completed_turns(self) -> None:
         """Called when a new user turn starts: every turn so far is complete."""
         for index, message in enumerate(self._messages):
-            if (message.role == Role.TOOL and len(message.content or "") > STALE_TOOL_RESULT_CHARS
-                    and not _is_elided(message)):
+            if (
+                message.role == Role.TOOL
+                and len(message.content or "") > STALE_TOOL_RESULT_CHARS
+                and not _is_elided(message)
+            ):
                 self._messages[index] = _elide_tool_result(message, "earlier request")
 
     def _remember_dropped(self, turn: list[Message]) -> None:

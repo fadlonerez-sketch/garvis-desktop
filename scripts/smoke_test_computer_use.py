@@ -8,6 +8,7 @@ is focused. Prints only success flags and counts -- not screen contents.
 
 Run with: python scripts/smoke_test_computer_use.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -33,8 +34,13 @@ STEPS = [
     ("system_status", {}),
     ("recent_system_errors", {"hours": 24, "limit": 3}),
     ("list_installed_apps", {"filter": "python", "limit": 3}),
-    ("run_powershell", {"command": "git status --short | Measure-Object | Select-Object -ExpandProperty Count",
-                        "working_directory": REPO}),
+    (
+        "run_powershell",
+        {
+            "command": "git status --short | Measure-Object | Select-Object -ExpandProperty Count",
+            "working_directory": REPO,
+        },
+    ),
     ("find_files", {"directory": REPO, "pattern": "test_*.py", "max_results": 5}),
     ("read_text_file", {"path": str(Path(REPO) / "README.md"), "max_lines": 3}),
 ]
@@ -49,7 +55,9 @@ class _ScriptedLLM(LLMProvider):
             name, args = STEPS[self.step]
             self.step += 1
             return LLMResponse(
-                message=Message(role=Role.ASSISTANT, tool_calls=[ToolCall(id=f"c{self.step}", name=name, arguments=args)]),
+                message=Message(
+                    role=Role.ASSISTANT, tool_calls=[ToolCall(id=f"c{self.step}", name=name, arguments=args)]
+                ),
                 finish_reason="tool_calls",
             )
         return LLMResponse(message=Message(role=Role.ASSISTANT, content="Inspection complete."))
@@ -95,7 +103,9 @@ async def main() -> None:
 
     async def recording(tool_call):
         result = await original(tool_call)
-        results.append((tool_call.name, result.success, _shape(result.data) if result.success else (result.error or "")[:120]))
+        results.append(
+            (tool_call.name, result.success, _shape(result.data) if result.success else (result.error or "")[:120])
+        )
         return result
 
     agent._execute_tool_call = recording

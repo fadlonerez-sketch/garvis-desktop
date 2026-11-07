@@ -3,6 +3,7 @@
 Verifies the UI builds and wires to the agent bridge without crashing.
 Run with: python scripts/smoke_test_ui.py
 """
+
 from __future__ import annotations
 
 import sys

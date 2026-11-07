@@ -10,6 +10,7 @@ leaves the PC; the PC microphone and speakers are never touched. Uses a
 throwaway certificate directory, not data/mobile. Not part of pytest
 (model dependent). Run with: python scripts/smoke_test_mobile.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -89,9 +90,13 @@ async def main() -> None:
                     print(f"Pairing -> HTTP {response.status}")
                 headers = {"X-Garvis-Client": "1", "Cookie": f"{COOKIE_NAME}={token}"}
 
-                async with session.post(f"{base}/api/messages", json={"text": "hello from the smoke test"}, headers=headers) as response:
+                async with session.post(
+                    f"{base}/api/messages", json={"text": "hello from the smoke test"}, headers=headers
+                ) as response:
                     turn_id = (await response.json())["turn_id"]
-                replies = [e["text"] for e in await _wait_for_turn(session, base, headers, turn_id) if e["kind"] == "assistant"]
+                replies = [
+                    e["text"] for e in await _wait_for_turn(session, base, headers, turn_id) if e["kind"] == "assistant"
+                ]
                 print(f"Text turn reply: {replies[-1]!r}")
 
                 print(f"\nSynthesizing the question with Piper: {SPOKEN_QUESTION!r}")

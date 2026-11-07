@@ -22,6 +22,7 @@ contents), by code -- never by the model. Tools that only touch public web
 content or have trivial output (`_NON_TAINTING_TOOLS`) don't taint; every
 other tool, including any added later, does.
 """
+
 from __future__ import annotations
 
 import json
@@ -30,13 +31,28 @@ from urllib.parse import urlsplit
 
 from app.llm.base import Message, Role
 
-_NON_TAINTING_TOOLS = frozenset({
-    "calculator", "get_current_datetime", "web_search", "web_research", "fetch_webpage_text",
-    "browser_navigate", "browser_read_page", "browser_close_page", "open_website",
-})
-_LINK_SOURCE_TOOLS = frozenset({
-    "web_search", "web_research", "fetch_webpage_text", "browser_navigate", "browser_read_page",
-})
+_NON_TAINTING_TOOLS = frozenset(
+    {
+        "calculator",
+        "get_current_datetime",
+        "web_search",
+        "web_research",
+        "fetch_webpage_text",
+        "browser_navigate",
+        "browser_read_page",
+        "browser_close_page",
+        "open_website",
+    }
+)
+_LINK_SOURCE_TOOLS = frozenset(
+    {
+        "web_search",
+        "web_research",
+        "fetch_webpage_text",
+        "browser_navigate",
+        "browser_read_page",
+    }
+)
 
 
 def tainting_tool(history: Iterable[Message]) -> str | None:
@@ -74,11 +90,20 @@ def url_egress_reason(url: str, history: list[Message]) -> str | None:
         host = (parts.hostname or "").lower()
     except ValueError:
         parts, host = None, ""
-    if (parts is not None and host and parts.path in ("", "/") and not parts.query and not parts.fragment
-            and not parts.username and parts.port is None):
+    if (
+        parts is not None
+        and host
+        and parts.path in ("", "/")
+        and not parts.query
+        and not parts.fragment
+        and not parts.username
+        and parts.port is None
+    ):
         bare = host.removeprefix("www.")
         if bare and bare in text.lower():
             return None
-    return (f"This conversation already contains your own data (from '{source}'), and Garvis composed "
-            "this address itself rather than taking it from your message or a page it read, so it "
-            "could carry that data to the site.")
+    return (
+        f"This conversation already contains your own data (from '{source}'), and Garvis composed "
+        "this address itself rather than taking it from your message or a page it read, so it "
+        "could carry that data to the site."
+    )

@@ -7,6 +7,7 @@ signal resampled to the mic rate, delayed, smeared by a short decaying room
 impulse response and attenuated: a delayed, filtered copy, never equal to
 the original waveform.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -25,14 +26,14 @@ def speech_like(seconds: float, f0: float, rate: int = TTS_RATE, seed: int = 0, 
     signal = np.zeros(n)
     for h in range(1, int(3800 / f0)):
         freq = h * f0
-        weight = sum(np.exp(-((freq - f) / 180.0) ** 2) for f in formants) + 0.05
-        signal += weight / h ** 0.3 * np.sin(h * phase)
+        weight = sum(np.exp(-(((freq - f) / 180.0) ** 2)) for f in formants) + 0.05
+        signal += weight / h**0.3 * np.sin(h * phase)
     envelope = np.zeros(n)
     position = int(0.05 * rate)
     while position < n:
         syllable = int(rng.uniform(0.12, 0.25) * rate)
         end = min(n, position + syllable)
-        envelope[position:end] = np.hanning(2 * (end - position) + 2)[1:end - position + 1][: end - position] ** 0.3
+        envelope[position:end] = np.hanning(2 * (end - position) + 2)[1 : end - position + 1][: end - position] ** 0.3
         position = end + int(rng.uniform(0.05, 0.15) * rate)
     signal *= envelope
     return signal / (np.sqrt(np.mean(signal[envelope > 0.5] ** 2)) + 1e-9) * level
@@ -76,4 +77,4 @@ def blocks(signal: np.ndarray, start_time: float, block: int = 416):
     """Mic blocks with capture timestamps, as MicrophoneRecorder delivers them."""
     pcm = np.clip(signal, -32768, 32767).astype(np.int16)
     for i in range(0, len(pcm) - block + 1, block):
-        yield start_time + i / MIC_RATE, pcm[i:i + block].tobytes()
+        yield start_time + i / MIC_RATE, pcm[i : i + block].tobytes()

@@ -11,6 +11,7 @@ inside a pause or while waiting for your answer); a step that is already
 acting on the desktop finishes first. A step that times out is reported as
 such -- the action it started may still complete in the background.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -58,8 +59,17 @@ def _tool_message(step_type: str, data: Any) -> str:
 
 
 class ProtocolRun:
-    def __init__(self, agent, events, protocol: Protocol, *, task_id: str, source: str | None,
-                 cancel: CancelToken, on_step: Callable[[list[dict]], None]) -> None:
+    def __init__(
+        self,
+        agent,
+        events,
+        protocol: Protocol,
+        *,
+        task_id: str,
+        source: str | None,
+        cancel: CancelToken,
+        on_step: Callable[[list[dict]], None],
+    ) -> None:
         self._agent = agent
         self._events = events
         self._protocol = protocol
@@ -68,8 +78,16 @@ class ProtocolRun:
         self._cancel = cancel
         self._on_step = on_step
         self.steps: list[dict] = [
-            {"index": i, "id": s.id, "type": s.type, "label": describe_step(s), "status": "pending",
-             "message": "", "started_at": None, "finished_at": None}
+            {
+                "index": i,
+                "id": s.id,
+                "type": s.type,
+                "label": describe_step(s),
+                "status": "pending",
+                "message": "",
+                "started_at": None,
+                "finished_at": None,
+            }
             for i, s in enumerate(s for s in protocol.steps if s.enabled)
         ]
 
@@ -91,8 +109,10 @@ class ProtocolRun:
                 record.update(status="cancelled", message=_clip(exc) or "Stopped.", finished_at=time.time())
                 return self._stop_cancelled(index + 1, already_marked=True)
             except TimeoutError:
-                record.update(status="timeout", message=f"Timed out after {action.timeout:g} s — anything it "
-                                                         "started may still finish.")
+                record.update(
+                    status="timeout",
+                    message=f"Timed out after {action.timeout:g} s — anything it started may still finish.",
+                )
             except StepFailed as exc:
                 record.update(status="failed", message=_clip(exc))
             except Exception as exc:  # noqa: BLE001 -- a bug in one step must not kill the run silently
@@ -103,7 +123,7 @@ class ProtocolRun:
             if record["status"] in ("failed", "timeout"):
                 failures += 1
                 if step.on_failure == "stop":
-                    for later in self.steps[index + 1:]:
+                    for later in self.steps[index + 1 :]:
                         later.update(status="skipped", message="Not run: an earlier step failed.")
                     self._on_step(self.steps)
                     return "failed", f"Stopped at step {index + 1} ({record['label']}): {record['message']}"
@@ -122,8 +142,9 @@ class ProtocolRun:
         return "cancelled", f"Cancelled after {done} completed step{'s' if done != 1 else ''}."
 
     async def _tool(self, step: Step, name: str, arguments: dict) -> str:
-        result = await self._agent.run_tool(name, arguments, source=self._source,
-                                            presentation_override=step.presentation(), task_id=self._task_id)
+        result = await self._agent.run_tool(
+            name, arguments, source=self._source, presentation_override=step.presentation(), task_id=self._task_id
+        )
         if not result.success:
             raise StepFailed(result.error or "The action failed.")
         return _tool_message(step.type, result.data)
@@ -132,8 +153,9 @@ class ProtocolRun:
         params = clean_params(step)  # validated again at run time: the files may have changed
         kind = step.type
         if kind == "open_application":
-            return await self._tool(step, "open_application",
-                                    {"application": params["application"], "target_desktop": params["where"]})
+            return await self._tool(
+                step, "open_application", {"application": params["application"], "target_desktop": params["where"]}
+            )
         if kind == "open_website":
             return await self._tool(step, "open_website", {"url": params["url"], "target_desktop": "user_desktop"})
         if kind == "open_websites":
@@ -149,8 +171,11 @@ class ProtocolRun:
         if kind == "focus_window":
             return await self._tool(step, "focus_window", {"window": params["window"]})
         if kind == "wait_for_window":
-            return await self._tool(step, "wait_for_window",
-                                    {"window": params["window"], "timeout_seconds": float(params["timeout_seconds"])})
+            return await self._tool(
+                step,
+                "wait_for_window",
+                {"window": params["window"], "timeout_seconds": float(params["timeout_seconds"])},
+            )
         if kind == "wait":
             deadline = time.monotonic() + float(params["seconds"])
             while time.monotonic() < deadline:
@@ -159,22 +184,33 @@ class ProtocolRun:
                 await asyncio.sleep(min(0.25, max(0.0, deadline - time.monotonic())))
             return f"Paused {float(params['seconds']):g} s."
         if kind == "notify":
-            level = pres.Presentation(step.presentation()) if step.presentation() != "none" else pres.Presentation.SUBTLE
-            await self._events.publish(AgentEvent(type=EventType.PRESENTATION, payload=pres.notice(
-                params["title"], params.get("message", ""), level, source=self._source, task_id=self._task_id)))
+            level = (
+                pres.Presentation(step.presentation()) if step.presentation() != "none" else pres.Presentation.SUBTLE
+            )
+            await self._events.publish(
+                AgentEvent(
+                    type=EventType.PRESENTATION,
+                    payload=pres.notice(
+                        params["title"], params.get("message", ""), level, source=self._source, task_id=self._task_id
+                    ),
+                )
+            )
             return f"Showed “{params['title']}”."
         if kind == "confirm":
-            outcome = await self._agent.ask_confirmation(f"Protocol: {self._protocol.name}", params["message"],
-                                                         {"question": params["message"]})
+            outcome = await self._agent.ask_confirmation(
+                f"Protocol: {self._protocol.name}", params["message"], {"question": params["message"]}
+            )
             if self._cancel.requested:
                 raise StepCancelled("Stopped while waiting for your answer.")
             if outcome != "approved":
-                raise StepCancelled("You declined." if outcome == "denied" else
-                                    "No answer in time, so the protocol stopped.")
+                raise StepCancelled(
+                    "You declined." if outcome == "denied" else "No answer in time, so the protocol stopped."
+                )
             return "You approved."
         if kind == "ask_garvis":
-            reply = await self._agent.handle_user_message(params["instruction"], source=self._source,
-                                                          cancel=self._cancel)
+            reply = await self._agent.handle_user_message(
+                params["instruction"], source=self._source, cancel=self._cancel
+            )
             if self._cancel.honored or reply.startswith(CANCELLED_REPLY):
                 raise StepCancelled("Stopped while Garvis was working on it.")
             return reply

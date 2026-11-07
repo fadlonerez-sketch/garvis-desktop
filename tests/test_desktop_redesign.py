@@ -7,6 +7,7 @@ conversation (app/ui/conversation.py), the switch, restrained motion
 Offscreen Qt against the fake bridges the other UI tests use: no Agent, LLM,
 microphone, real input or visible window.
 """
+
 from __future__ import annotations
 
 import os
@@ -160,8 +161,14 @@ def test_overview_columns_follow_the_mockup_and_give_way_when_narrow(window):
 def test_command_bar_holds_the_existing_controls(window):
     bar = window._input_line.parentWidget()
     assert isinstance(bar, main_window.CommandBar)
-    for widget in (window._mic_button, window._send_button, window._stop_button, window._voice_replies_checkbox,
-                   window._session_button, window._session_status_label):
+    for widget in (
+        window._mic_button,
+        window._send_button,
+        window._stop_button,
+        window._voice_replies_checkbox,
+        window._session_button,
+        window._session_status_label,
+    ):
         assert widget.parentWidget() is bar
     assert window._send_button.property("accent") and window._stop_button.property("ghost")
     assert isinstance(window._voice_replies_checkbox, QCheckBox)  # a switch, still a check box

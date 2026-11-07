@@ -5,6 +5,7 @@ what the phone may see, and the PWA shell routes.
 
 In-process aiohttp test server on 127.0.0.1; a real Agent with fake tools
 and a gated/scripted LLM (no model, desktop or network)."""
+
 from __future__ import annotations
 
 import json
@@ -49,15 +50,28 @@ async def phone(tmp_path):
     web = FakeWebsiteTool()
     agent = make_agent(tmp_path, llm, events=events, tools=[web, FakeAppTool()])
     store = ProtocolStore(tmp_path / "protocols")
-    manager = TaskManager(agent, events, tmp_path / "tasks.json", store,
-                          available_tools=lambda: {"open_website", "open_application"})
+    manager = TaskManager(
+        agent, events, tmp_path / "tasks.json", store, available_tools=lambda: {"open_website", "open_application"}
+    )
     manager.start()
-    service = MobileService(agent, events, make_voice(), tasks=manager, protocols=store,
-                            available_tools=lambda: {"open_website", "open_application"})
+    service = MobileService(
+        agent,
+        events,
+        make_voice(),
+        tasks=manager,
+        protocols=store,
+        available_tools=lambda: {"open_website", "open_application"},
+    )
     service.start()
     pairing = PairingManager(tmp_path / "devices.json")
-    app = create_app(service, pairing, allowed_networks=parse_networks(""), allowed_hosts=None,
-                     ca_cert_der=None, max_audio_bytes=1_000_000)
+    app = create_app(
+        service,
+        pairing,
+        allowed_networks=parse_networks(""),
+        allowed_hosts=None,
+        ca_cert_der=None,
+        max_audio_bytes=1_000_000,
+    )
     client = TestClient(TestServer(app, host="127.0.0.1"))
     await client.start_server()
     p = _Phone(client, service, manager, store, pairing, llm, web)
@@ -75,8 +89,13 @@ def _protocol(store: ProtocolStore, **fields) -> Protocol:
 
 async def test_every_new_route_requires_a_paired_device(phone):
     protocol = _protocol(phone.store)
-    for method, path in (("GET", "/api/tasks"), ("GET", "/api/tasks/abcdefabcdef"), ("GET", "/api/protocols"),
-                         ("POST", "/api/tasks/abcdefabcdef/cancel"), ("POST", f"/api/protocols/{protocol.id}/run")):
+    for method, path in (
+        ("GET", "/api/tasks"),
+        ("GET", "/api/tasks/abcdefabcdef"),
+        ("GET", "/api/protocols"),
+        ("POST", "/api/tasks/abcdefabcdef/cancel"),
+        ("POST", f"/api/protocols/{protocol.id}/run"),
+    ):
         response = await phone.client.request(method, path, headers=POST, json={})
         assert response.status == 401, path
     assert phone.manager.list() == []
@@ -84,11 +103,13 @@ async def test_every_new_route_requires_a_paired_device(phone):
 
 async def test_posts_without_the_client_header_are_refused(phone):
     protocol = _protocol(phone.store)
-    response = await phone.client.post(f"/api/protocols/{protocol.id}/run", json={},
-                                       headers={"Cookie": f"{COOKIE_NAME}={phone.token}"})
+    response = await phone.client.post(
+        f"/api/protocols/{protocol.id}/run", json={}, headers={"Cookie": f"{COOKIE_NAME}={phone.token}"}
+    )
     assert response.status == 403
-    response = await phone.client.post(f"/api/protocols/{protocol.id}/run", json={},
-                                       headers={**phone.auth(), "Origin": "https://evil.example"})
+    response = await phone.client.post(
+        f"/api/protocols/{protocol.id}/run", json={}, headers={**phone.auth(), "Origin": "https://evil.example"}
+    )
     assert response.status == 403
     assert phone.manager.list() == []
 
@@ -110,8 +131,9 @@ async def test_instruction_becomes_a_task_and_a_retry_does_not_run_it_twice(phon
 
 async def test_tasks_list_and_detail_carry_status_steps_and_what_was_shown(phone):
     protocol = _protocol(phone.store)
-    response = await phone.client.post(f"/api/protocols/{protocol.id}/run", json={"request_id": "run-request-0001"},
-                                       headers=phone.auth())
+    response = await phone.client.post(
+        f"/api/protocols/{protocol.id}/run", json={"request_id": "run-request-0001"}, headers=phone.auth()
+    )
     assert response.status == 202
     task = await response.json()
     await wait_until(lambda: phone.manager.get(task["id"]).terminal)
@@ -137,8 +159,11 @@ async def test_protocol_requests_are_validated_on_the_desktop(phone):
 
 
 async def test_protocol_listing_shows_only_what_the_phone_needs(phone):
-    _protocol(phone.store, name="Project", steps=[Step(type="open_path", params={"path": "C:\\private\\stuff"},
-                                                       label="Open my project")])
+    _protocol(
+        phone.store,
+        name="Project",
+        steps=[Step(type="open_path", params={"path": "C:\\private\\stuff"}, label="Open my project")],
+    )
     data = await (await phone.client.get("/api/protocols", headers=phone.auth(post=False))).json()
     entry = data["protocols"][0]
     assert entry["name"] == "Project" and entry["steps"] == ["Open my project"]
@@ -150,8 +175,9 @@ async def test_cancel_from_the_phone_stops_the_pending_desktop_action(phone):
 
     phone.llm.gate.clear()
     phone.llm._responses = [tool_call_response("open_website", {"url": "https://never.example"})]
-    response = await phone.client.post("/api/messages", json={"text": "slow", "request_id": "slow-request-01"},
-                                       headers=phone.auth())
+    response = await phone.client.post(
+        "/api/messages", json={"text": "slow", "request_id": "slow-request-01"}, headers=phone.auth()
+    )
     task_id = (await response.json())["turn_id"]
     await wait_until(lambda: phone.llm.in_flight == 1)
     cancel = await phone.client.post(f"/api/tasks/{task_id}/cancel", headers=phone.auth())
@@ -169,8 +195,9 @@ async def test_task_changes_wake_the_phones_long_poll(phone):
     snapshot = await (await phone.client.get("/api/events?after=0", headers=phone.auth(post=False))).json()
     version = snapshot["tasks_version"]
     phone.manager.submit_instruction("hello", origin="mobile")
-    data = await (await phone.client.get(f"/api/events?after={snapshot['last_seq']}&wait=2",
-                                         headers=phone.auth(post=False))).json()
+    data = await (
+        await phone.client.get(f"/api/events?after={snapshot['last_seq']}&wait=2", headers=phone.auth(post=False))
+    ).json()
     assert data["tasks_version"] > version
 
 

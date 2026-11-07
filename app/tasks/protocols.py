@@ -11,6 +11,7 @@ written atomically. A file that can't be read or doesn't validate is
 reported as invalid (with the reason) and is never run; the others load
 normally.
 """
+
 from __future__ import annotations
 
 import json
@@ -74,49 +75,143 @@ class Action:
     unavailable_reason: str = "Not available in this configuration."
 
 
-_WHERE = Param("where", "Where", "choice", required=False, default="user_desktop",
-               choices=(("user_desktop", "On my screen"), ("garvis_workspace", "In Garvis's workspace (background)")),
-               help="Background work never pulls your attention.")
+_WHERE = Param(
+    "where",
+    "Where",
+    "choice",
+    required=False,
+    default="user_desktop",
+    choices=(("user_desktop", "On my screen"), ("garvis_workspace", "In Garvis's workspace (background)")),
+    help="Background work never pulls your attention.",
+)
 
-ACTIONS: dict[str, Action] = {a.key: a for a in (
-    Action("open_application", "Open an application", "Start an installed app by its name.", "open_application",
-           (Param("application", "Application", "app", help="As you'd find it in Start, e.g. 'Visual Studio Code'."),
-            _WHERE),
-           presentation="prominent", timeout=60.0, icon="app"),
-    Action("open_website", "Open a web page", "Open a page in your own browser.", "open_website",
-           (Param("url", "Address", "url", help="A full http(s) address."),),
-           presentation="prominent", timeout=45.0, icon="web"),
-    Action("open_websites", "Open several web pages", "Open a set of pages in your browser, one after another.",
-           "open_website",
-           (Param("urls", "Addresses", "urls", help=f"One http(s) address per line, up to {MAX_URLS}."),),
-           presentation="prominent", timeout=45.0, icon="web"),
-    Action("open_path", "Open a folder or file", "Show a folder in File Explorer or open a document.", "open_path",
-           (Param("path", "Folder or file", "path", help="An existing folder or document. Programs and scripts "
-                                                         "are never opened."),),
-           presentation="prominent", timeout=30.0, icon="folder"),
-    Action("focus_window", "Bring a window forward", "Switch to an open window by its title or app name.",
-           "focus_window", (Param("window", "Window", "window", help="e.g. 'chrome' or part of the title."),),
-           presentation="none", timeout=30.0, icon="window",
-           unavailable_reason="Needs desktop control, which is turned off in Garvis's .env."),
-    Action("wait_for_window", "Wait for a window", "Wait until a window appears (or give up).", "wait_for_window",
-           (Param("window", "Window", "window"),
-            Param("timeout_seconds", "Give up after (s)", "seconds", required=False, default=15, minimum=1, maximum=120)),
-           presentation="none", timeout=130.0, icon="wait",
-           unavailable_reason="Needs desktop control, which is turned off in Garvis's .env."),
-    Action("wait", "Pause", "Wait a fixed time before the next step.", None,
-           (Param("seconds", "Seconds", "seconds", default=3, minimum=1, maximum=600),),
-           timeout=610.0, icon="wait"),
-    Action("notify", "Notify me", "Show a card on the desktop (and in the task on the phone).", None,
-           (Param("title", "Title", "text"), Param("message", "Message", "longtext", required=False, default="")),
-           presentation="prominent", timeout=5.0, icon="notify"),
-    Action("confirm", "Ask me first", "Pause until you approve on the PC or the phone; stop if you decline.", None,
-           (Param("message", "Question", "longtext", help="What you're approving, e.g. 'Open the work apps?'"),),
-           timeout=130.0, icon="confirm"),
-    Action("ask_garvis", "Ask Garvis", "Give Garvis an instruction in your own words; it uses its tools "
-                                       "(and the AI model) like a chat request.", None,
-           (Param("instruction", "Instruction", "longtext"),),
-           timeout=300.0, icon="ai"),
-)}
+ACTIONS: dict[str, Action] = {
+    a.key: a
+    for a in (
+        Action(
+            "open_application",
+            "Open an application",
+            "Start an installed app by its name.",
+            "open_application",
+            (
+                Param(
+                    "application", "Application", "app", help="As you'd find it in Start, e.g. 'Visual Studio Code'."
+                ),
+                _WHERE,
+            ),
+            presentation="prominent",
+            timeout=60.0,
+            icon="app",
+        ),
+        Action(
+            "open_website",
+            "Open a web page",
+            "Open a page in your own browser.",
+            "open_website",
+            (Param("url", "Address", "url", help="A full http(s) address."),),
+            presentation="prominent",
+            timeout=45.0,
+            icon="web",
+        ),
+        Action(
+            "open_websites",
+            "Open several web pages",
+            "Open a set of pages in your browser, one after another.",
+            "open_website",
+            (Param("urls", "Addresses", "urls", help=f"One http(s) address per line, up to {MAX_URLS}."),),
+            presentation="prominent",
+            timeout=45.0,
+            icon="web",
+        ),
+        Action(
+            "open_path",
+            "Open a folder or file",
+            "Show a folder in File Explorer or open a document.",
+            "open_path",
+            (
+                Param(
+                    "path",
+                    "Folder or file",
+                    "path",
+                    help="An existing folder or document. Programs and scripts are never opened.",
+                ),
+            ),
+            presentation="prominent",
+            timeout=30.0,
+            icon="folder",
+        ),
+        Action(
+            "focus_window",
+            "Bring a window forward",
+            "Switch to an open window by its title or app name.",
+            "focus_window",
+            (Param("window", "Window", "window", help="e.g. 'chrome' or part of the title."),),
+            presentation="none",
+            timeout=30.0,
+            icon="window",
+            unavailable_reason="Needs desktop control, which is turned off in Garvis's .env.",
+        ),
+        Action(
+            "wait_for_window",
+            "Wait for a window",
+            "Wait until a window appears (or give up).",
+            "wait_for_window",
+            (
+                Param("window", "Window", "window"),
+                Param(
+                    "timeout_seconds",
+                    "Give up after (s)",
+                    "seconds",
+                    required=False,
+                    default=15,
+                    minimum=1,
+                    maximum=120,
+                ),
+            ),
+            presentation="none",
+            timeout=130.0,
+            icon="wait",
+            unavailable_reason="Needs desktop control, which is turned off in Garvis's .env.",
+        ),
+        Action(
+            "wait",
+            "Pause",
+            "Wait a fixed time before the next step.",
+            None,
+            (Param("seconds", "Seconds", "seconds", default=3, minimum=1, maximum=600),),
+            timeout=610.0,
+            icon="wait",
+        ),
+        Action(
+            "notify",
+            "Notify me",
+            "Show a card on the desktop (and in the task on the phone).",
+            None,
+            (Param("title", "Title", "text"), Param("message", "Message", "longtext", required=False, default="")),
+            presentation="prominent",
+            timeout=5.0,
+            icon="notify",
+        ),
+        Action(
+            "confirm",
+            "Ask me first",
+            "Pause until you approve on the PC or the phone; stop if you decline.",
+            None,
+            (Param("message", "Question", "longtext", help="What you're approving, e.g. 'Open the work apps?'"),),
+            timeout=130.0,
+            icon="confirm",
+        ),
+        Action(
+            "ask_garvis",
+            "Ask Garvis",
+            "Give Garvis an instruction in your own words; it uses its tools (and the AI model) like a chat request.",
+            None,
+            (Param("instruction", "Instruction", "longtext"),),
+            timeout=300.0,
+            icon="ai",
+        ),
+    )
+}
 
 
 def action_available(action: Action, tools: set[str] | None) -> bool:
@@ -213,10 +308,11 @@ def clean_params(step: Step) -> dict[str, Any]:
         elif param.kind == "seconds":
             try:
                 value = float(value)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 raise ValueError(f"{param.label} must be a number.") from None
             if (param.minimum is not None and value < param.minimum) or (
-                    param.maximum is not None and value > param.maximum):
+                param.maximum is not None and value > param.maximum
+            ):
                 raise ValueError(f"{param.label} must be between {param.minimum:g} and {param.maximum:g}.")
         elif param.kind == "choice":
             if value not in {key for key, _ in param.choices}:
@@ -261,8 +357,9 @@ def validate(protocol: Protocol, tools: set[str] | None = None) -> list[Problem]
             reason = refusal(expand(params["path"]))
             if reason:
                 missing = reason.startswith("Nothing exists")
-                problems.append(Problem(reason + (" (checked again when it runs)" if missing else ""), index,
-                                        blocking=not missing))
+                problems.append(
+                    Problem(reason + (" (checked again when it runs)" if missing else ""), index, blocking=not missing)
+                )
     return problems
 
 
@@ -412,13 +509,20 @@ class ProtocolStore:
         if original is None:
             return None
         now = time.time()
-        copy = original.model_copy(deep=True, update={
-            "id": new_id(), "name": f"{original.name} (copy)"[:80], "created_at": now, "updated_at": now,
-            "steps": [s.model_copy(update={"id": uuid.uuid4().hex[:12]}) for s in original.steps],
-        })
+        copy = original.model_copy(
+            deep=True,
+            update={
+                "id": new_id(),
+                "name": f"{original.name} (copy)"[:80],
+                "created_at": now,
+                "updated_at": now,
+                "steps": [s.model_copy(update={"id": uuid.uuid4().hex[:12]}) for s in original.steps],
+            },
+        )
         return self.save(copy)
 
     @staticmethod
     def export(protocol: Protocol, target: Path) -> None:
-        Path(target).write_text(json.dumps(protocol.model_dump(mode="json"), ensure_ascii=False, indent=2),
-                                encoding="utf-8")
+        Path(target).write_text(
+            json.dumps(protocol.model_dump(mode="json"), ensure_ascii=False, indent=2), encoding="utf-8"
+        )

@@ -13,6 +13,7 @@ API credits. Speakers must be on (not muted) at your normal volume.
 
 Run with: python scripts/check_barge_in.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -44,7 +45,9 @@ async def main() -> None:
     settings = get_settings()
     voice = build_voice_pipeline(settings)
     session = ConversationSession(
-        agent=_NoAgent(), voice=voice, events=EventBus(),
+        agent=_NoAgent(),
+        voice=voice,
+        events=EventBus(),
         poll_interval_seconds=settings.session_poll_interval_seconds,
         energy_threshold=settings.session_energy_threshold,
         min_speech_seconds=settings.session_min_speech_seconds,
@@ -64,8 +67,13 @@ async def main() -> None:
     session._noise_floor = calibration.noise_floor
 
     async def phantoms_after(seconds: float = 1.5) -> int:
-        vad = VoiceActivityDetector(16000, settings.session_energy_threshold, settings.session_min_speech_seconds,
-                                    settings.session_min_silence_seconds, initial_noise_floor=session._noise_floor)
+        vad = VoiceActivityDetector(
+            16000,
+            settings.session_energy_threshold,
+            settings.session_min_speech_seconds,
+            settings.session_min_silence_seconds,
+            initial_noise_floor=session._noise_floor,
+        )
         count = 0
         end = time.perf_counter() + seconds
         while time.perf_counter() < end:
@@ -85,7 +93,9 @@ async def main() -> None:
             voice.stop_speaking()
             print(f"  FALSE interruption after {time.perf_counter() - started:.1f} s")
         phantoms += await phantoms_after()
-    print(f"  false interruptions: {false_interruptions}/{len(SENTENCES)}, phantom utterances after replies: {phantoms}")
+    print(
+        f"  false interruptions: {false_interruptions}/{len(SENTENCES)}, phantom utterances after replies: {phantoms}"
+    )
 
     print("\nROUND 2 -- about 2 seconds into each sentence, say something at your normal voice.")
     await asyncio.sleep(1.5)

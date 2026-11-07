@@ -1,5 +1,6 @@
 """Agent additions for multiple interfaces: serialized turns, the optional
 `source` tag, CONFIRMATION_RESOLVED, and a reset that never lands mid-turn."""
+
 from __future__ import annotations
 
 import asyncio

@@ -5,6 +5,7 @@ exactly one `KEY=...` line (or appends it) and leaves every other line --
 comments, blank lines, similarly named keys -- untouched. Values are never
 printed.
 """
+
 from __future__ import annotations
 
 import re

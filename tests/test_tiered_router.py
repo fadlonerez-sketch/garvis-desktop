@@ -1,6 +1,7 @@
 """Tests for tiered routing: classify_tier(), TieredLLMRouter's single-model
 policy (one model per tier, same-model retries only, failures reported --
 never another model), the 'tiered' build, and the Agent on top of it."""
+
 from __future__ import annotations
 
 import json
@@ -63,7 +64,8 @@ def test_ordinary_and_tool_requests_are_medium(text, reason):
 
 
 @pytest.mark.parametrize(
-    "text", ["Why is the sky blue?", "compare postgres and mysql", "explain this traceback", "debug my code step by step"]
+    "text",
+    ["Why is the sky blue?", "compare postgres and mysql", "explain this traceback", "debug my code step by step"],
 )
 def test_complex_requests_are_large(text):
     assert classify_tier(_user(text)) == (ModelTier.LARGE, "complex_request")
@@ -88,8 +90,9 @@ def test_tier_is_stable_across_a_tool_loop():
 
 # ------------------------------------------------------------------ router
 class FakeModel(LLMProvider):
-    def __init__(self, name: str, errors: list[Exception] | None = None, healthy: bool = True,
-                 model: str | None = None) -> None:
+    def __init__(
+        self, name: str, errors: list[Exception] | None = None, healthy: bool = True, model: str | None = None
+    ) -> None:
         self.name = name
         self.model = model or name
         self.errors = list(errors or [])
@@ -165,8 +168,12 @@ def test_required_model_is_checked_at_construction():
 
 async def test_a_pool_swapped_at_runtime_is_blocked_before_any_request():
     haiku = FakeModel("haiku", model="claude-haiku-5-5")
-    router = _router(small=haiku, medium=FakeModel("m", model="claude-haiku-5-5"),
-                     large=FakeModel("l", model="claude-haiku-5-5"), required_model="claude-haiku-5-5")
+    router = _router(
+        small=haiku,
+        medium=FakeModel("m", model="claude-haiku-5-5"),
+        large=FakeModel("l", model="claude-haiku-5-5"),
+        required_model="claude-haiku-5-5",
+    )
     intruder = FakeModel("gemini", model="gemini-3.1-flash-lite")
     router.pools[ModelTier.SMALL][:] = [("gemini", intruder)]
     with pytest.raises(LLMError, match="Blocked"):
@@ -177,14 +184,17 @@ async def test_a_pool_swapped_at_runtime_is_blocked_before_any_request():
     assert intruder.calls == 0 and haiku.calls == 0
 
 
-@pytest.mark.parametrize("error", [
-    LLMRateLimitError("Anthropic rate limit reached"),
-    LLMUnavailableError("Anthropic API error: 529 Overloaded"),
-    LLMTimeoutError("Claude didn't answer within 45s."),
-    LLMAuthenticationError("Anthropic rejected the API key (401)."),
-    LLMBadRequestError("Claude rejected the request (400)."),
-    LLMBillingError("Anthropic API billing problem: credit balance too low"),
-])
+@pytest.mark.parametrize(
+    "error",
+    [
+        LLMRateLimitError("Anthropic rate limit reached"),
+        LLMUnavailableError("Anthropic API error: 529 Overloaded"),
+        LLMTimeoutError("Claude didn't answer within 45s."),
+        LLMAuthenticationError("Anthropic rejected the API key (401)."),
+        LLMBadRequestError("Claude rejected the request (400)."),
+        LLMBillingError("Anthropic API billing problem: credit balance too low"),
+    ],
+)
 async def test_any_failure_is_raised_and_no_other_tier_model_is_called(router_logs, error):
     small, medium, large = FakeModel("small-1", errors=[error] * 5), FakeModel("medium-1"), FakeModel("large-1")
     router = _router(small=small, medium=medium, large=large)
@@ -226,10 +236,13 @@ async def test_agent_runs_transparently_on_tiered_router(memory_store, make_scri
     """Tool loop end-to-end: user -> MEDIUM model -> tool -> same model -> answer."""
     medium = make_scripted_llm([tool_call_response("calculator", {"expression": "17*24"}), final_response("408.")])
     small = make_scripted_llm([])
-    router = TieredLLMRouter({
-        ModelTier.SMALL: [("small", small)], ModelTier.MEDIUM: [("medium", medium)],
-        ModelTier.LARGE: [("large", make_scripted_llm([]))],
-    })
+    router = TieredLLMRouter(
+        {
+            ModelTier.SMALL: [("small", small)],
+            ModelTier.MEDIUM: [("medium", medium)],
+            ModelTier.LARGE: [("large", make_scripted_llm([]))],
+        }
+    )
     registry = ToolRegistry()
     registry.register(CalculatorTool())
     agent = Agent(llm=router, registry=registry, memory=memory_store, events=EventBus())
@@ -246,8 +259,12 @@ async def test_agent_reports_the_failure_and_stops(memory_store):
     events.subscribe(lambda e: errors.append(e.payload["message"]) if e.type == EventType.ERROR else None)
     medium = FakeModel("medium-1", errors=[LLMUnavailableError("Anthropic API error for claude-haiku-5-5: 529")])
     others = FakeModel("small-1"), FakeModel("large-1")
-    agent = Agent(llm=_router(small=others[0], medium=medium, large=others[1]), registry=ToolRegistry(),
-                  memory=memory_store, events=events)
+    agent = Agent(
+        llm=_router(small=others[0], medium=medium, large=others[1]),
+        registry=ToolRegistry(),
+        memory=memory_store,
+        events=events,
+    )
     reply = await agent.handle_user_message("open whatsapp")
     assert reply == "Anthropic API error for claude-haiku-5-5: 529" and errors == [reply]
     assert medium.calls == 1 and all(m.calls == 0 for m in others)
@@ -258,13 +275,27 @@ def _settings(**kw) -> Settings:
     return Settings(_env_file=None, **kw)
 
 
-_HAIKU = {ModelTier.SMALL: "anthropic:claude-haiku-5-5@low", ModelTier.MEDIUM: "anthropic:claude-haiku-5-5@medium",
-          ModelTier.LARGE: "anthropic:claude-haiku-5-5@high"}
+_HAIKU = {
+    ModelTier.SMALL: "anthropic:claude-haiku-5-5@low",
+    ModelTier.MEDIUM: "anthropic:claude-haiku-5-5@medium",
+    ModelTier.LARGE: "anthropic:claude-haiku-5-5@high",
+}
 
 
-@pytest.mark.parametrize("keys", [{}, {"anthropic_api_key": "sk-test"},
-                                  {"anthropic_api_key": "sk-test", "omniroute_api_key": "k", "gemini_api_key": "g",
-                                   "groq_api_key": "q", "openrouter_api_key": "o"}])
+@pytest.mark.parametrize(
+    "keys",
+    [
+        {},
+        {"anthropic_api_key": "sk-test"},
+        {
+            "anthropic_api_key": "sk-test",
+            "omniroute_api_key": "k",
+            "gemini_api_key": "g",
+            "groq_api_key": "q",
+            "openrouter_api_key": "o",
+        },
+    ],
+)
 def test_build_serves_every_tier_with_haiku_only_whatever_keys_exist(keys):
     router = build_llm_provider(_settings(llm_provider="tiered", **keys))
     assert isinstance(router, TieredLLMRouter) and router.required_model == "claude-haiku-5-5"
@@ -281,28 +312,47 @@ async def test_without_an_anthropic_key_requests_fail_clearly_and_nothing_else_i
     assert "ANTHROPIC_API_KEY is not set" in reply and "No other model is used" in reply
 
 
-@pytest.mark.parametrize("entries", [
-    [{"provider": "anthropic", "model": "claude-haiku-5-5"},
-     {"provider": "omniroute", "model": "gemini/gemini-3.1-flash-lite", "enabled": False}],
-    [{"provider": "omniroute", "model": "gemini/gemini-3.1-flash-lite"}],
-    [{"provider": "anthropic", "model": "claude-sonnet-5-5"}],
-    [{"provider": "anthropic", "model": "claude-haiku-5-5"}, {"provider": "anthropic", "model": "claude-haiku-5-5"}],
-    [{"provider": "anthropic", "model": "claude-haiku-5-5", "enabled": False}],
-])
+@pytest.mark.parametrize(
+    "entries",
+    [
+        [
+            {"provider": "anthropic", "model": "claude-haiku-5-5"},
+            {"provider": "omniroute", "model": "gemini/gemini-3.1-flash-lite", "enabled": False},
+        ],
+        [{"provider": "omniroute", "model": "gemini/gemini-3.1-flash-lite"}],
+        [{"provider": "anthropic", "model": "claude-sonnet-5-5"}],
+        [
+            {"provider": "anthropic", "model": "claude-haiku-5-5"},
+            {"provider": "anthropic", "model": "claude-haiku-5-5"},
+        ],
+        [{"provider": "anthropic", "model": "claude-haiku-5-5", "enabled": False}],
+    ],
+)
 def test_build_refuses_any_registry_that_could_reach_another_model(tmp_path, entries):
     path = tmp_path / "models.json"
     ok = [{"provider": "anthropic", "model": "claude-haiku-5-5"}]
     path.write_text(json.dumps({"tiers": {"small": ok, "medium": entries, "large": ok}}), encoding="utf-8")
     with pytest.raises(ConfigurationError, match="may only use anthropic/claude-haiku-5-5"):
-        build_llm_provider(_settings(llm_provider="tiered", anthropic_api_key="sk-test", omniroute_api_key="k",
-                                     llm_model_registry_path=path))
+        build_llm_provider(
+            _settings(
+                llm_provider="tiered", anthropic_api_key="sk-test", omniroute_api_key="k", llm_model_registry_path=path
+            )
+        )
 
 
 @pytest.mark.parametrize("mode", ["gemini", "groq", "openrouter", "omniroute"])
 def test_other_single_provider_modes_are_refused(mode):
     with pytest.raises(ConfigurationError, match="only Claude Haiku 5.5"):
-        build_llm_provider(_settings(llm_provider=mode, gemini_api_key="g", groq_api_key="q",
-                                     openrouter_api_key="o", openrouter_model="x/y", omniroute_api_key="k"))
+        build_llm_provider(
+            _settings(
+                llm_provider=mode,
+                gemini_api_key="g",
+                groq_api_key="q",
+                openrouter_api_key="o",
+                openrouter_model="x/y",
+                omniroute_api_key="k",
+            )
+        )
 
 
 def test_context_budget_defaults():
@@ -311,8 +361,9 @@ def test_context_budget_defaults():
 
 
 def test_agent_uses_the_configured_context_budget(memory_store):
-    agent = Agent(llm=FakeModel("x"), registry=ToolRegistry(), memory=memory_store, events=EventBus(),
-                  max_context_tokens=12000)
+    agent = Agent(
+        llm=FakeModel("x"), registry=ToolRegistry(), memory=memory_store, events=EventBus(), max_context_tokens=12000
+    )
     assert agent._context._max_tokens == 12000
     default = Agent(llm=FakeModel("x"), registry=ToolRegistry(), memory=memory_store, events=EventBus())
     assert default._context._max_tokens == 1200

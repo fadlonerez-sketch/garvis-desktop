@@ -7,6 +7,7 @@ behave correctly when wired together the way `app/agent/build.py` wires
 them for real, for Phase 8's "Agent <-> Tool integration" and "Browser
 integration" goals.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -57,7 +58,10 @@ def _build_real_registry(browser_manager) -> ToolRegistry:
     tools relevant here, using the real Tool/ToolRegistry classes end to end."""
     registry = ToolRegistry()
     for tool in (
-        CalculatorTool(), NavigateTool(browser_manager), ReadPageTool(browser_manager), SubmitFormTool(browser_manager)
+        CalculatorTool(),
+        NavigateTool(browser_manager),
+        ReadPageTool(browser_manager),
+        SubmitFormTool(browser_manager),
     ):
         registry.register(tool)
     return registry
@@ -85,9 +89,7 @@ async def test_agent_discovers_and_invokes_real_registered_tool(memory_store, ma
 
 
 @pytest.mark.asyncio
-async def test_browser_tool_flows_through_real_permission_and_confirmation_system(
-    memory_store, make_scripted_llm
-):
+async def test_browser_tool_flows_through_real_permission_and_confirmation_system(memory_store, make_scripted_llm):
     """browser_submit_form is HIGH risk: the agent must pause for a real
     confirmation (not bypass it), and only then call into the (fake)
     BrowserManager, before returning a final answer built on the tool
@@ -195,9 +197,7 @@ async def test_browser_failure_becomes_safe_tool_result_not_a_crash(memory_store
 
 
 @pytest.mark.asyncio
-async def test_unknown_tool_call_does_not_break_the_session_for_the_next_turn(
-    memory_store, make_scripted_llm
-):
+async def test_unknown_tool_call_does_not_break_the_session_for_the_next_turn(memory_store, make_scripted_llm):
     """Tool-not-found is handled per-call; the conversation/session must
     remain usable for a subsequent, unrelated turn afterwards."""
     llm = make_scripted_llm(

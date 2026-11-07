@@ -12,6 +12,7 @@ former --tool-test (a prompt to every registry model) was removed.
 The key is OmniRoute's *client* API key (Dashboard -> API Keys). It is only
 ever written to the gitignored .env; this script never prints it.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -31,11 +32,35 @@ from app.llm.omniroute import validate_base_url  # noqa: E402
 from env_file import ENV_PATH, set_env_value  # noqa: E402
 
 KEYLESS_PREFIXES = (
-    "ddgw/", "duckduckgo-web/", "felo/", "felo-web/", "tllm/", "theoldllm/", "pepper/", "chipotle/",
-    "cfp/", "cloudflare-playground/", "veo-free/", "veoaifree-web/", "dva/", "devin-cli-agentic/",
-    "aug/", "auggie/", "zc/", "zcode/", "cxa/", "codex-app-server/", "unc/", "uncloseai/",
-    "horde/", "aihorde/", "oc/", "opencode/",
+    "ddgw/",
+    "duckduckgo-web/",
+    "felo/",
+    "felo-web/",
+    "tllm/",
+    "theoldllm/",
+    "pepper/",
+    "chipotle/",
+    "cfp/",
+    "cloudflare-playground/",
+    "veo-free/",
+    "veoaifree-web/",
+    "dva/",
+    "devin-cli-agentic/",
+    "aug/",
+    "auggie/",
+    "zc/",
+    "zcode/",
+    "cxa/",
+    "codex-app-server/",
+    "unc/",
+    "uncloseai/",
+    "horde/",
+    "aihorde/",
+    "oc/",
+    "opencode/",
 )
+
+
 async def verify(settings: Settings) -> bool:
     ok = True
     try:
@@ -53,10 +78,14 @@ async def verify(settings: Settings) -> bool:
         try:
             anonymous = await client.get("/models")
         except httpx.ConnectError:
-            print(f"Gateway: NOT REACHABLE at {base_url}. Start it with OMNIROUTE_SERVER_HOST=127.0.0.1 omniroute serve")
+            print(
+                f"Gateway: NOT REACHABLE at {base_url}. Start it with OMNIROUTE_SERVER_HOST=127.0.0.1 omniroute serve"
+            )
             return False
-        print(f"Auth: /models without a key -> HTTP {anonymous.status_code}"
-              + (" (enforced)" if anonymous.status_code == 401 else " -- WARNING: API is open without a key"))
+        print(
+            f"Auth: /models without a key -> HTTP {anonymous.status_code}"
+            + (" (enforced)" if anonymous.status_code == 401 else " -- WARNING: API is open without a key")
+        )
         ok = ok and anonymous.status_code == 401
 
         listed = await client.get("/models", headers=auth)
@@ -68,8 +97,10 @@ async def verify(settings: Settings) -> bool:
 
         keyless = sorted(i for i in ids if i.startswith(KEYLESS_PREFIXES))
         if keyless:
-            print(f"Keyless providers: WARNING -- {len(keyless)} still listed (e.g. {keyless[:3]}). "
-                  "Block them in OmniRoute (see README).")
+            print(
+                f"Keyless providers: WARNING -- {len(keyless)} still listed (e.g. {keyless[:3]}). "
+                "Block them in OmniRoute (see README)."
+            )
         else:
             print("Keyless providers: none listed.")
 
@@ -84,8 +115,10 @@ async def verify(settings: Settings) -> bool:
         )
         allow = cross_site.headers.get("access-control-allow-origin")
         if cross_site.status_code != 401 or allow == "*":
-            print(f"CORS: WARNING -- a website origin got HTTP {cross_site.status_code} without a key "
-                  f"(allow-origin={allow!r}). Enable REQUIRE_API_KEY in OmniRoute.")
+            print(
+                f"CORS: WARNING -- a website origin got HTTP {cross_site.status_code} without a key "
+                f"(allow-origin={allow!r}). Enable REQUIRE_API_KEY in OmniRoute."
+            )
             ok = False
         else:
             preflight = await client.options(
@@ -93,18 +126,24 @@ async def verify(settings: Settings) -> bool:
                 headers={"Origin": "https://example.com", "Access-Control-Request-Method": "POST"},
             )
             echoed = preflight.headers.get("access-control-allow-origin")
-            print(f"CORS: website origins can't call without a key (HTTP 401). "
-                  f"Preflight allow-origin={echoed!r} (OmniRoute echoes it on /v1 by design; harmless while a key is required).")
+            print(
+                f"CORS: website origins can't call without a key (HTTP 401). "
+                f"Preflight allow-origin={echoed!r} (OmniRoute echoes it on /v1 by design; harmless while a key is required)."
+            )
 
-    print("Models: Garvis sends no model requests through OmniRoute (Claude Haiku 5.5 only, via the "
-          "Anthropic API); no prompt was sent.")
+    print(
+        "Models: Garvis sends no model requests through OmniRoute (Claude Haiku 5.5 only, via the "
+        "Anthropic API); no prompt was sent."
+    )
     print("RESULT:", "PASS" if ok else "FAIL -- see above.")
     return ok
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--set-key", action="store_true", help="prompt for the OmniRoute client key and save it to .env")
+    parser.add_argument(
+        "--set-key", action="store_true", help="prompt for the OmniRoute client key and save it to .env"
+    )
     args = parser.parse_args()
 
     if args.set_key:

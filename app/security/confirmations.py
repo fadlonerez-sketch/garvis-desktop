@@ -5,6 +5,7 @@ agent registers a `ConfirmationRequest` here and *awaits* the user's
 decision before executing anything. The UI is the only thing that can
 resolve a pending confirmation (approve/deny); the LLM cannot.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -40,9 +41,7 @@ class ConfirmationManager:
         try:
             approved = await asyncio.wait_for(future, timeout=timeout_seconds or self._default_timeout)
         except TimeoutError as exc:
-            raise ConfirmationTimeoutError(
-                f"Confirmation {request_id} timed out waiting for the user."
-            ) from exc
+            raise ConfirmationTimeoutError(f"Confirmation {request_id} timed out waiting for the user.") from exc
         finally:
             self._pending.pop(request_id, None)
         if not approved:

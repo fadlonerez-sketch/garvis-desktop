@@ -24,6 +24,7 @@ design isolates it accordingly --
     onto the user's desktop instead -- app/desktop/routing.py), while
     everything aimed at the user's desktop keeps working.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -141,9 +142,7 @@ class WorkspaceManager:
         if self._unavailable_reason is not None:
             raise WorkspaceError(f"The Garvis workspace is unavailable: {self._unavailable_reason}.")
         if self._executor is None:
-            self._executor = concurrent.futures.ThreadPoolExecutor(
-                max_workers=1, thread_name_prefix="garvis-workspace"
-            )
+            self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="garvis-workspace")
 
         def _run():
             if self._backend is None:
@@ -177,6 +176,7 @@ class WorkspaceManager:
         """Return the Garvis desktop, finding it by name (it survives Garvis
         restarts) or creating it. Never switches the user's view."""
         async with self._lock:
+
             def _ensure(backend: VirtualDesktopBackend) -> tuple[DesktopRef, bool]:
                 desktops = backend.list_desktops()
                 if self._garvis_id:
@@ -260,7 +260,7 @@ class WorkspaceManager:
         return current
 
     async def window_location(self, handle: int) -> str:
-        """"user" (the desktop being viewed), "garvis_workspace", "other"
+        """ "user" (the desktop being viewed), "garvis_workspace", "other"
         (another of the user's desktops) or "unknown" (no virtual-desktop
         API). Viewing the Garvis desktop itself counts as "user": what the
         user is looking at is the user's desktop."""
@@ -284,8 +284,13 @@ class WorkspaceManager:
                 found = {}
                 for handle in handles:
                     where = backend.window_desktop_id(handle)
-                    found[handle] = ("user" if where is None or where == current
-                                     else "garvis_workspace" if where == garvis.id else "other")
+                    found[handle] = (
+                        "user"
+                        if where is None or where == current
+                        else "garvis_workspace"
+                        if where == garvis.id
+                        else "other"
+                    )
                 return found
 
             return await self._call(_locate)

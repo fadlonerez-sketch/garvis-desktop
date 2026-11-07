@@ -12,6 +12,7 @@ Usage:
     python scripts/install_shortcut.py           # create / update
     python scripts/install_shortcut.py --remove  # delete it (frees the key)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -57,7 +58,7 @@ $link.Save()
 """
     encoded = base64.b64encode(script.encode("utf-16-le")).decode("ascii")
     subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], check=True)
-    print(f"Created {SHORTCUT}\n  starts: {pythonw()} \"{REPO / 'run_garvis.py'}\"\n  shortcut key: {hotkey}")
+    print(f'Created {SHORTCUT}\n  starts: {pythonw()} "{REPO / "run_garvis.py"}"\n  shortcut key: {hotkey}')
 
 
 def main() -> int:

@@ -37,6 +37,7 @@ Extension point: Code Mode (Claude) is intentionally NOT a tier yet. It
 will be a new ModelTier member plus a pool here, and a classification rule
 in app/llm/router.py:classify_tier -- nothing else needs to change.
 """
+
 from __future__ import annotations
 
 import json
@@ -105,7 +106,9 @@ class ModelEntry(BaseModel):
     def _anthropic_effort_is_valid(self) -> ModelEntry:
         if self.provider != "anthropic" or self.reasoning_effort is None:
             return self
-        allowed = ("low", "medium", "high") if self.thinking == "disabled" else ("low", "medium", "high", "xhigh", "max")
+        allowed = (
+            ("low", "medium", "high") if self.thinking == "disabled" else ("low", "medium", "high", "xhigh", "max")
+        )
         if self.reasoning_effort not in allowed:
             raise ValueError(
                 f"{self.model}: reasoning_effort must be one of {allowed}"
@@ -118,8 +121,12 @@ class ModelEntry(BaseModel):
         # OmniRoute 3.8.50 turns any reasoning_effort for a Claude Haiku model into
         # thinking={type:'enabled', budget_tokens} (openai-to-claude.ts +
         # claudeHaikuConstraints.ts), which Claude Haiku 5.5 rejects with HTTP 400.
-        if (self.provider == "omniroute" and self.upstream == "anthropic"
-                and "haiku" in self.upstream_model.lower() and self.reasoning_effort):
+        if (
+            self.provider == "omniroute"
+            and self.upstream == "anthropic"
+            and "haiku" in self.upstream_model.lower()
+            and self.reasoning_effort
+        ):
             raise ValueError(
                 f"{self.model}: remove 'reasoning_effort' -- OmniRoute converts it to a thinking budget, "
                 "which Claude Haiku 5.5 rejects (HTTP 400)"
@@ -225,8 +232,10 @@ def enforce_single_model(registry: ModelRegistry) -> None:
         if others:
             problems.append(f"{tier.value} lists other models {others}")
         if len(entries) != 1 or not entries[0].enabled:
-            problems.append(f"{tier.value} must have exactly one enabled entry (has {len(entries)}, "
-                            f"{len(registry.tier(tier))} enabled)")
+            problems.append(
+                f"{tier.value} must have exactly one enabled entry (has {len(entries)}, "
+                f"{len(registry.tier(tier))} enabled)"
+            )
     if problems:
         raise ConfigurationError(
             f"Garvis may only use {REQUIRED_PROVIDER}/{REQUIRED_MODEL}, one entry per tier with no fallback: "

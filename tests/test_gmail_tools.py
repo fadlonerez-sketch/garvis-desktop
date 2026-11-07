@@ -6,6 +6,7 @@ to the manager, translating GmailError into ToolResult.fail -- doesn't
 need real OAuth/API plumbing; that's covered by test_gmail_manager.py
 instead. Mirrors test_browser_tools.py's structure exactly.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -159,9 +160,7 @@ def test_read_email_is_low_risk():
 async def test_draft_email_success():
     manager = _FakeGmailManager()
     tool = DraftEmailTool(manager)
-    result = await tool.execute(
-        tool.validate_arguments({"to": "bob@example.com", "subject": "Hi", "body": "text"})
-    )
+    result = await tool.execute(tool.validate_arguments({"to": "bob@example.com", "subject": "Hi", "body": "text"}))
     assert result.success
     assert result.data == {"draft_id": "draft-456"}
     assert manager.drafted == [("bob@example.com", "Hi", "text")]
@@ -183,9 +182,7 @@ def test_draft_email_input_requires_all_fields():
 async def test_send_email_success():
     manager = _FakeGmailManager()
     tool = SendEmailTool(manager)
-    result = await tool.execute(
-        tool.validate_arguments({"to": "bob@example.com", "subject": "Hi", "body": "text"})
-    )
+    result = await tool.execute(tool.validate_arguments({"to": "bob@example.com", "subject": "Hi", "body": "text"}))
     assert result.success
     assert result.data == {"sent_message_id": "sent-123"}
     assert manager.sent == [("bob@example.com", "Hi", "text")]
@@ -195,9 +192,7 @@ async def test_send_email_success():
 async def test_send_email_failure_becomes_tool_result_fail_not_a_crash():
     manager = _FakeGmailManager(fail=True)
     tool = SendEmailTool(manager)
-    result = await tool.execute(
-        tool.validate_arguments({"to": "bob@example.com", "subject": "Hi", "body": "text"})
-    )
+    result = await tool.execute(tool.validate_arguments({"to": "bob@example.com", "subject": "Hi", "body": "text"}))
     assert not result.success
     assert manager.sent == []  # never actually sent
 

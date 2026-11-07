@@ -1,5 +1,6 @@
 """Reminders: time parsing, recurrence (incl. DST), the store's idempotency
 and persistence, and the assistant's reminder tools. No phone, no network."""
+
 from __future__ import annotations
 
 import datetime as dt
@@ -37,8 +38,17 @@ class Clock:
 
 
 # ------------------------------------------------------------------ parsing
-@pytest.mark.parametrize("text,expected", [("8:05", (8, 5)), ("20:30", (20, 30)), ("8pm", (20, 0)),
-                                           ("8:30 am", (8, 30)), ("12am", (0, 0)), ("12 pm", (12, 0))])
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("8:05", (8, 5)),
+        ("20:30", (20, 30)),
+        ("8pm", (20, 0)),
+        ("8:30 am", (8, 30)),
+        ("12am", (0, 0)),
+        ("12 pm", (12, 0)),
+    ],
+)
 def test_parse_hhmm(text, expected):
     assert parse_hhmm(text) == expected
 
@@ -303,11 +313,11 @@ async def test_tool_call_me_at_8pm(tools):
 
 async def test_tool_every_sunday(tools):
     built, store, _ = tools
-    missing_time = await _run(built["create_reminder"], text="Prepare for school", repeat="weekly",
-                              weekdays=["sunday"])
+    missing_time = await _run(built["create_reminder"], text="Prepare for school", repeat="weekly", weekdays=["sunday"])
     assert not missing_time.success
-    result = await _run(built["create_reminder"], text="Prepare for school", repeat="weekly", weekdays=["sunday"],
-                        time="18:30")
+    result = await _run(
+        built["create_reminder"], text="Prepare for school", repeat="weekly", weekdays=["sunday"], time="18:30"
+    )
     assert result.success and store.get(result.data["id"]).days == [6]
 
 
@@ -339,8 +349,10 @@ def test_zone_preference_order():
     assert ReminderZone("Asia/Tokyo").current() == "Asia/Tokyo"
 
 
-@pytest.mark.skipif(not (Path(__file__).resolve().parents[1] / "android").exists(),
-                    reason="Garvis Mobile (android/) is not part of this repository")
+@pytest.mark.skipif(
+    not (Path(__file__).resolve().parents[1] / "android").exists(),
+    reason="Garvis Mobile (android/) is not part of this repository",
+)
 def test_android_recurrence_fixture_matches_these_rules():
     """The Android app's Recurrence.kt is tested against this fixture; it must
     stay what the PC's rules produce (regenerate: python android/tools/make_recurrence_fixture.py)."""

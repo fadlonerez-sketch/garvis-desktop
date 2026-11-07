@@ -7,6 +7,7 @@ real Chrome (Playwright), launched off-screen, moved to the "Garvis" virtual
 desktop, then a real search + source reading. Checks that the desktop you're
 looking at never changes. No LLM involved -- this exercises the tool layer.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -30,8 +31,11 @@ async def main(query: str) -> int:
     focused_before = await desktop.foreground_window()
     print("workspace before:", before)
     researcher = WebResearcher(
-        browser, workspace=workspace, engine=settings.research_search_engine,
-        max_sources=settings.research_max_sources, source_chars=settings.research_source_chars,
+        browser,
+        workspace=workspace,
+        engine=settings.research_search_engine,
+        max_sources=settings.research_max_sources,
+        source_chars=settings.research_source_chars,
     )
     started = time.monotonic()
     try:
@@ -43,8 +47,10 @@ async def main(query: str) -> int:
         if workspace:
             workspace.shutdown()
 
-    print(f"\nquery: {report.query!r}  engine: {report.engine}  ran on: {report.workspace}  "
-          f"({time.monotonic() - started:.1f}s)")
+    print(
+        f"\nquery: {report.query!r}  engine: {report.engine}  ran on: {report.workspace}  "
+        f"({time.monotonic() - started:.1f}s)"
+    )
     for step in report.plan:
         print(f"  [{step.status:8}] {step.step}: {step.detail[:160]}")
     print("\nresults:")
@@ -56,12 +62,15 @@ async def main(query: str) -> int:
         print("    " + s.excerpt[:300].replace("\n", " | "))
 
     view_unchanged = before.get("current_desktop") == after.get("current_desktop")
-    same_focus = (focused_before and focused_after and focused_before.handle == focused_after.handle)
+    same_focus = focused_before and focused_after and focused_before.handle == focused_after.handle
     print("\nuser's view unchanged:", view_unchanged)
-    print("focused window before/after:",
-          f"{focused_before.process_name}#{focused_before.handle}" if focused_before else None, "/",
-          f"{focused_after.process_name}#{focused_after.handle}" if focused_after else None,
-          "(same window)" if same_focus else "(changed -- did you switch windows meanwhile?)")
+    print(
+        "focused window before/after:",
+        f"{focused_before.process_name}#{focused_before.handle}" if focused_before else None,
+        "/",
+        f"{focused_after.process_name}#{focused_after.handle}" if focused_after else None,
+        "(same window)" if same_focus else "(changed -- did you switch windows meanwhile?)",
+    )
     ok = bool(report.sources) and view_unchanged
     print("PASS" if ok else "FAIL")
     return 0 if ok else 1

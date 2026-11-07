@@ -10,6 +10,7 @@ MEDIUM entry: thinking off, effort, prompt caching, Garvis's real system
 prompt) and prints each request's served model, token usage -- including
 cache writes/reads -- and estimated cost, from the API's own usage fields.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -42,10 +43,16 @@ def _primary_entry(settings: Settings):
 
 def _provider(settings: Settings, entry) -> AnthropicProvider:
     return AnthropicProvider(
-        api_key=settings.anthropic_api_key, model=entry.model, base_url=settings.anthropic_base_url,
-        timeout_seconds=settings.anthropic_request_timeout_seconds, reasoning_effort=entry.reasoning_effort,
-        thinking=entry.thinking, max_output_tokens=entry.max_output_tokens, prompt_cache=entry.prompt_cache,
-        verify_served_model=entry.verify_served_model, pricing=entry.pricing,
+        api_key=settings.anthropic_api_key,
+        model=entry.model,
+        base_url=settings.anthropic_base_url,
+        timeout_seconds=settings.anthropic_request_timeout_seconds,
+        reasoning_effort=entry.reasoning_effort,
+        thinking=entry.thinking,
+        max_output_tokens=entry.max_output_tokens,
+        prompt_cache=entry.prompt_cache,
+        verify_served_model=entry.verify_served_model,
+        pricing=entry.pricing,
     )
 
 
@@ -54,9 +61,11 @@ def _usage_line(label: str, response, pricing) -> str:
     if u is None:
         return f"  {label}: served by {response.served_model}, no usage reported"
     cost = pricing.cost(u) if pricing else None
-    return (f"  {label}: served by {response.served_model} ({response.request_id}) | input {u.input_tokens}, "
-            f"output {u.output_tokens}, cache read {u.cache_read_tokens}, cache write 5m {u.cache_write_5m_tokens} "
-            f"/ 1h {u.cache_write_1h_tokens}" + (f" | ~${cost:.6f}" if cost is not None else ""))
+    return (
+        f"  {label}: served by {response.served_model} ({response.request_id}) | input {u.input_tokens}, "
+        f"output {u.output_tokens}, cache read {u.cache_read_tokens}, cache write 5m {u.cache_write_5m_tokens} "
+        f"/ 1h {u.cache_write_1h_tokens}" + (f" | ~${cost:.6f}" if cost is not None else "")
+    )
 
 
 async def verify(settings: Settings, live_test: bool) -> bool:
@@ -67,12 +76,15 @@ async def verify(settings: Settings, live_test: bool) -> bool:
     print("Key: present (not shown).")
     entry = _primary_entry(settings)
     if entry is None:
-        print("Registry: no enabled 'anthropic' entry in the MEDIUM tier of config/models.json -- nothing uses the key.")
+        print(
+            "Registry: no enabled 'anthropic' entry in the MEDIUM tier of config/models.json -- nothing uses the key."
+        )
         return False
     print(f"Registry: primary = {entry.label} (thinking {entry.thinking}, prompt cache {entry.prompt_cache})")
 
-    client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key, base_url=settings.anthropic_base_url,
-                                      max_retries=0, timeout=30.0)
+    client = anthropic.AsyncAnthropic(
+        api_key=settings.anthropic_api_key, base_url=settings.anthropic_base_url, max_retries=0, timeout=30.0
+    )
     try:
         model = await client.models.retrieve(entry.model)
         print(f"API: key accepted; model {model.id} is available to this account (no tokens used).")
@@ -103,8 +115,10 @@ async def verify(settings: Settings, live_test: bool) -> bool:
             print(f"Tool call: NOT MADE -- the model answered directly: {first.message.content[:80]!r}")
             return False
         call = first.message.tool_calls[0]
-        history += [first.message,
-                    Message(role=Role.TOOL, content='{"success":true,"data":408}', tool_call_id=call.id, name=call.name)]
+        history += [
+            first.message,
+            Message(role=Role.TOOL, content='{"success":true,"data":408}', tool_call_id=call.id, name=call.name),
+        ]
         second = await provider.chat(history, tools=registry.tool_specs())
         print(_usage_line("request 2", second, provider.pricing))
     except LLMError as exc:
@@ -113,8 +127,14 @@ async def verify(settings: Settings, live_test: bool) -> bool:
     print(f"Tool call: OK ({call.name} {call.arguments}) -> answer {second.message.content.strip()[:60]!r}")
     if entry.prompt_cache != "off":
         read = second.usage.cache_read_tokens if second.usage else 0
-        print("Prompt cache: " + (f"CONFIRMED ({read} tokens read from cache on request 2)" if read else
-                                  "NOT confirmed -- request 2 read nothing from the cache"))
+        print(
+            "Prompt cache: "
+            + (
+                f"CONFIRMED ({read} tokens read from cache on request 2)"
+                if read
+                else "NOT confirmed -- request 2 read nothing from the cache"
+            )
+        )
     print("RESULT: PASS")
     return True
 

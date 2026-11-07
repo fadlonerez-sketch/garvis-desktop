@@ -6,6 +6,7 @@ delegating to the manager, translating BrowserError into ToolResult.fail
 -- doesn't need real browser plumbing; that's covered by
 test_browser_manager.py instead.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -83,8 +84,11 @@ async def test_navigate_tool_success():
     args = tool.validate_arguments({"url": "https://example.com/"})
     result = await tool.execute(args)
     assert result.success
-    assert result.data == {"url": "https://example.com/", "target_desktop": "garvis_workspace",
-                           "target_reason": "default for this kind of window"}
+    assert result.data == {
+        "url": "https://example.com/",
+        "target_desktop": "garvis_workspace",
+        "target_reason": "default for this kind of window",
+    }
     assert manager.navigate_calls == ["https://example.com/"]
 
 

@@ -13,6 +13,7 @@ scripts/install_shortcut.py, whose "Shortcut key" Explorer handles: it
 starts Garvis, and if Garvis is already running that launch just forwards
 "activate" to it.
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -74,8 +75,9 @@ class HotkeyStatus:
 
 
 class GlobalHotkey(QAbstractNativeEventFilter):
-    def __init__(self, spec: str, on_activate: Callable[[], None], activate_message: int = 0,
-                 api: HotkeyApi | None = None) -> None:
+    def __init__(
+        self, spec: str, on_activate: Callable[[], None], activate_message: int = 0, api: HotkeyApi | None = None
+    ) -> None:
         super().__init__()
         self._spec = spec
         self._on_activate = on_activate

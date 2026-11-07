@@ -8,6 +8,7 @@ so these exercise the actual orchestration logic (listen -> think -> speak
 speaker -- and without real wall-clock waiting (poll_interval_seconds is
 set near-zero).
 """
+
 from __future__ import annotations
 
 import asyncio

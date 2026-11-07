@@ -1,5 +1,6 @@
 """Tests for VoicePipeline, using fake recorder/STT/TTS/player collaborators
 so no real hardware, model, or subprocess is involved."""
+
 from __future__ import annotations
 
 import os
@@ -153,9 +154,7 @@ async def test_speak_uses_a_real_temp_file_and_cleans_up_when_playback_finishes(
 async def test_speak_cleans_up_temp_file_when_synthesis_raises(tmp_path, monkeypatch):
     monkeypatch.setattr(tempfile, "gettempdir", lambda: str(tmp_path))
     player = _FakePlayer()
-    pipeline = VoicePipeline(
-        stt=_FakeSTT(""), tts=_FailingTTS(), recorder=_FakeRecorder(""), player=player
-    )
+    pipeline = VoicePipeline(stt=_FakeSTT(""), tts=_FailingTTS(), recorder=_FakeRecorder(""), player=player)
 
     with pytest.raises(RuntimeError, match="synthesis failed"):
         await pipeline.speak("hello")
@@ -254,9 +253,7 @@ async def test_transcribe_bytes_uses_correct_wav_format():
 
             return TranscriptionResult(text="ok")
 
-    pipeline = VoicePipeline(
-        stt=_InspectingSTT(), tts=_FakeTTS(), recorder=recorder, player=_FakePlayer()
-    )
+    pipeline = VoicePipeline(stt=_InspectingSTT(), tts=_FakeTTS(), recorder=recorder, player=_FakePlayer())
     await pipeline.transcribe_bytes(b"\x01\x02" * 50)
 
     assert captured == {"channels": 1, "sampwidth": 2, "framerate": 22050, "nframes": 50}
@@ -270,9 +267,7 @@ async def test_transcribe_bytes_cleans_up_temp_file_even_on_stt_failure():
         async def transcribe(self, audio_path: str):
             raise RuntimeError("stt exploded")
 
-    pipeline = VoicePipeline(
-        stt=_FailingSTT(), tts=_FakeTTS(), recorder=recorder, player=_FakePlayer()
-    )
+    pipeline = VoicePipeline(stt=_FailingSTT(), tts=_FakeTTS(), recorder=recorder, player=_FakePlayer())
     with pytest.raises(RuntimeError, match="stt exploded"):
         await pipeline.transcribe_bytes(b"\x01\x02" * 10)
 
@@ -308,9 +303,7 @@ class _ToneWritingTTS:
 
 @pytest.mark.asyncio
 async def test_reference_energy_now_is_zero_when_not_speaking():
-    pipeline = VoicePipeline(
-        stt=_FakeSTT(""), tts=_ToneWritingTTS(), recorder=_FakeRecorder(""), player=_FakePlayer()
-    )
+    pipeline = VoicePipeline(stt=_FakeSTT(""), tts=_ToneWritingTTS(), recorder=_FakeRecorder(""), player=_FakePlayer())
     assert pipeline.reference_energy_now() == 0.0
 
 
@@ -333,9 +326,7 @@ async def test_reference_energy_now_reflects_currently_playing_audio():
 @pytest.mark.asyncio
 async def test_reference_energy_now_drops_to_zero_after_playback_finishes():
     player = _FakePlayer()
-    pipeline = VoicePipeline(
-        stt=_FakeSTT(""), tts=_ToneWritingTTS(), recorder=_FakeRecorder(""), player=player
-    )
+    pipeline = VoicePipeline(stt=_FakeSTT(""), tts=_ToneWritingTTS(), recorder=_FakeRecorder(""), player=player)
 
     await pipeline.speak("hello")
     assert pipeline.reference_energy_now() > 0.0

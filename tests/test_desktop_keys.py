@@ -1,4 +1,5 @@
 """Tests for key-name parsing (app/desktop/keys.py) -- pure data, any platform."""
+
 from __future__ import annotations
 
 import pytest
@@ -9,9 +10,21 @@ from app.desktop.keys import key_to_vk, parse_hotkey
 @pytest.mark.parametrize(
     "name, vk",
     [
-        ("enter", 0x0D), ("Return", 0x0D), ("ESC", 0x1B), ("escape", 0x1B), ("tab", 0x09),
-        ("a", 0x41), ("Z", 0x5A), ("7", 0x37), ("f5", 0x74), ("F12", 0x7B), ("page down", 0x22),
-        ("ctrl", 0x11), ("Control", 0x11), ("win", 0x5B), ("volume_up", 0xAF),
+        ("enter", 0x0D),
+        ("Return", 0x0D),
+        ("ESC", 0x1B),
+        ("escape", 0x1B),
+        ("tab", 0x09),
+        ("a", 0x41),
+        ("Z", 0x5A),
+        ("7", 0x37),
+        ("f5", 0x74),
+        ("F12", 0x7B),
+        ("page down", 0x22),
+        ("ctrl", 0x11),
+        ("Control", 0x11),
+        ("win", 0x5B),
+        ("volume_up", 0xAF),
     ],
 )
 def test_key_to_vk_known_names(name, vk):

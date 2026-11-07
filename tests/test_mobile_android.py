@@ -7,6 +7,7 @@ validated with `cryptography`'s strict RFC 5280 path validator (name
 constraints, EKU, validity -- the checks a modern browser verifier makes).
 None of this runs on a real Android device.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -35,13 +36,18 @@ from app.tasks.protocols import Protocol, ProtocolStore, Step
 from tests.mobile_fakes import GatedLLM, make_agent, make_voice, wait_until
 from tests.test_tasks_and_protocols import FakeWebsiteTool
 
-GALAXY_S24_CHROME = ("Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) "
-                     "Chrome/138.0.0.0 Mobile Safari/537.36")
+GALAXY_S24_CHROME = (
+    "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Mobile Safari/537.36"
+)
 """Chrome's reduced user agent, as an Android phone sends it (model and real Android version are hidden)."""
-GALAXY_SAMSUNG_INTERNET = ("Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) "
-                           "SamsungBrowser/27.0 Chrome/125.0.0.0 Mobile Safari/537.36")
-IPHONE_SAFARI = ("Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) "
-                 "Version/18.5 Mobile/15E148 Safari/604.1")
+GALAXY_SAMSUNG_INTERNET = (
+    "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "SamsungBrowser/27.0 Chrome/125.0.0.0 Mobile Safari/537.36"
+)
+IPHONE_SAFARI = (
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) "
+    "Version/18.5 Mobile/15E148 Safari/604.1"
+)
 POST = {"X-Garvis-Client": "1"}
 
 
@@ -55,8 +61,12 @@ def _verify(material, host: str) -> None:
         subject = x509.IPAddress(ipaddress.ip_address(host))
     except ValueError:
         subject = x509.DNSName(host)
-    verifier = (PolicyBuilder().store(Store([_load(material.ca_cert_path)])).time(dt.datetime.now(dt.UTC))
-                .build_server_verifier(subject))
+    verifier = (
+        PolicyBuilder()
+        .store(Store([_load(material.ca_cert_path)]))
+        .time(dt.datetime.now(dt.UTC))
+        .build_server_verifier(subject)
+    )
     verifier.verify(_load(material.server_cert_path), [])
 
 
@@ -97,8 +107,9 @@ class _Rig:
 
     async def pair(self, user_agent: str) -> str:
         code = self.pairing.new_pairing_code()
-        response = await self.client.post("/api/pair", json={"code": code.code},
-                                          headers={**POST, "User-Agent": user_agent})
+        response = await self.client.post(
+            "/api/pair", json={"code": code.code}, headers={**POST, "User-Agent": user_agent}
+        )
         assert response.status == 200
         token = response.cookies[COOKIE_NAME].value
         self.client.session.cookie_jar.clear()
@@ -118,12 +129,19 @@ async def rig(tmp_path):
     store = ProtocolStore(tmp_path / "protocols")
     manager = TaskManager(agent, events, tmp_path / "tasks.json", store, available_tools=lambda: {"open_website"})
     manager.start()
-    service = MobileService(agent, events, make_voice(), tasks=manager, protocols=store,
-                            available_tools=lambda: {"open_website"})
+    service = MobileService(
+        agent, events, make_voice(), tasks=manager, protocols=store, available_tools=lambda: {"open_website"}
+    )
     service.start()
     pairing = PairingManager(tmp_path / "devices.json")
-    app = create_app(service, pairing, allowed_networks=parse_networks(""), allowed_hosts=None,
-                     ca_cert_der=b"0\x82fake-der", max_audio_bytes=1_000_000)
+    app = create_app(
+        service,
+        pairing,
+        allowed_networks=parse_networks(""),
+        allowed_hosts=None,
+        ca_cert_der=b"0\x82fake-der",
+        max_audio_bytes=1_000_000,
+    )
     client = TestClient(TestServer(app, host="127.0.0.1"))
     await client.start_server()
     yield _Rig(client, manager, store, pairing, web)
@@ -132,9 +150,10 @@ async def rig(tmp_path):
     await client.close()
 
 
-@pytest.mark.parametrize(("user_agent", "label"), [(GALAXY_S24_CHROME, "Android"),
-                                                    (GALAXY_SAMSUNG_INTERNET, "Android"),
-                                                    (IPHONE_SAFARI, "iPhone")])
+@pytest.mark.parametrize(
+    ("user_agent", "label"),
+    [(GALAXY_S24_CHROME, "Android"), (GALAXY_SAMSUNG_INTERNET, "Android"), (IPHONE_SAFARI, "iPhone")],
+)
 async def test_pairing_records_the_device_type(rig, user_agent, label):
     token = await rig.pair(user_agent)
     record = rig.pairing.verify(token)
@@ -144,33 +163,47 @@ async def test_pairing_records_the_device_type(rig, user_agent, label):
 async def test_tasks_carry_the_real_device_for_each_platform(rig):
     android = await rig.pair(GALAXY_S24_CHROME)
     iphone = await rig.pair(IPHONE_SAFARI)
-    for token, ua, request_id in ((android, GALAXY_S24_CHROME, "android-req-01"),
-                                  (iphone, IPHONE_SAFARI, "iphone-req-001")):
-        response = await rig.client.post("/api/messages", json={"text": "hello", "request_id": request_id},
-                                         headers=_headers(token, ua))
+    for token, ua, request_id in (
+        (android, GALAXY_S24_CHROME, "android-req-01"),
+        (iphone, IPHONE_SAFARI, "iphone-req-001"),
+    ):
+        response = await rig.client.post(
+            "/api/messages", json={"text": "hello", "request_id": request_id}, headers=_headers(token, ua)
+        )
         assert response.status == 202
     await wait_until(lambda: all(t.terminal for t in rig.manager.list()))
     listing = await (await rig.client.get("/api/tasks", headers=_headers(android, GALAXY_S24_CHROME, False))).json()
     assert sorted(t["device"] for t in listing["tasks"]) == ["Android", "iPhone"]
-    protocol = rig.store.save(Protocol(name="Weather", steps=[Step(type="open_website",
-                                                                   params={"url": "https://w.example"})]))
-    run = await rig.client.post(f"/api/protocols/{protocol.id}/run", json={"request_id": "android-run-01"},
-                                headers=_headers(android, GALAXY_S24_CHROME))
+    protocol = rig.store.save(
+        Protocol(name="Weather", steps=[Step(type="open_website", params={"url": "https://w.example"})])
+    )
+    run = await rig.client.post(
+        f"/api/protocols/{protocol.id}/run",
+        json={"request_id": "android-run-01"},
+        headers=_headers(android, GALAXY_S24_CHROME),
+    )
     assert run.status == 202 and (await run.json())["device"] == "Android"
 
 
 async def test_android_requests_get_the_same_authentication_and_errors(rig):
-    wrong = await rig.client.post("/api/pair", json={"code": "00000000"},
-                                  headers={**POST, "User-Agent": GALAXY_S24_CHROME})
+    wrong = await rig.client.post(
+        "/api/pair", json={"code": "00000000"}, headers={**POST, "User-Agent": GALAXY_S24_CHROME}
+    )
     assert wrong.status == 403 and "pairing code" in (await wrong.json())["error"].lower()
     unpaired = await rig.client.get("/api/tasks", headers={"User-Agent": GALAXY_S24_CHROME})
     assert unpaired.status == 401
     token = await rig.pair(GALAXY_S24_CHROME)
-    no_header = await rig.client.post("/api/messages", json={"text": "x"},
-                                      headers={"Cookie": f"{COOKIE_NAME}={token}", "User-Agent": GALAXY_S24_CHROME})
+    no_header = await rig.client.post(
+        "/api/messages",
+        json={"text": "x"},
+        headers={"Cookie": f"{COOKIE_NAME}={token}", "User-Agent": GALAXY_S24_CHROME},
+    )
     assert no_header.status == 403  # anti-forgery header still required
-    cross_site = await rig.client.post("/api/messages", json={"text": "x"},
-                                       headers={**_headers(token, GALAXY_S24_CHROME), "Origin": "https://evil.example"})
+    cross_site = await rig.client.post(
+        "/api/messages",
+        json={"text": "x"},
+        headers={**_headers(token, GALAXY_S24_CHROME), "Origin": "https://evil.example"},
+    )
     assert cross_site.status == 403
     rig.pairing.revoke(token)
     revoked = await rig.client.get("/api/tasks", headers=_headers(token, GALAXY_S24_CHROME, False))

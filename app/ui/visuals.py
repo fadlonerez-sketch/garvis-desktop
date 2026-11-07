@@ -25,6 +25,7 @@ plasma.SOFTWARE_FPS on a software rasterizer), and not at all when idle with
 reduced motion. A frame is one GPU pass plus a read-back: about 3 ms at
 560 px on the integrated GPU it was measured on.
 """
+
 from __future__ import annotations
 
 import math
@@ -69,7 +70,7 @@ def system_prefers_reduced_motion() -> bool:
         value = ctypes.c_int(1)
         if ctypes.windll.user32.SystemParametersInfoW(0x1042, 0, ctypes.byref(value), 0):  # SPI_GETCLIENTAREAANIMATION
             return not value.value
-    except (AttributeError, OSError):
+    except AttributeError, OSError:
         pass
     return False
 
@@ -130,12 +131,16 @@ class Dynamics:
         pulse = 0.0 if still else math.sin(2 * math.pi * self.time / _PULSE_PERIOD)
         level, hush = self.glow_level, self.hush
         return dict(
-            glow=max(0.0, min(1.0, v["glow"] + 0.07 * v["breathe"] * breath + 0.38 * level + 0.45 * self.flash
-                              - 0.28 * hush)),
-            heat=max(0.0, min(1.0, v["heat"] + 0.10 * v["stir"] * pulse + 0.38 * level + 0.35 * self.flash
-                              - 0.22 * hush)),
+            glow=max(
+                0.0, min(1.0, v["glow"] + 0.07 * v["breathe"] * breath + 0.38 * level + 0.45 * self.flash - 0.28 * hush)
+            ),
+            heat=max(
+                0.0, min(1.0, v["heat"] + 0.10 * v["stir"] * pulse + 0.38 * level + 0.35 * self.flash - 0.22 * hush)
+            ),
             plasma=max(0.0, min(1.0, v["plasma"] + 0.22 * level - 0.15 * hush)),
-            swell=1.0 + (0.0 if still else 0.012 * v["breathe"] * breath + 0.035 * level) + 0.03 * self.flash
+            swell=1.0
+            + (0.0 if still else 0.012 * v["breathe"] * breath + 0.035 * level)
+            + 0.03 * self.flash
             - 0.02 * hush,
             alert=v["alert"],
             standby=v["standby"],
@@ -143,8 +148,13 @@ class Dynamics:
 
     @property
     def settled(self) -> bool:
-        return (self.level < 0.01 and self.glow_level < 0.01 and self.flash < 0.01 and self.hush < 0.01
-                and self._hush_goal < 0.01)
+        return (
+            self.level < 0.01
+            and self.glow_level < 0.01
+            and self.flash < 0.01
+            and self.hush < 0.01
+            and self._hush_goal < 0.01
+        )
 
 
 def shader_uniforms(dyn: Dynamics, detail: float = 1.0) -> dict[str, float]:
@@ -196,8 +206,15 @@ class CoreVisual(QWidget):
     (bridge.voice_level) is sampled only while speaking. `accent` is accepted
     for the callers' theme plumbing; the orb's colours are its own."""
 
-    def __init__(self, accent: Accent, compact: bool = False, level_source: Callable[[], float] | None = None,
-                 parent: QWidget | None = None, *, reduced_motion: bool | None = None) -> None:
+    def __init__(
+        self,
+        accent: Accent,
+        compact: bool = False,
+        level_source: Callable[[], float] | None = None,
+        parent: QWidget | None = None,
+        *,
+        reduced_motion: bool | None = None,
+    ) -> None:
         super().__init__(parent)
         self._accent = accent
         self._compact = compact

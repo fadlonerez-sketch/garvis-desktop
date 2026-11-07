@@ -4,6 +4,7 @@ scripts/tailscale_check.py (run against a real TLS listener made with
 Garvis's own certificate code -- and an impostor CA, which must fail).
 
 No Tailscale, network or admin rights needed: everything runs on 127.0.0.1."""
+
 from __future__ import annotations
 
 import json
@@ -23,16 +24,36 @@ from scripts import tailscale_check
 STATUS = {
     "Version": "1.90.6-t1234",
     "BackendState": "Running",
-    "Self": {"HostName": "DESKTOP-EXAMPLE", "DNSName": "desktop-example.tail1a2b3.ts.net.", "OS": "windows",
-             "TailscaleIPs": ["100.101.1.2", "fd7a:115c:a1e0::1"], "Online": True, "KeyExpiry": "2027-04-30T00:00:00Z"},
+    "Self": {
+        "HostName": "DESKTOP-EXAMPLE",
+        "DNSName": "desktop-example.tail1a2b3.ts.net.",
+        "OS": "windows",
+        "TailscaleIPs": ["100.101.1.2", "fd7a:115c:a1e0::1"],
+        "Online": True,
+        "KeyExpiry": "2027-04-30T00:00:00Z",
+    },
     "CurrentTailnet": {"Name": "someone@example.com", "MagicDNSSuffix": "tail1a2b3.ts.net", "MagicDNSEnabled": True},
     "Health": [],
     "Peer": {
-        "nodekey:aa": {"HostName": "Example Phone", "DNSName": "example-phone.tail1a2b3.ts.net.",
-                       "OS": "android", "TailscaleIPs": ["100.90.8.7"], "Online": True, "CurAddr": "",
-                       "Relay": "fra", "ExitNode": False},
-        "nodekey:bb": {"HostName": "old-laptop", "DNSName": "old-laptop.tail1a2b3.ts.net.", "OS": "linux",
-                       "TailscaleIPs": ["100.77.1.1"], "Online": False, "CurAddr": "203.0.113.5:41641", "Relay": "lhr"},
+        "nodekey:aa": {
+            "HostName": "Example Phone",
+            "DNSName": "example-phone.tail1a2b3.ts.net.",
+            "OS": "android",
+            "TailscaleIPs": ["100.90.8.7"],
+            "Online": True,
+            "CurAddr": "",
+            "Relay": "fra",
+            "ExitNode": False,
+        },
+        "nodekey:bb": {
+            "HostName": "old-laptop",
+            "DNSName": "old-laptop.tail1a2b3.ts.net.",
+            "OS": "linux",
+            "TailscaleIPs": ["100.77.1.1"],
+            "Online": False,
+            "CurAddr": "203.0.113.5:41641",
+            "Relay": "lhr",
+        },
     },
 }
 
@@ -76,21 +97,26 @@ def test_policy_grants_the_phone_only_tcp_8443_on_the_pc():
     accept = [t for t in policy["tests"] if t.get("accept")]
     assert accept == [policy["tests"][0]] and accept[0]["accept"] == ["garvis-pc:8443"]
     assert "garvis-pc:3389" in policy["tests"][0]["deny"]
-    assert policy["tests"][1] == {"src": "garvis-pc", "deny": ["garvis-phone:8443", "garvis-phone:22",
-                                                              "garvis-phone:443"]}
+    assert policy["tests"][1] == {
+        "src": "garvis-pc",
+        "deny": ["garvis-phone:8443", "garvis-phone:22", "garvis-phone:443"],
+    }
 
 
-@pytest.mark.parametrize("pc,phone", [("192.168.10.156", "100.90.8.7"), ("100.101.1.2", "8.8.8.8"),
-                                      ("fd7a:115c:a1e0::1", "100.90.8.7")])
+@pytest.mark.parametrize(
+    "pc,phone", [("192.168.10.156", "100.90.8.7"), ("100.101.1.2", "8.8.8.8"), ("fd7a:115c:a1e0::1", "100.90.8.7")]
+)
 def test_policy_refuses_addresses_outside_the_tailnet(pc, phone):
     with pytest.raises(ValueError):
         tailscale_check.build_policy(pc, phone)
 
 
 def test_broad_python_allow_rules_are_flagged():
-    rules = [{"id": "Garvis-Mobile-TCP8443-Tailscale", "remote": "100.90.8.7"},
-             {"id": "Garvis-Mobile-TCP8443-Phone", "remote": "192.168.10.200"},
-             {"id": "TCP Query User{x}", "remote": "Any"}]
+    rules = [
+        {"id": "Garvis-Mobile-TCP8443-Tailscale", "remote": "100.90.8.7"},
+        {"id": "Garvis-Mobile-TCP8443-Phone", "remote": "192.168.10.200"},
+        {"id": "TCP Query User{x}", "remote": "Any"},
+    ]
     assert [r["id"] for r in tailscale_check.broad_rules(rules)] == ["TCP Query User{x}"]
 
 
@@ -116,9 +142,13 @@ class _TlsHello:
                     request = tls.recv(65536).decode("ascii", "replace")
                     self.hosts.append(re.search(r"\r\nHost: ([^\r]+)", request).group(1))
                     body = b'{"api": 1, "server": "garvis", "paired": false, "remote": true}'
-                    tls.sendall(b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: "
-                                + str(len(body)).encode() + b"\r\nConnection: close\r\n\r\n" + body)
-            except (OSError, ssl.SSLError):
+                    tls.sendall(
+                        b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: "
+                        + str(len(body)).encode()
+                        + b"\r\nConnection: close\r\n\r\n"
+                        + body
+                    )
+            except OSError, ssl.SSLError:
                 pass
 
     def close(self) -> None:
@@ -160,14 +190,29 @@ FIREWALL_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "tailscale_f
 def _firewall_check(*args: str):
     import subprocess
 
-    return subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-                           "-File", str(FIREWALL_SCRIPT), "-Check", *args],
-                          capture_output=True, text=True, timeout=120)
+    return subprocess.run(
+        [
+            "powershell",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(FIREWALL_SCRIPT),
+            "-Check",
+            *args,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
 
 
 @pytest.mark.skipif(not sys.platform.startswith("win"), reason="Windows Firewall script")
-@pytest.mark.skipif(not FIREWALL_SCRIPT.exists(),
-                    reason="scripts/tailscale_firewall.ps1 (Garvis Mobile remote access) is not part of this repository")
+@pytest.mark.skipif(
+    not FIREWALL_SCRIPT.exists(),
+    reason="scripts/tailscale_firewall.ps1 (Garvis Mobile remote access) is not part of this repository",
+)
 @pytest.mark.parametrize("address", ["8.8.8.8", "192.168.10.200", "100.128.0.1", "100.63.255.255", "fd00::1"])
 def test_firewall_script_admits_only_tailnet_addresses(address):
     result = _firewall_check("-PhoneIp", address)  # -Check: read-only, no admin
@@ -175,8 +220,10 @@ def test_firewall_script_admits_only_tailnet_addresses(address):
 
 
 @pytest.mark.skipif(not sys.platform.startswith("win"), reason="Windows Firewall script")
-@pytest.mark.skipif(not FIREWALL_SCRIPT.exists(),
-                    reason="scripts/tailscale_firewall.ps1 (Garvis Mobile remote access) is not part of this repository")
+@pytest.mark.skipif(
+    not FIREWALL_SCRIPT.exists(),
+    reason="scripts/tailscale_firewall.ps1 (Garvis Mobile remote access) is not part of this repository",
+)
 def test_firewall_script_check_accepts_the_phones_tailnet_addresses():
     result = _firewall_check("-PhoneIp", "100.90.8.7,fd7a:115c:a1e0::9")
     assert result.returncode == 0, result.stderr

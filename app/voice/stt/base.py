@@ -1,4 +1,5 @@
 """Speech-to-text provider abstraction (implemented in Phase 5)."""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

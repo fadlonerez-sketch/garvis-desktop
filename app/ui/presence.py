@@ -18,6 +18,7 @@ frame, so nothing jumps or flickers. One progress value 0..1 drives it, so
 an interrupted transition simply reverses from where it is. When animations
 are off (Settings), the switch is immediate.
 """
+
 from __future__ import annotations
 
 import math
@@ -307,8 +308,14 @@ class PresenceController(QObject):
     sources_requested = Signal(QPoint)
     quit_requested = Signal()
 
-    def __init__(self, dashboard: QWidget, state: GarvisState, store: UiStateStore, level_source=None,
-                 parent: QObject | None = None) -> None:
+    def __init__(
+        self,
+        dashboard: QWidget,
+        state: GarvisState,
+        store: UiStateStore,
+        level_source=None,
+        parent: QObject | None = None,
+    ) -> None:
         super().__init__(parent)
         self._dashboard = dashboard
         self._state = state
@@ -360,7 +367,11 @@ class PresenceController(QObject):
         size = QSize(ORB_SIZE, ORB_SIZE)
         saved = tuple(self.prefs.orb_pos) if self.prefs.orb_pos else None
         restored = restore_position(saved, size, self._screens())
-        return restored if restored is not None else corner_position(self._primary_available(), size, self.prefs.orb_corner)
+        return (
+            restored
+            if restored is not None
+            else corner_position(self._primary_available(), size, self.prefs.orb_corner)
+        )
 
     def dashboard_rect(self) -> QRect:
         if self.prefs.dashboard_rect:
@@ -379,8 +390,9 @@ class PresenceController(QObject):
         center = self.orb_position() + QPoint(ORB_SIZE // 2, ORB_SIZE // 2)
         local = QPointF(center - rect.topLeft())
         margin = ORB_SIZE * 0.25
-        return QPointF(min(max(local.x(), -margin), rect.width() + margin),
-                       min(max(local.y(), -margin), rect.height() + margin))
+        return QPointF(
+            min(max(local.x(), -margin), rect.width() + margin), min(max(local.y(), -margin), rect.height() + margin)
+        )
 
     # -------------------------------------------------------- transitions
     def expand(self, animated: bool = True) -> None:

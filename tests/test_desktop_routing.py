@@ -4,6 +4,7 @@ and its enforcement in the tools.
 Hermetic: the virtual desktops, windows, focus and browser are fakes that
 agree with each other (tests/routing_fakes.py). The real-Windows check of
 the same behaviour is tests/test_desktop_routing_live.py (opt-in)."""
+
 from __future__ import annotations
 
 import pytest
@@ -31,22 +32,39 @@ from tests.test_research import FakeResearchBrowser, _researcher
 
 
 # ------------------------------------------------------------------ intent
-@pytest.mark.parametrize("text, target, placement", [
-    ("Yeah, show me some of the news today.", DesktopTarget.USER, False),
-    ("open youtube for me", DesktopTarget.USER, False),
-    ("let me see the weather radar", DesktopTarget.USER, False),
-    ("put it on my screen", DesktopTarget.USER, True),
-    ("open the docs in my browser", DesktopTarget.USER, True),
-    ("תראה לי חדשות של היום", DesktopTarget.USER, False),
-    ("תפתח את זה על המסך", DesktopTarget.USER, True),
-    ("research flights in the background", DesktopTarget.WORKSPACE, True),
-    ("check the price but don't open anything", DesktopTarget.WORKSPACE, True),
-    ("just tell me the score", DesktopTarget.WORKSPACE, True),
-    ("תבדוק ברקע מה מזג האוויר", DesktopTarget.WORKSPACE, True),
-    ("research it in the background and show me the summary", DesktopTarget.WORKSPACE, True),
-    ("what's the bitcoin price?", None, False),
-], ids=["news", "open-for-me", "let-me-see", "on-my-screen", "in-my-browser", "he-show", "he-screen",
-        "background", "dont-open", "just-tell", "he-background", "background-wins", "neutral"])
+@pytest.mark.parametrize(
+    "text, target, placement",
+    [
+        ("Yeah, show me some of the news today.", DesktopTarget.USER, False),
+        ("open youtube for me", DesktopTarget.USER, False),
+        ("let me see the weather radar", DesktopTarget.USER, False),
+        ("put it on my screen", DesktopTarget.USER, True),
+        ("open the docs in my browser", DesktopTarget.USER, True),
+        ("תראה לי חדשות של היום", DesktopTarget.USER, False),
+        ("תפתח את זה על המסך", DesktopTarget.USER, True),
+        ("research flights in the background", DesktopTarget.WORKSPACE, True),
+        ("check the price but don't open anything", DesktopTarget.WORKSPACE, True),
+        ("just tell me the score", DesktopTarget.WORKSPACE, True),
+        ("תבדוק ברקע מה מזג האוויר", DesktopTarget.WORKSPACE, True),
+        ("research it in the background and show me the summary", DesktopTarget.WORKSPACE, True),
+        ("what's the bitcoin price?", None, False),
+    ],
+    ids=[
+        "news",
+        "open-for-me",
+        "let-me-see",
+        "on-my-screen",
+        "in-my-browser",
+        "he-show",
+        "he-screen",
+        "background",
+        "dont-open",
+        "just-tell",
+        "he-background",
+        "background-wins",
+        "neutral",
+    ],
+)
 def test_infer_intent(text, target, placement):
     intent = infer_intent(text)
     assert intent.explicit_target == target
@@ -120,9 +138,11 @@ class RecordingPlacer:
         self.last_placement = None
 
     def place(self, target):
-        self.last_placement = ({"target_desktop": "user_desktop", "visible": True, "focused": True,
-                                "moved_from_other_desktop": False}
-                               if target == "user_desktop" else {"target_desktop": target, "moved": True})
+        self.last_placement = (
+            {"target_desktop": "user_desktop", "visible": True, "focused": True, "moved_from_other_desktop": False}
+            if target == "user_desktop"
+            else {"target_desktop": target, "moved": True}
+        )
 
 
 def _research_tool(browser, routing, workspace):
@@ -135,8 +155,7 @@ def _research_tool(browser, routing, workspace):
         return result
 
     browser.navigate = navigate
-    return WebResearchTool(_researcher(browser, workspace=workspace), browser=browser, routing=routing,
-                           placer=placer)
+    return WebResearchTool(_researcher(browser, workspace=workspace), browser=browser, routing=routing, placer=placer)
 
 
 @pytest.fixture
@@ -219,7 +238,9 @@ async def test_target_is_kept_across_a_multi_step_workflow():
 async def test_disabled_workspace_target_is_an_error_not_a_visible_page():
     browser = SurfaceBrowser()
     tool = NavigateTool(browser, DesktopRouting(), workspace_available=False)
-    result = await tool.execute(tool.validate_arguments({"url": "https://a.test", "target_desktop": "garvis_workspace"}))
+    result = await tool.execute(
+        tool.validate_arguments({"url": "https://a.test", "target_desktop": "garvis_workspace"})
+    )
     assert not result.success and "disabled" in result.error
     assert browser.surface_navigations == []
 
@@ -296,6 +317,7 @@ async def test_open_application_in_workspace_keeps_users_focus_and_moves_nothing
             launched.append(background)
             # the app ignores SW_SHOWMINNOACTIVE and grabs focus anyway
             backend.open_window(77, "Calculator", "CalculatorApp.exe", 770, minimized=True, steal_focus=True)
+
         return launch
 
     monkeypatch.setattr("app.tools.applications.make_launcher", fake_launcher)
@@ -344,8 +366,7 @@ async def test_open_application_in_unavailable_workspace_launches_nothing(monkey
     desktop = DesktopController(backend_factory=lambda: backend, screenshot_dir=None, own_pid=GARVIS_PID)
     desktop.attach_workspace(WorkspaceManager(backend_factory=None))
     launched = []
-    monkeypatch.setattr("app.tools.applications.make_launcher",
-                        lambda *a: (lambda: launched.append(True)))
+    monkeypatch.setattr("app.tools.applications.make_launcher", lambda *a: lambda: launched.append(True))
     tool = OpenApplicationTool(allowlist={"calculator": "calc.exe"}, desktop=desktop)
     result = await tool.execute(OpenApplicationInput(application="calculator", target_desktop="garvis_workspace"))
     assert not result.success and "workspace" in result.error
@@ -374,12 +395,14 @@ async def test_input_never_silently_pulls_a_workspace_window_onto_the_users_scre
         result = await typing.execute(typing.validate_arguments({"text": "hi", "window": "Research"}))
         assert not result.success and "workspace" in result.error
         assert vd.moves == [] and not [c for c in backend.calls if c[0] == "type"]
-        refused = await typing.execute(typing.validate_arguments(
-            {"text": "hi", "window": "Research", "target_desktop": "garvis_workspace"}))
+        refused = await typing.execute(
+            typing.validate_arguments({"text": "hi", "window": "Research", "target_desktop": "garvis_workspace"})
+        )
         assert not refused.success and "only reaches the desktop" in refused.error
         # explicitly for the user: brought over, focused, typed
-        ok = await typing.execute(typing.validate_arguments(
-            {"text": "hi", "window": "Research", "target_desktop": "user_desktop"}))
+        ok = await typing.execute(
+            typing.validate_arguments({"text": "hi", "window": "Research", "target_desktop": "user_desktop"})
+        )
         assert ok.success, ok.error
         assert vd.window_desktops[60] == vd.current_id and backend.foreground == 60
     finally:
@@ -421,12 +444,14 @@ async def test_window_action_on_workspace_never_activates_it():
     backend.foreground = 1
     tool = {t.name: t for t in build_desktop_tools(desktop)}["window_action"]
     try:
-        result = await tool.execute(tool.validate_arguments(
-            {"action": "restore", "window": "notes", "target_desktop": "garvis_workspace"}))
+        result = await tool.execute(
+            tool.validate_arguments({"action": "restore", "window": "notes", "target_desktop": "garvis_workspace"})
+        )
         assert result.success, result.error
         assert backend.foreground == 1 and vd.current_id != garvis_id(vd)
-        refused = await tool.execute(tool.validate_arguments(
-            {"action": "maximize", "window": "notes", "target_desktop": "garvis_workspace"}))
+        refused = await tool.execute(
+            tool.validate_arguments({"action": "maximize", "window": "notes", "target_desktop": "garvis_workspace"})
+        )
         assert not refused.success and "switch your view" in refused.error
     finally:
         workspace.shutdown()
@@ -460,7 +485,9 @@ async def test_open_website_reports_honestly_when_it_cant_confirm(monkeypatch):
     tool = OpenWebsiteTool(desktop=desktop, verify_seconds=0.3)
     try:
         result = await tool.execute(tool.validate_arguments({"url": "https://news.test"}))
-        assert result.success and result.data["visible_verified"] is False and "can't be confirmed" in result.data["note"]
+        assert (
+            result.success and result.data["visible_verified"] is False and "can't be confirmed" in result.data["note"]
+        )
     finally:
         workspace.shutdown()
 
@@ -470,8 +497,7 @@ async def test_open_website_refuses_background_instead_of_showing_anyway(monkeyp
     monkeypatch.setattr(open_website_module.webbrowser, "open", lambda url: opened.append(url) or True)
     routing = DesktopRouting()
     routing.new_request("check that page in the background")
-    result = await OpenWebsiteTool(routing=routing).execute(
-        OpenWebsiteTool.input_model(url="https://news.test"))
+    result = await OpenWebsiteTool(routing=routing).execute(OpenWebsiteTool.input_model(url="https://news.test"))
     assert not result.success and "browser_navigate" in result.error
     assert opened == []
 
@@ -503,11 +529,15 @@ async def test_powershell_windows_go_to_the_workspace_and_focus_stays_with_the_u
     runner = _ScriptRunner(lambda: backend.open_window(90, "Report - Excel", "EXCEL.EXE", 900, steal_focus=True))
     tool = RunPowerShellTool(runner=runner, policy=_AllowAll(), desktop=desktop)
     try:
-        result = await tool.execute(tool.validate_arguments(
-            {"command": "Start-Process excel report.xlsx", "target_desktop": "garvis_workspace"}))
+        result = await tool.execute(
+            tool.validate_arguments(
+                {"command": "Start-Process excel report.xlsx", "target_desktop": "garvis_workspace"}
+            )
+        )
         assert result.success, result.error
-        assert result.data["opened_windows"] == [{"title": "Report - Excel", "app": "EXCEL.EXE",
-                                                  "desktop": "garvis_workspace"}]
+        assert result.data["opened_windows"] == [
+            {"title": "Report - Excel", "app": "EXCEL.EXE", "desktop": "garvis_workspace"}
+        ]
         assert vd.moves == [(90, garvis_id(vd))] and backend.foreground == 1
     finally:
         workspace.shutdown()
@@ -522,6 +552,7 @@ async def test_powershell_with_unavailable_workspace_does_not_run():
     desktop = DesktopController(backend_factory=FakeDesktopBackend, screenshot_dir=None, own_pid=GARVIS_PID)
     desktop.attach_workspace(WorkspaceManager(backend_factory=None))
     tool = RunPowerShellTool(runner=_ScriptRunner(lambda: ran.append(1)), policy=_AllowAll(), desktop=desktop)
-    result = await tool.execute(tool.validate_arguments({"command": "Start-Process notepad",
-                                                         "target_desktop": "garvis_workspace"}))
+    result = await tool.execute(
+        tool.validate_arguments({"command": "Start-Process notepad", "target_desktop": "garvis_workspace"})
+    )
     assert not result.success and "was not run" in result.error and ran == []

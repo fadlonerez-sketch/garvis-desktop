@@ -11,6 +11,7 @@ The title-bar logo lockup is NOT part of this palette: the amber logo is
 frozen in app/ui/logo.py and the wordmark keeps its original Bahnschrift
 type and colours (roles "wordmark" / "tagline").
 """
+
 from __future__ import annotations
 
 import tempfile

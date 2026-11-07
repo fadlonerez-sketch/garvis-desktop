@@ -43,6 +43,7 @@ interrupts (its whole onset kept); a sound that already ended -- a cough,
 a TV, the tail of the user's last words -- is ignored instead of cutting
 the reply off and starting a phantom turn.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -182,9 +183,7 @@ class ConversationSession:
     async def _set_state(self, state: SessionState) -> None:
         self._state = state
         log_extra(logger, 20, "session.state_changed", state=state.value)
-        await self._events.publish(
-            AgentEvent(type=EventType.SESSION_STATE, payload={"state": state.value})
-        )
+        await self._events.publish(AgentEvent(type=EventType.SESSION_STATE, payload={"state": state.value}))
 
     async def _run(self) -> None:
         seed_vad: VoiceActivityDetector | None = None
@@ -231,9 +230,7 @@ class ConversationSession:
         if self._on_sleep is not None and not self._stopping:
             self._on_sleep(self)
 
-    async def _capture_utterance(
-        self, seed_vad: VoiceActivityDetector | None, seed_bytes: bytes
-    ) -> str | None:
+    async def _capture_utterance(self, seed_vad: VoiceActivityDetector | None, seed_bytes: bytes) -> str | None:
         """Capture one utterance's audio and transcribe it.
 
         Audio arriving before `speech_start` fires (while the VAD is still
@@ -254,9 +251,7 @@ class ConversationSession:
         )
         buffer = bytearray(seed_bytes)
         preroll = bytearray()
-        max_preroll_bytes = max(
-            1, int(self._min_speech_seconds * 2 * self._voice.sample_rate * 2)
-        )
+        max_preroll_bytes = max(1, int(self._min_speech_seconds * 2 * self._voice.sample_rate * 2))
         elapsed = 0.0
 
         ended = False
@@ -312,9 +307,7 @@ class ConversationSession:
             await self._events.publish(AgentEvent(type=EventType.ERROR, payload={"message": str(exc)}))
             return None
 
-    async def _speak_interruptibly(
-        self, text: str
-    ) -> tuple[VoiceActivityDetector | None, bytes]:
+    async def _speak_interruptibly(self, text: str) -> tuple[VoiceActivityDetector | None, bytes]:
         await self._set_state(SessionState.SPEAKING)
         try:
             await self._voice.speak(to_spoken_text(text))
@@ -338,9 +331,7 @@ class ConversationSession:
         # kept, clipping up to ~min_speech_seconds of the interruption's
         # true onset before it ever reached STT. See module docstring.
         preroll = bytearray()
-        max_preroll_bytes = max(
-            1, int(self._min_speech_seconds * 2 * self._voice.sample_rate * 2)
-        )
+        max_preroll_bytes = max(1, int(self._min_speech_seconds * 2 * self._voice.sample_rate * 2))
 
         # The mic wasn't read while Garvis was thinking and synthesizing, so all
         # of that audio is queued now. It was recorded while Garvis was silent:
@@ -352,8 +343,12 @@ class ConversationSession:
             event = vad.process(frame)
             recent.extend(frame)
             if event == "speech_end":
-                log_extra(logger, 20, "session.backlog_speech_ignored",
-                          seconds=round(len(recent) / 2 / self._voice.sample_rate, 2))
+                log_extra(
+                    logger,
+                    20,
+                    "session.backlog_speech_ignored",
+                    seconds=round(len(recent) / 2 / self._voice.sample_rate, 2),
+                )
             if not vad.is_active and len(recent) > max_preroll_bytes:
                 del recent[: len(recent) - max_preroll_bytes]
         if vad.is_active:
@@ -419,5 +414,4 @@ class ConversationSession:
         size = max(2, int(self._voice.sample_rate * _VAD_FRAME_SECONDS) * 2)
         if len(chunk) <= 2 * size:
             return [chunk] if chunk else []
-        return [chunk[i: i + size] for i in range(0, len(chunk), size)]
-
+        return [chunk[i : i + size] for i in range(0, len(chunk), size)]

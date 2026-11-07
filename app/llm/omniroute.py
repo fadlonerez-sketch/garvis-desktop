@@ -48,6 +48,7 @@ specific differences, all handled here:
     upstream model raises LLMModelMismatchError (usage attached, since the
     request was billed) instead of being used.
 """
+
 from __future__ import annotations
 
 import json
@@ -365,11 +366,16 @@ class OmniRouteProvider(LLMProvider):
             raise LLMModelMismatchError(
                 f"Requested {self._model}, but OmniRoute reports the reply came from "
                 f"{served_provider or self.upstream}/{served_model or 'an unnamed model'}. The reply was discarded.",
-                usage=usage, served_model=served_model, request_id=request_id,
+                usage=usage,
+                served_model=served_model,
+                request_id=request_id,
             )
         return LLMResponse(
-            message=message, finish_reason=finish_reason, usage=usage,
-            served_model=served_model, request_id=request_id,
+            message=message,
+            finish_reason=finish_reason,
+            usage=usage,
+            served_model=served_model,
+            request_id=request_id,
         )
 
     async def health_check(self) -> bool:

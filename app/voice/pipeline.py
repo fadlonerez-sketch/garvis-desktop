@@ -4,6 +4,7 @@ voice output. The agent core still only ever sees plain text in
 this module is entirely a UI-side concern, same as `app/ui/agent_bridge.py`
 which wires it up.
 """
+
 from __future__ import annotations
 
 import os
@@ -147,8 +148,11 @@ class VoicePipeline:
             playback["seq"] = self._playback_seq
             self._notify_playback(True)
             if clip is not None and self._player_reports_start():
-                self._player.play(output_path, on_finished=_finished,
-                                  on_started=lambda dac_time: self._echo.set_reference_start(clip, dac_time))
+                self._player.play(
+                    output_path,
+                    on_finished=_finished,
+                    on_started=lambda dac_time: self._echo.set_reference_start(clip, dac_time),
+                )
             else:
                 self._player.play(output_path, on_finished=_finished)
                 if clip is not None:  # no device timing: approximate; the delay tracker corrects it
@@ -162,7 +166,7 @@ class VoicePipeline:
 
         try:
             return "on_started" in inspect.signature(self._player.play).parameters
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return False
 
     def _register_echo_reference(self, wav_path: str):
@@ -174,7 +178,7 @@ class VoicePipeline:
                 rate = wav_file.getframerate()
                 channels = wav_file.getnchannels()
                 pcm = np.frombuffer(wav_file.readframes(wav_file.getnframes()), dtype=np.int16)
-        except (OSError, wave.Error, EOFError, ValueError):
+        except OSError, wave.Error, EOFError, ValueError:
             return None
         if channels > 1:
             pcm = pcm[::channels]
@@ -197,7 +201,7 @@ class VoicePipeline:
             if not pcm or sample_rate <= 0:
                 return None
             return PlaybackEnvelope(pcm, sample_rate)
-        except (OSError, wave.Error, EOFError):
+        except OSError, wave.Error, EOFError:
             return None
 
     def reference_energy_now(self) -> float:
@@ -258,10 +262,10 @@ class VoicePipeline:
             residual = self._echo.process(pcm, captured_at)
             if residual is None:
                 values = np.frombuffer(pcm[: count * 2], dtype=np.int16).astype(np.float64)
-                power += float(np.sum(values ** 2))
+                power += float(np.sum(values**2))
             else:
                 any_reference = True
-                power += residual ** 2 * count
+                power += residual**2 * count
             samples += count
         chunk = b"".join(pcm for _, pcm in blocks)
         if not any_reference or samples == 0:

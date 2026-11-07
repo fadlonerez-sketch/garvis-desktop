@@ -7,6 +7,7 @@ imported. The running instance registers the global hotkey
 front (app/ui/global_hotkey.py), expanding it from the floating orb when
 collapsed (app/ui/presence.py).
 """
+
 from __future__ import annotations
 
 import sys

@@ -6,6 +6,7 @@ and fakes are reused): the REAL VoicePipeline and VoiceActivityDetector,
 wired to a scripted recorder, a fake STT and a fake player, with a
 near-zero poll interval and an injectable clock for the time-based guards.
 """
+
 from __future__ import annotations
 
 import wave

@@ -11,6 +11,7 @@ events (KEYEVENTF_UNICODE), so what the model asks to type is exactly what
 arrives, independent of the active keyboard layout (English, Hebrew, ...).
 Screenshots are GDI BitBlt + a small stdlib PNG encoder -- no Pillow.
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -157,14 +158,23 @@ def _declare() -> None:
     u.GetThreadDesktop.argtypes = [wintypes.DWORD]
     u.GetThreadDesktop.restype = wintypes.HANDLE
     u.GetUserObjectInformationW.argtypes = [
-        wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD, ctypes.POINTER(wintypes.DWORD),
+        wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        ctypes.POINTER(wintypes.DWORD),
     ]
     k.ProcessIdToSessionId.argtypes = [wintypes.DWORD, ctypes.POINTER(wintypes.DWORD)]
     k.WTSGetActiveConsoleSessionId.restype = wintypes.DWORD
     u.BringWindowToTop.argtypes = [wintypes.HWND]
     u.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
     u.SetWindowPos.argtypes = [
-        wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        wintypes.HWND,
+        wintypes.HWND,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
         wintypes.UINT,
     ]
     u.EnumWindows.argtypes = [_WNDENUMPROC, wintypes.LPARAM]
@@ -178,24 +188,42 @@ def _declare() -> None:
     g.SelectObject.argtypes = [wintypes.HDC, wintypes.HGDIOBJ]
     g.SelectObject.restype = wintypes.HGDIOBJ
     g.BitBlt.argtypes = [
-        wintypes.HDC, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-        wintypes.HDC, ctypes.c_int, ctypes.c_int, wintypes.DWORD,
+        wintypes.HDC,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        wintypes.HDC,
+        ctypes.c_int,
+        ctypes.c_int,
+        wintypes.DWORD,
     ]
     g.GetDIBits.argtypes = [
-        wintypes.HDC, wintypes.HBITMAP, wintypes.UINT, wintypes.UINT, ctypes.c_void_p,
-        ctypes.POINTER(BITMAPINFOHEADER), wintypes.UINT,
+        wintypes.HDC,
+        wintypes.HBITMAP,
+        wintypes.UINT,
+        wintypes.UINT,
+        ctypes.c_void_p,
+        ctypes.POINTER(BITMAPINFOHEADER),
+        wintypes.UINT,
     ]
     g.DeleteObject.argtypes = [wintypes.HGDIOBJ]
     g.DeleteDC.argtypes = [wintypes.HDC]
     k.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
     k.OpenProcess.restype = wintypes.HANDLE
     k.QueryFullProcessImageNameW.argtypes = [
-        wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD),
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        wintypes.LPWSTR,
+        ctypes.POINTER(wintypes.DWORD),
     ]
     k.CloseHandle.argtypes = [wintypes.HANDLE]
     k.GetCurrentThreadId.restype = wintypes.DWORD
     _dwmapi.DwmGetWindowAttribute.argtypes = [
-        wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD,
+        wintypes.HWND,
+        wintypes.DWORD,
+        ctypes.c_void_p,
+        wintypes.DWORD,
     ]
 
 
@@ -208,7 +236,7 @@ def _enable_dpi_awareness() -> None:
     (awareness can only be set once) -- harmless either way."""
     try:
         _user32.SetProcessDpiAwarenessContext(ctypes.c_void_p(-4))  # PER_MONITOR_AWARE_V2
-    except (AttributeError, OSError):
+    except AttributeError, OSError:
         pass
 
 
@@ -218,19 +246,14 @@ def _encode_png(width: int, height: int, bgra: bytes) -> bytes:
     rgb[1::3] = bgra[1::4]
     rgb[2::3] = bgra[0::4]
     stride = width * 3
-    raw = b"".join(b"\x00" + bytes(rgb[y * stride:(y + 1) * stride]) for y in range(height))
+    raw = b"".join(b"\x00" + bytes(rgb[y * stride : (y + 1) * stride]) for y in range(height))
 
     def chunk(tag: bytes, data: bytes) -> bytes:
         body = tag + data
         return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
 
     header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
-    return (
-        b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", header)
-        + chunk(b"IDAT", zlib.compress(raw, 6))
-        + chunk(b"IEND", b"")
-    )
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(raw, 6)) + chunk(b"IEND", b"")
 
 
 class Win32DesktopBackend(DesktopBackend):
@@ -292,12 +315,10 @@ class Win32DesktopBackend(DesktopBackend):
             for (unit,) in struct.iter_unpack("<H", encoded):  # surrogate pairs -> 2 units
                 for up in (False, True):
                     flags = KEYEVENTF_UNICODE | (KEYEVENTF_KEYUP if up else 0)
-                    events.append(
-                        INPUT(type=INPUT_KEYBOARD, u=_INPUTUNION(ki=KEYBDINPUT(wScan=unit, dwFlags=flags)))
-                    )
+                    events.append(INPUT(type=INPUT_KEYBOARD, u=_INPUTUNION(ki=KEYBDINPUT(wScan=unit, dwFlags=flags))))
         # Chunked so a long string doesn't overflow the target's input queue.
         for start in range(0, len(events), 200):
-            self._send(events[start:start + 200])
+            self._send(events[start : start + 200])
             time.sleep(0.01)
 
     def press_keys(self, vks: list[int], repeat: int = 1) -> None:
@@ -337,9 +358,7 @@ class Win32DesktopBackend(DesktopBackend):
         bitmap = _gdi32.CreateCompatibleBitmap(screen_dc, width, height)
         old = _gdi32.SelectObject(mem_dc, bitmap)
         try:
-            if not _gdi32.BitBlt(
-                mem_dc, 0, 0, width, height, screen_dc, area.left, area.top, SRCCOPY | CAPTUREBLT
-            ):
+            if not _gdi32.BitBlt(mem_dc, 0, 0, width, height, screen_dc, area.left, area.top, SRCCOPY | CAPTUREBLT):
                 raise OSError(f"BitBlt failed (error {ctypes.get_last_error()}).")
             header = BITMAPINFOHEADER(
                 biSize=ctypes.sizeof(BITMAPINFOHEADER),
@@ -381,9 +400,7 @@ class Win32DesktopBackend(DesktopBackend):
         """Cloaked windows exist but aren't shown -- chiefly windows on a
         different virtual desktop, plus suspended UWP frames."""
         cloaked = wintypes.DWORD(0)
-        result = _dwmapi.DwmGetWindowAttribute(
-            hwnd, DWMWA_CLOAKED, ctypes.byref(cloaked), ctypes.sizeof(cloaked)
-        )
+        result = _dwmapi.DwmGetWindowAttribute(hwnd, DWMWA_CLOAKED, ctypes.byref(cloaked), ctypes.sizeof(cloaked))
         return result == 0 and cloaked.value != 0
 
     @staticmethod
@@ -448,17 +465,24 @@ class Win32DesktopBackend(DesktopBackend):
                 _user32.CloseDesktop(handle)
         reason = None
         if console != 0xFFFFFFFF and session.value != console:
-            reason = (f"Garvis runs in Windows session {session.value}, but the screen in front of you is session "
-                      f"{console} (e.g. Garvis was started over Remote Desktop or as another user). Start Garvis "
-                      "from your own desktop session.")
+            reason = (
+                f"Garvis runs in Windows session {session.value}, but the screen in front of you is session "
+                f"{console} (e.g. Garvis was started over Remote Desktop or as another user). Start Garvis "
+                "from your own desktop session."
+            )
         elif input_desktop is None:
-            reason = ("Windows is showing the lock screen or a secure prompt (UAC / Ctrl+Alt+Del), which normal "
-                      "apps can't control. Unlock or answer it, then try again.")
+            reason = (
+                "Windows is showing the lock screen or a secure prompt (UAC / Ctrl+Alt+Del), which normal "
+                "apps can't control. Unlock or answer it, then try again."
+            )
         elif own_desktop and input_desktop.lower() != own_desktop.lower():
-            reason = (f"Input currently goes to the '{input_desktop}' desktop, not Garvis's '{own_desktop}' desktop.")
+            reason = f"Input currently goes to the '{input_desktop}' desktop, not Garvis's '{own_desktop}' desktop."
         return InputContext(
-            session_id=session.value, console_session_id=console, input_desktop=input_desktop,
-            interactive=reason is None, reason=reason,
+            session_id=session.value,
+            console_session_id=console,
+            input_desktop=input_desktop,
+            interactive=reason is None,
+            reason=reason,
         )
 
     def list_windows(self, include_other_desktops: bool = False) -> list[WindowInfo]:
@@ -501,8 +525,9 @@ class Win32DesktopBackend(DesktopBackend):
         current = _user32.GetForegroundWindow()
         our_thread = _kernel32.GetCurrentThreadId()
         fg_thread = _user32.GetWindowThreadProcessId(current, None) if current else 0
-        attached = bool(fg_thread and fg_thread != our_thread and
-                        _user32.AttachThreadInput(our_thread, fg_thread, True))
+        attached = bool(
+            fg_thread and fg_thread != our_thread and _user32.AttachThreadInput(our_thread, fg_thread, True)
+        )
         try:
             _user32.BringWindowToTop(handle)
             _user32.SetForegroundWindow(handle)
@@ -521,8 +546,11 @@ class Win32DesktopBackend(DesktopBackend):
     def set_window_state(self, handle: int, state: WindowState) -> None:
         if not _user32.IsWindow(handle):
             raise OSError("That window no longer exists.")
-        command = {WindowState.MINIMIZE: SW_MINIMIZE, WindowState.MAXIMIZE: SW_MAXIMIZE,
-                   WindowState.SHOW_INACTIVE: SW_SHOWNOACTIVATE}.get(state, SW_RESTORE)
+        command = {
+            WindowState.MINIMIZE: SW_MINIMIZE,
+            WindowState.MAXIMIZE: SW_MAXIMIZE,
+            WindowState.SHOW_INACTIVE: SW_SHOWNOACTIVATE,
+        }.get(state, SW_RESTORE)
         _user32.ShowWindow(handle, command)
 
     def close_window(self, handle: int) -> None:

@@ -22,6 +22,7 @@ duration, `is_playing`/`on_finished` fire a little early. That's an
 accepted limitation of using `winsound` -- exact completion detection
 would need a different playback API, which is out of scope here.
 """
+
 from __future__ import annotations
 
 import threading
@@ -117,7 +118,7 @@ class AudioPlayer:
                 frames = wav_file.getnframes()
                 rate = wav_file.getframerate() or 1
                 return max(frames / rate, _MIN_DURATION_SECONDS)
-        except (OSError, wave.Error):
+        except OSError, wave.Error:
             return _MIN_DURATION_SECONDS
 
 
@@ -167,11 +168,15 @@ class StreamingAudioPlayer:
         if width != 2:
             raise TextToSpeechError(f"'{wav_path}' is not 16-bit PCM.")
         if channels > 1:  # keep the first channel
-            frames = b"".join(frames[i:i + 2] for i in range(0, len(frames), 2 * channels))
+            frames = b"".join(frames[i : i + 2] for i in range(0, len(frames), 2 * channels))
         return frames, rate
 
-    def play(self, wav_path: str, on_finished: Callable[[], None] | None = None,
-             on_started: Callable[[float], None] | None = None) -> None:
+    def play(
+        self,
+        wav_path: str,
+        on_finished: Callable[[], None] | None = None,
+        on_started: Callable[[float], None] | None = None,
+    ) -> None:
         pcm, rate = self._read_wav(wav_path)
         self.stop()
         with self._lock:
@@ -187,10 +192,10 @@ class StreamingAudioPlayer:
                     if on_started is not None:
                         on_started(dac if dac > 0 else self._clock())
                 start = position["byte"]
-                chunk = pcm[start: start + frames * frame_bytes]
+                chunk = pcm[start : start + frames * frame_bytes]
                 outdata[: len(chunk)] = chunk
                 if len(chunk) < frames * frame_bytes:
-                    outdata[len(chunk):] = b"\x00" * (frames * frame_bytes - len(chunk))
+                    outdata[len(chunk) :] = b"\x00" * (frames * frame_bytes - len(chunk))
                 position["byte"] = start + frames * frame_bytes
                 if position["byte"] >= len(pcm):
                     raise self._sd.CallbackStop
@@ -200,8 +205,9 @@ class StreamingAudioPlayer:
 
             try:
                 sd = self._import_sounddevice()
-                stream = sd.RawOutputStream(samplerate=rate, channels=1, dtype="int16",
-                                            callback=callback, finished_callback=finished)
+                stream = sd.RawOutputStream(
+                    samplerate=rate, channels=1, dtype="int16", callback=callback, finished_callback=finished
+                )
                 stream.start()
             except Exception:
                 # No usable output stream: winsound, with the start time approximated.

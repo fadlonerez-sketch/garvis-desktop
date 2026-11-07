@@ -18,6 +18,7 @@ Guarantees:
   fail immediately with that reason.
 - A request nobody answers expires (the phone drops it from its list).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -65,8 +66,18 @@ ACTIONS: dict[str, dict[str, Any]] = {
 }
 _URL = re.compile(r"^https?://", re.IGNORECASE)
 _NUMBER = re.compile(r"^[0-9+*#() -]{3,32}$")
-_SETTINGS_PAGES = ("wifi", "bluetooth", "display", "sound", "battery", "notifications", "accessibility",
-                   "location", "app", "main")
+_SETTINGS_PAGES = (
+    "wifi",
+    "bluetooth",
+    "display",
+    "sound",
+    "battery",
+    "notifications",
+    "accessibility",
+    "location",
+    "app",
+    "main",
+)
 _MEDIA = ("play_pause", "next", "previous", "volume_up", "volume_down", "mute")
 DEVICE_FRESH_SECONDS = 75.0
 """A phone counts as connected if it polled within this window."""
@@ -127,8 +138,14 @@ class PendingAction:
     future: asyncio.Future
 
     def public(self) -> dict[str, Any]:
-        return {"id": self.id, "action": self.action, "params": self.params, "confirm": self.confirm,
-                "created_at": self.created_at, "expires_at": self.expires_at}
+        return {
+            "id": self.id,
+            "action": self.action,
+            "params": self.params,
+            "confirm": self.confirm,
+            "created_at": self.created_at,
+            "expires_at": self.expires_at,
+        }
 
 
 class PhoneActionBroker:
@@ -173,16 +190,23 @@ class PhoneActionBroker:
 
     def connected_devices(self) -> list[PhoneDevice]:
         now = self._clock()
-        return sorted((d for d in self._devices.values() if now - d.last_seen <= DEVICE_FRESH_SECONDS),
-                      key=lambda d: d.last_seen, reverse=True)
+        return sorted(
+            (d for d in self._devices.values() if now - d.last_seen <= DEVICE_FRESH_SECONDS),
+            key=lambda d: d.last_seen,
+            reverse=True,
+        )
 
     def describe(self) -> dict[str, Any]:
         devices = self.connected_devices()
         if not devices:
             return {"connected": False}
         device = devices[0]
-        return {"connected": True, "paused": device.paused, "capabilities": sorted(device.capabilities),
-                "accessibility": device.accessibility}
+        return {
+            "connected": True,
+            "paused": device.paused,
+            "capabilities": sorted(device.capabilities),
+            "accessibility": device.accessibility,
+        }
 
     # -------------------------------------------------------------- actions
     def _target(self, capability: str) -> PhoneDevice:
@@ -196,17 +220,26 @@ class PhoneActionBroker:
                 return device
         if all(d.paused for d in devices):
             raise PhoneActionError("Automation is stopped in the phone app (Phone control > Stop automation).")
-        raise PhoneActionError(f"The '{capability}' capability is switched off in the phone app "
-                               "(Phone control). Ask the user to enable it there.")
+        raise PhoneActionError(
+            f"The '{capability}' capability is switched off in the phone app "
+            "(Phone control). Ask the user to enable it there."
+        )
 
     async def request(self, action: str, params: dict[str, Any], *, timeout: float = 90.0) -> dict[str, Any]:
         clean = validate_params(action, params)
         spec = ACTIONS[action]
         device = self._target(spec["capability"])
         now = self._clock()
-        pending = PendingAction(id=secrets.token_hex(8), device_id=device.device_id, action=action, params=clean,
-                                confirm=bool(spec.get("confirm")), created_at=now, expires_at=now + timeout,
-                                future=asyncio.get_running_loop().create_future())
+        pending = PendingAction(
+            id=secrets.token_hex(8),
+            device_id=device.device_id,
+            action=action,
+            params=clean,
+            confirm=bool(spec.get("confirm")),
+            created_at=now,
+            expires_at=now + timeout,
+            future=asyncio.get_running_loop().create_future(),
+        )
         self._pending[pending.id] = pending
         log_extra(logger, 20, "phone_actions.requested", action=action, request=pending.id)
         self._notify()
@@ -222,8 +255,9 @@ class PhoneActionBroker:
     def pending_for(self, device_id: str) -> list[dict[str, Any]]:
         return [p.public() for p in self._pending.values() if p.device_id == device_id]
 
-    def complete(self, device_id: str, action_id: str, status: str, message: str = "",
-                 data: dict[str, Any] | None = None) -> bool:
+    def complete(
+        self, device_id: str, action_id: str, status: str, message: str = "", data: dict[str, Any] | None = None
+    ) -> bool:
         pending = self._pending.get(action_id)
         if pending is None or pending.device_id != device_id or status not in RESULT_STATUSES:
             return False
@@ -241,26 +275,51 @@ class PhoneActionBroker:
 
 class PhoneActionInput(BaseModel):
     action: Literal[
-        "open_app", "open_url", "web_search", "navigate_to", "open_settings", "set_alarm", "set_timer",
-        "flashlight", "media", "dial", "compose_sms", "share_text", "go_back", "go_home", "recents",
-        "notifications", "quick_settings", "click_text", "type_text", "scroll", "read_screen", "save_image",
+        "open_app",
+        "open_url",
+        "web_search",
+        "navigate_to",
+        "open_settings",
+        "set_alarm",
+        "set_timer",
+        "flashlight",
+        "media",
+        "dial",
+        "compose_sms",
+        "share_text",
+        "go_back",
+        "go_home",
+        "recents",
+        "notifications",
+        "quick_settings",
+        "click_text",
+        "type_text",
+        "scroll",
+        "read_screen",
+        "save_image",
     ]
     app: str | None = Field(default=None, description="open_app: the app's name as shown on the phone.")
     url: str | None = Field(default=None, description="open_url: an http(s) link.")
     query: str | None = Field(default=None, description="web_search: what to search for.")
     destination: str | None = Field(default=None, description="navigate_to: address or place.")
-    page: str | None = Field(default=None, description="open_settings: wifi, bluetooth, display, sound, battery, "
-                             "notifications, accessibility, location, app or main.")
+    page: str | None = Field(
+        default=None,
+        description="open_settings: wifi, bluetooth, display, sound, battery, "
+        "notifications, accessibility, location, app or main.",
+    )
     hour: int | None = Field(default=None, description="set_alarm: 0-23.")
     minute: int | None = Field(default=None, description="set_alarm: 0-59.")
     seconds: int | None = Field(default=None, description="set_timer: duration in seconds.")
     label: str | None = Field(default=None, description="set_alarm/set_timer: optional label.")
     on: bool | None = Field(default=None, description="flashlight: true = on.")
-    command: str | None = Field(default=None, description="media: play_pause, next, previous, volume_up, "
-                                "volume_down or mute.")
+    command: str | None = Field(
+        default=None, description="media: play_pause, next, previous, volume_up, volume_down or mute."
+    )
     number: str | None = Field(default=None, description="dial/compose_sms: phone number.")
-    text: str | None = Field(default=None, description="share_text/type_text: the text; click_text: the visible "
-                             "label of the button or item to tap.")
+    text: str | None = Field(
+        default=None,
+        description="share_text/type_text: the text; click_text: the visible label of the button or item to tap.",
+    )
     direction: str | None = Field(default=None, description="scroll: up or down.")
     image_id: str | None = Field(default=None, description="save_image: id returned by generate_image.")
 
@@ -290,9 +349,17 @@ class PhoneActionTool(Tool):
         except PhoneActionError as exc:
             return ToolResult.fail(str(exc))
         if result.get("status") == "done":
-            return ToolResult.ok({"status": "done", "message": result.get("message", ""),
-                                  **({"data": result["data"]} if result.get("data") else {})})
-        reason = {"declined": "The user declined it on the phone", "unsupported": "The phone can't do that",
-                  "failed": "It failed on the phone"}.get(result.get("status"), "It failed on the phone")
+            return ToolResult.ok(
+                {
+                    "status": "done",
+                    "message": result.get("message", ""),
+                    **({"data": result["data"]} if result.get("data") else {}),
+                }
+            )
+        reason = {
+            "declined": "The user declined it on the phone",
+            "unsupported": "The phone can't do that",
+            "failed": "It failed on the phone",
+        }.get(result.get("status"), "It failed on the phone")
         message = result.get("message") or ""
         return ToolResult.fail(f"{reason}{': ' + message if message else '.'}")

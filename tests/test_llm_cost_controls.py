@@ -1,5 +1,6 @@
 """Cost controls: usage accounting, budgets, bounded retries, model
 verification, and the Haiku 5.5 request shape through OmniRoute."""
+
 from __future__ import annotations
 
 import json
@@ -34,9 +35,17 @@ from tests.conftest import final_response, tool_call_response
 
 _REAL_ASYNC_CLIENT = httpx.AsyncClient
 _HAIKU_PRICES = PriceCard(
-    input=0.10, output=0.50, cache_read=0.01, cache_write_5m=0.125, cache_write_1h=0.20,
-    long_context_threshold=100_000, long_input=0.50, long_output=2.50, long_cache_read=0.05,
-    long_cache_write_5m=0.625, long_cache_write_1h=1.00,
+    input=0.10,
+    output=0.50,
+    cache_read=0.01,
+    cache_write_5m=0.125,
+    cache_write_1h=0.20,
+    long_context_threshold=100_000,
+    long_input=0.50,
+    long_output=2.50,
+    long_cache_read=0.05,
+    long_cache_write_5m=0.625,
+    long_cache_write_1h=1.00,
 )
 
 
@@ -67,10 +76,16 @@ def _ledger(tmp_path) -> UsageLedger:
 def test_ledger_stores_counts_but_never_text(tmp_path):
     ledger = _ledger(tmp_path)
     task = TaskMeter(category="medium:tool_intent")
-    ledger.record(status="ok", model_requested="anthropic/claude-haiku-5-5", task=task,
-                  model_served="claude-haiku-5-5", request_id="chatcmpl-msg_1",
-                  usage=TokenUsage(input_tokens=10, output_tokens=2), cost_usd=0.000002,
-                  tools_requested=["inspect_ui"])
+    ledger.record(
+        status="ok",
+        model_requested="anthropic/claude-haiku-5-5",
+        task=task,
+        model_served="claude-haiku-5-5",
+        request_id="chatcmpl-msg_1",
+        usage=TokenUsage(input_tokens=10, output_tokens=2),
+        cost_usd=0.000002,
+        tools_requested=["inspect_ui"],
+    )
     with sqlite3.connect(ledger.path) as conn:
         row = conn.execute("SELECT * FROM llm_calls").fetchone()
         columns = [d[0] for d in conn.execute("SELECT * FROM llm_calls").description]
@@ -81,8 +96,17 @@ def test_ledger_stores_counts_but_never_text(tmp_path):
 def test_budget_stops_on_each_limit(tmp_path):
     ledger = _ledger(tmp_path)
     now = datetime(2026, 10, 22, 12, 0)
-    guard = BudgetGuard(BudgetLimits(max_calls_per_task=2, max_cost_per_task_usd=0.01, daily_budget_usd=0.05,
-                                     monthly_budget_usd=0.08, max_prompt_tokens=5_000), ledger, clock=lambda: now)
+    guard = BudgetGuard(
+        BudgetLimits(
+            max_calls_per_task=2,
+            max_cost_per_task_usd=0.01,
+            daily_budget_usd=0.05,
+            monthly_budget_usd=0.08,
+            max_prompt_tokens=5_000,
+        ),
+        ledger,
+        clock=lambda: now,
+    )
     guard.check(TaskMeter(), 100, 0.001)  # fine
 
     with pytest.raises(LLMBudgetExceededError) as size:
@@ -138,11 +162,18 @@ class PricedModel(LLMProvider):
 
 
 def _ok(text="done", input_tokens=1_000, output_tokens=50, tools=()):
-    message = Message(role=Role.ASSISTANT, content=text,
-                      tool_calls=[ToolCall(id=f"c{i}", name=n, arguments={}) for i, n in enumerate(tools)])
-    return LLMResponse(message=message, finish_reason="tool_calls" if tools else "stop",
-                       usage=TokenUsage(input_tokens=input_tokens, output_tokens=output_tokens),
-                       served_model="claude-haiku-5-5", request_id="chatcmpl-x")
+    message = Message(
+        role=Role.ASSISTANT,
+        content=text,
+        tool_calls=[ToolCall(id=f"c{i}", name=n, arguments={}) for i, n in enumerate(tools)],
+    )
+    return LLMResponse(
+        message=message,
+        finish_reason="tool_calls" if tools else "stop",
+        usage=TokenUsage(input_tokens=input_tokens, output_tokens=output_tokens),
+        served_model="claude-haiku-5-5",
+        request_id="chatcmpl-x",
+    )
 
 
 def _router_with(model, tmp_path, **kw):
@@ -187,14 +218,17 @@ async def test_permanent_errors_are_never_retried(tmp_path, error):
 
 
 async def test_model_mismatch_is_recorded_with_its_cost_and_ends_the_request(tmp_path):
-    mismatch = LLMModelMismatchError("served by another model", usage=TokenUsage(input_tokens=500, output_tokens=10),
-                                     served_model="claude-sonnet-5-5")
+    mismatch = LLMModelMismatchError(
+        "served by another model",
+        usage=TokenUsage(input_tokens=500, output_tokens=10),
+        served_model="claude-sonnet-5-5",
+    )
     haiku = PricedModel([mismatch, _ok("never sent")])
     router, sleeps = _router_with(haiku, tmp_path, max_retries=3)
     with pytest.raises(LLMModelMismatchError):
         await router.chat([Message(role=Role.USER, content="hello")])
     assert haiku.calls == 1 and sleeps == []
-    (status, _, input_tokens, cost, _), = _rows(router)
+    ((status, _, input_tokens, cost, _),) = _rows(router)
     assert status == "model_mismatch" and input_tokens == 500 and cost > 0
 
 
@@ -240,16 +274,28 @@ def _patch_transport(monkeypatch, handler):
 
 
 def _haiku(**kw) -> OmniRouteProvider:
-    return OmniRouteProvider(api_key="k", model="anthropic/claude-haiku-5-5", thinking="disabled",
-                             max_output_tokens=4096, verify_served_model=True, pricing=_HAIKU_PRICES, **kw)
+    return OmniRouteProvider(
+        api_key="k",
+        model="anthropic/claude-haiku-5-5",
+        thinking="disabled",
+        max_output_tokens=4096,
+        verify_served_model=True,
+        pricing=_HAIKU_PRICES,
+        **kw,
+    )
 
 
 def _claude_reply(model="claude-haiku-5-5", usage=None, headers=None):
     body = {
-        "id": "chatcmpl-msg_01", "model": model,
+        "id": "chatcmpl-msg_01",
+        "model": model,
         "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "408."}}],
-        "usage": usage if usage is not None else {
-            "prompt_tokens": 12_000, "completion_tokens": 7, "total_tokens": 12_007,
+        "usage": usage
+        if usage is not None
+        else {
+            "prompt_tokens": 12_000,
+            "completion_tokens": 7,
+            "total_tokens": 12_007,
             "prompt_tokens_details": {"cached_tokens": 10_000, "cache_creation_tokens": 1_500},
         },
     }
@@ -274,17 +320,23 @@ async def test_haiku_request_disables_thinking_sends_no_effort_or_sampling_and_o
     assert seen["headers"]["x-omniroute-no-cache"] == "true"
     assert seen["headers"]["x-omniroute-no-memory"] == "true"
     assert response.served_model == "claude-haiku-5-5" and response.request_id == "chatcmpl-msg_01"
-    assert response.usage == TokenUsage(input_tokens=2_000, output_tokens=7, cache_read_tokens=10_000,
-                                        cache_write_unknown_ttl_tokens=1_500)
+    assert response.usage == TokenUsage(
+        input_tokens=2_000, output_tokens=7, cache_read_tokens=10_000, cache_write_unknown_ttl_tokens=1_500
+    )
 
 
-@pytest.mark.parametrize("served, provider_header", [
-    ("claude-sonnet-5-5", "anthropic"),
-    ("gpt-oss-120b", "nvidia"),
-    ("claude-haiku-5-5", "claude"),
-])
+@pytest.mark.parametrize(
+    "served, provider_header",
+    [
+        ("claude-sonnet-5-5", "anthropic"),
+        ("gpt-oss-120b", "nvidia"),
+        ("claude-haiku-5-5", "claude"),
+    ],
+)
 async def test_a_reply_from_another_model_or_provider_is_rejected(monkeypatch, served, provider_header):
-    _patch_transport(monkeypatch, lambda request: _claude_reply(served, headers={"X-OmniRoute-Provider": provider_header}))
+    _patch_transport(
+        monkeypatch, lambda request: _claude_reply(served, headers={"X-OmniRoute-Provider": provider_header})
+    )
     with pytest.raises(LLMModelMismatchError, match="discarded") as info:
         await _haiku().chat([Message(role=Role.USER, content="hi")])
     assert info.value.usage is not None and info.value.served_model == served
@@ -313,8 +365,9 @@ def test_haiku_through_omniroute_is_refused_too(tmp_path):
     path = tmp_path / "models.json"
     path.write_text(json.dumps({"tiers": {"small": [entry], "medium": [entry], "large": [entry]}}), encoding="utf-8")
     with pytest.raises(ConfigurationError, match="may only use anthropic/claude-haiku-5-5"):
-        build_llm_provider(Settings(_env_file=None, llm_provider="tiered", omniroute_api_key="k",
-                                    llm_model_registry_path=path))
+        build_llm_provider(
+            Settings(_env_file=None, llm_provider="tiered", omniroute_api_key="k", llm_model_registry_path=path)
+        )
 
 
 def test_registry_refuses_reasoning_effort_for_haiku_through_omniroute(tmp_path):
@@ -362,11 +415,13 @@ async def test_budget_stop_reports_what_was_already_done(memory_store, tmp_path)
 
 async def test_an_identical_failing_call_is_not_rerun(memory_store, make_scripted_llm):
     bad = {"expression": "import os"}
-    llm = make_scripted_llm([
-        tool_call_response("calculator", bad),
-        tool_call_response("calculator", bad),
-        final_response("That expression isn't supported."),
-    ])
+    llm = make_scripted_llm(
+        [
+            tool_call_response("calculator", bad),
+            tool_call_response("calculator", bad),
+            final_response("That expression isn't supported."),
+        ]
+    )
     registry = ToolRegistry()
     calculator = CalculatorTool()
     runs = []
@@ -436,15 +491,23 @@ def test_usage_report_summarizes_spend_without_text(tmp_path):
     import importlib.util
 
     spec = importlib.util.spec_from_file_location(
-        "usage_report", Path(__file__).resolve().parents[1] / "scripts" / "usage_report.py")
+        "usage_report", Path(__file__).resolve().parents[1] / "scripts" / "usage_report.py"
+    )
     usage_report = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(usage_report)
     ledger = _ledger(tmp_path)
     now = datetime(2026, 10, 22, 15, 0)
     task = TaskMeter(category="medium:tool_activity")
-    ledger.record(status="ok", model_requested="anthropic/claude-haiku-5-5", model_served="claude-haiku-5-5",
-                  task=task, usage=TokenUsage(input_tokens=2_000, output_tokens=50, cache_read_tokens=10_000),
-                  cost_usd=0.000325, tools_requested=["read_screen_text"], now=now)
+    ledger.record(
+        status="ok",
+        model_requested="anthropic/claude-haiku-5-5",
+        model_served="claude-haiku-5-5",
+        task=task,
+        usage=TokenUsage(input_tokens=2_000, output_tokens=50, cache_read_tokens=10_000),
+        cost_usd=0.000325,
+        tools_requested=["read_screen_text"],
+        now=now,
+    )
     text = usage_report.report(ledger, days=3, top=5, now=now)
     assert "$   0.0003" in text and "read_screen_text" in text and "medium:tool_activity" in text
     assert "anthropic/claude-haiku-5-5 -> claude-haiku-5-5: 1" in text

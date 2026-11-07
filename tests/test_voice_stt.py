@@ -4,6 +4,7 @@ Both external libraries (`sounddevice`, `faster_whisper`) are faked via
 sys.modules injection rather than exercising real hardware/models, so
 these tests are hermetic and fast regardless of what's installed.
 """
+
 from __future__ import annotations
 
 import sys

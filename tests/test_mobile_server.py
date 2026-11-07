@@ -1,6 +1,7 @@
 """HTTP layer of the mobile interface: authentication, CSRF, network/host
 restrictions, request validation and the chat/voice/confirmation routes.
 Runs the aiohttp app in-process (aiohttp's test server on 127.0.0.1)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -308,7 +309,9 @@ async def test_voice_upload_transcribes_runs_a_turn_and_speech_can_be_fetched(ha
 )
 async def test_invalid_voice_uploads_are_rejected_without_stt(harness, data, content_type, status):
     await harness.pair()
-    response = await harness.client.post("/api/voice", data=data, headers=harness.auth(**{"Content-Type": content_type}))
+    response = await harness.client.post(
+        "/api/voice", data=data, headers=harness.auth(**{"Content-Type": content_type})
+    )
     assert response.status == status
     assert "error" in await response.json()
     assert harness.stt.paths == []
@@ -318,7 +321,9 @@ async def test_oversized_voice_upload_is_rejected(tmp_path):
     h = await _start(tmp_path, max_audio_bytes=10_000)
     try:
         await h.pair()
-        response = await h.client.post("/api/voice", data=make_wav(1.0), headers=h.auth(**{"Content-Type": "audio/wav"}))
+        response = await h.client.post(
+            "/api/voice", data=make_wav(1.0), headers=h.auth(**{"Content-Type": "audio/wav"})
+        )
         assert response.status == 413
         assert h.stt.paths == []
     finally:
@@ -330,7 +335,9 @@ async def test_stt_failure_returns_502_and_no_turn(tmp_path):
     h = await _start(tmp_path, stt=FakeSTT(error="Transcription failed: boom"))
     try:
         await h.pair()
-        response = await h.client.post("/api/voice", data=make_wav(1.0), headers=h.auth(**{"Content-Type": "audio/wav"}))
+        response = await h.client.post(
+            "/api/voice", data=make_wav(1.0), headers=h.auth(**{"Content-Type": "audio/wav"})
+        )
         assert response.status == 502
         assert "boom" in (await response.json())["error"]
         assert h.llm.calls == []
@@ -344,7 +351,9 @@ async def test_silence_with_no_transcript_returns_422_and_no_turn(tmp_path):
     h = await _start(tmp_path, stt=FakeSTT(text="   "))
     try:
         await h.pair()
-        response = await h.client.post("/api/voice", data=make_wav(1.0), headers=h.auth(**{"Content-Type": "audio/wav"}))
+        response = await h.client.post(
+            "/api/voice", data=make_wav(1.0), headers=h.auth(**{"Content-Type": "audio/wav"})
+        )
         assert response.status == 422
         assert h.llm.calls == []
     finally:

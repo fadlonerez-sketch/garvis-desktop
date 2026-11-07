@@ -9,6 +9,7 @@ subsystems compose correctly end to end -- something no existing test
 exercises (test_voice_pipeline.py stops at VoicePipeline; test_agent_loop.py
 never involves voice).
 """
+
 from __future__ import annotations
 
 import pytest

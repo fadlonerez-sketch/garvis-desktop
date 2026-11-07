@@ -4,6 +4,7 @@ and it can read only the voice turns it started itself.
 
 Same in-process harness as test_mobile_native_api.py: real TaskManager,
 MobileService, PairingManager and PhoneActionBroker; scripted LLM, fake STT/TTS."""
+
 from __future__ import annotations
 
 import json
@@ -17,8 +18,9 @@ from tests.test_mobile_native_api import _App, _start
 
 async def _pair_station(h: _App) -> dict:
     code = h.pairing.new_pairing_code()
-    response = await h.client.post("/api/v1/pair", json={"code": code.code, "client": "eye_station",
-                                                         "device_name": "Example Tablet"})
+    response = await h.client.post(
+        "/api/v1/pair", json={"code": code.code, "client": "eye_station", "device_name": "Example Tablet"}
+    )
     assert response.status == 201
     data = await response.json()
     h.token = data["token"]
@@ -60,9 +62,22 @@ async def test_a_plain_pairing_is_still_a_phone(tmp_path):
 
 
 def test_devices_saved_before_kinds_existed_load_as_phones(tmp_path):
-    (tmp_path / "devices.json").write_text(json.dumps({"devices": [
-        {"id": "ab12cd34", "label": "Android", "created_at": 1.0, "expires_at": 4e9, "token_sha256": "0" * 64}]}),
-        encoding="utf-8")
+    (tmp_path / "devices.json").write_text(
+        json.dumps(
+            {
+                "devices": [
+                    {
+                        "id": "ab12cd34",
+                        "label": "Android",
+                        "created_at": 1.0,
+                        "expires_at": 4e9,
+                        "token_sha256": "0" * 64,
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
     manager = PairingManager(tmp_path / "devices.json")
     assert manager.devices()[0].kind == "phone"
     assert manager.device_count(kind="phone") == 1 and manager.device_count(kind="station") == 0
@@ -75,11 +90,19 @@ def test_unknown_device_kind_is_refused(tmp_path):
         manager.redeem(code.code, kind="robot-overlord")
 
 
-STATION_DENIED = [("GET", "/api/v1/events"), ("POST", "/api/v1/messages"), ("GET", "/api/v1/tasks"),
-                  ("GET", "/api/v1/reminders"), ("POST", "/api/v1/reminders"), ("GET", "/api/v1/images"),
-                  ("POST", "/api/v1/images"), ("POST", "/api/v1/phone/capabilities"),
-                  ("POST", "/api/v1/phone/actions/0123456789abcdef/result"), ("GET", "/api/v1/protocols"),
-                  ("POST", "/api/v1/confirmations/00000000-0000-0000-0000-000000000000")]
+STATION_DENIED = [
+    ("GET", "/api/v1/events"),
+    ("POST", "/api/v1/messages"),
+    ("GET", "/api/v1/tasks"),
+    ("GET", "/api/v1/reminders"),
+    ("POST", "/api/v1/reminders"),
+    ("GET", "/api/v1/images"),
+    ("POST", "/api/v1/images"),
+    ("POST", "/api/v1/phone/capabilities"),
+    ("POST", "/api/v1/phone/actions/0123456789abcdef/result"),
+    ("GET", "/api/v1/protocols"),
+    ("POST", "/api/v1/confirmations/00000000-0000-0000-0000-000000000000"),
+]
 
 
 @pytest.mark.parametrize("method,path", STATION_DENIED)

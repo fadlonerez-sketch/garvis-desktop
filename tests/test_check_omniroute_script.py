@@ -1,4 +1,5 @@
 """Tests for scripts/check_omniroute.py -- httpx MockTransport, no network, no prompts."""
+
 from __future__ import annotations
 
 import importlib.util
@@ -51,8 +52,11 @@ def _gateway(auth_enforced=True, allow_origin=None, extra_ids=()):
         if request.url.path.endswith("/models"):
             if auth_enforced and not authed:
                 return httpx.Response(401, json={"error": {"message": "unauthorized"}})
-            return httpx.Response(200, json={"data": [{"id": "gemini/gemini-3.1-flash-lite"}, *({"id": i} for i in extra_ids)]})
+            return httpx.Response(
+                200, json={"data": [{"id": "gemini/gemini-3.1-flash-lite"}, *({"id": i} for i in extra_ids)]}
+            )
         raise AssertionError(f"unexpected request {request.method} {request.url}")
+
     return handler
 
 
@@ -82,8 +86,12 @@ async def test_open_api_wildcard_cors_and_keyless_providers_are_flagged(monkeypa
 
 async def test_missing_key_and_remote_url_are_refused_before_any_request(monkeypatch, capsys):
     seen = _patch(monkeypatch, _gateway())
-    assert not await check_omniroute.verify(Settings(_env_file=None), )
-    assert not await check_omniroute.verify(_settings(omniroute_base_url="http://192.168.1.2:20128/v1"), )
+    assert not await check_omniroute.verify(
+        Settings(_env_file=None),
+    )
+    assert not await check_omniroute.verify(
+        _settings(omniroute_base_url="http://192.168.1.2:20128/v1"),
+    )
     assert seen == []
     out = capsys.readouterr().out
     assert "NOT CONFIGURED" in out and "REFUSED" in out

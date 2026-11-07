@@ -3,6 +3,7 @@ injected via sys.modules -- no real browser, no real network, and no
 requirement that the `playwright` package even be installed (it mirrors
 how faster_whisper/sounddevice/winsound are faked elsewhere in this suite).
 """
+
 from __future__ import annotations
 
 import socket

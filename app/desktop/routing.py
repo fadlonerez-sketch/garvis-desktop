@@ -25,6 +25,7 @@ The resolved target is reported in every tool result, with the reason. A
 target that turns out to be unavailable is an error -- nothing silently
 opens on the other desktop instead.
 """
+
 from __future__ import annotations
 
 import re
@@ -47,18 +48,38 @@ TARGET_FIELD_DESCRIPTION = (
 )
 
 _USER_PLACEMENT_PATTERNS = [
-    r"\bon (?:my|the) (?:screen|monitor|desktop)\b", r"\bin my (?:browser|chrome|edge|firefox|brave)\b",
-    r"\bput (?:it|this|that) on (?:my|the) screen\b", r"על המסך", r"בדפדפן שלי",
+    r"\bon (?:my|the) (?:screen|monitor|desktop)\b",
+    r"\bin my (?:browser|chrome|edge|firefox|brave)\b",
+    r"\bput (?:it|this|that) on (?:my|the) screen\b",
+    r"על המסך",
+    r"בדפדפן שלי",
 ]
 _USER_SEE_PATTERNS = [
-    r"\bshow (?:me|it|them|this|that|us)\b", r"\blet me see\b", r"\bi (?:want|need) to see\b",
-    r"\bopen (?:\w+ ){0,6}for me\b", r"\bpull (?:it |this |that )?up\b",
-    r"תראה לי", r"תראי לי", r"תציג לי", r"תציגי לי", r"הראה לי", r"תפתח לי", r"תפתחי לי",
+    r"\bshow (?:me|it|them|this|that|us)\b",
+    r"\blet me see\b",
+    r"\bi (?:want|need) to see\b",
+    r"\bopen (?:\w+ ){0,6}for me\b",
+    r"\bpull (?:it |this |that )?up\b",
+    r"תראה לי",
+    r"תראי לי",
+    r"תציג לי",
+    r"תציגי לי",
+    r"הראה לי",
+    r"תפתח לי",
+    r"תפתחי לי",
 ]
 _WORKSPACE_PATTERNS = [
-    r"\bin the background\b", r"\bbehind the scenes\b", r"\b(?:don't|do not|dont) (?:show|open|disturb)\b",
-    r"\bwithout (?:opening|showing|disturbing)\b", r"\bjust (?:tell|give) me\b", r"\bon your (?:own )?(?:desktop|workspace)\b",
-    r"\bquietly\b", r"ברקע", r"אל תפתח", r"בלי לפתוח", r"רק תגיד לי",
+    r"\bin the background\b",
+    r"\bbehind the scenes\b",
+    r"\b(?:don't|do not|dont) (?:show|open|disturb)\b",
+    r"\bwithout (?:opening|showing|disturbing)\b",
+    r"\bjust (?:tell|give) me\b",
+    r"\bon your (?:own )?(?:desktop|workspace)\b",
+    r"\bquietly\b",
+    r"ברקע",
+    r"אל תפתח",
+    r"בלי לפתוח",
+    r"רק תגיד לי",
 ]
 _USER_PLACEMENT_RE = re.compile("|".join(_USER_PLACEMENT_PATTERNS), re.IGNORECASE)
 _USER_SEE_RE = re.compile("|".join(_USER_SEE_PATTERNS), re.IGNORECASE)
@@ -126,16 +147,17 @@ class DesktopRouting:
             # A new explicit instruction re-routes resources already in use.
             self.sticky.clear()
 
-    def resolve(self, resource: str, requested: str | DesktopTarget | None, default: DesktopTarget,
-                user_facing: bool = True) -> Resolution:
+    def resolve(
+        self, resource: str, requested: str | DesktopTarget | None, default: DesktopTarget, user_facing: bool = True
+    ) -> Resolution:
         if self.intent.placement:
-            return Resolution(self.intent.explicit_target, f"you said \"{self.intent.phrase}\"")
+            return Resolution(self.intent.explicit_target, f'you said "{self.intent.phrase}"')
         if requested:
             return Resolution(DesktopTarget(requested), "chosen for this task")
         if resource in self.sticky:
             return Resolution(self.sticky[resource], "continuing where this task's work already is")
         if user_facing and self.intent.wants_to_see:
-            return Resolution(DesktopTarget.USER, f"you asked to see it (\"{self.intent.phrase}\")")
+            return Resolution(DesktopTarget.USER, f'you asked to see it ("{self.intent.phrase}")')
         return Resolution(default, "default for this kind of window")
 
     def remember(self, resource: str, target: DesktopTarget) -> None:

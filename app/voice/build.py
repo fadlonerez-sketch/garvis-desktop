@@ -4,6 +4,7 @@ Providers are chosen by name from Settings (never hardcoded); adding a new
 STT/TTS backend means adding a branch here, not touching the pipeline or
 the UI.
 """
+
 from __future__ import annotations
 
 from app.core.config import Settings, get_settings

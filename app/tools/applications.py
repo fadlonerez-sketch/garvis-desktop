@@ -44,6 +44,7 @@ verified. "garvis_workspace" launches it minimized without activation
 the user's focus is unchanged; if the workspace is unavailable it is an
 error and nothing is launched.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -272,8 +273,7 @@ def resolve_application(name: str, allowlist: dict[str, str]) -> tuple[str, bool
 
 class OpenApplicationInput(BaseModel):
     application: str = Field(
-        description="Friendly name of the application to open, e.g. 'whatsapp', 'chrome', "
-        "'notepad', 'spotify'."
+        description="Friendly name of the application to open, e.g. 'whatsapp', 'chrome', 'notepad', 'spotify'."
     )
     target_desktop: Literal["user_desktop", "garvis_workspace"] | None = Field(
         default=None, description=TARGET_FIELD_DESCRIPTION + " Default: user_desktop."
@@ -320,8 +320,9 @@ class OpenApplicationTool(Tool):
     presentation = "prominent"  # the user asked to see it
     input_model = OpenApplicationInput
 
-    def __init__(self, allowlist: dict[str, str] | None = None, desktop=None,
-                 routing: DesktopRouting | None = None) -> None:
+    def __init__(
+        self, allowlist: dict[str, str] | None = None, desktop=None, routing: DesktopRouting | None = None
+    ) -> None:
         """`desktop` (a DesktopController), when given, is used to find the
         window the launch produced, put it on its target desktop and verify
         it -- so the next step (typing) has a real target."""
@@ -375,6 +376,13 @@ class OpenApplicationTool(Tool):
         except DesktopError as exc:
             log_extra(logger, 30, "open_application.window_not_ready", application=key, error=str(exc))
             return ToolResult.fail(str(exc))
-        log_extra(logger, 20, "open_application.launched", application=key, resolved_path=target,
-                  window=window["window"], target_desktop=resolution.target.value)
+        log_extra(
+            logger,
+            20,
+            "open_application.launched",
+            application=key,
+            resolved_path=target,
+            window=window["window"],
+            target_desktop=resolution.target.value,
+        )
         return ToolResult.ok({"opened": key, "window_verified": True, **window, **resolution.as_result()})

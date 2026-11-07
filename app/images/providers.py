@@ -11,6 +11,7 @@ id and an API token with the "Workers AI" permission. On Cloudflare's Free
 plan requests stop at the daily free allocation (they are never billed);
 on a paid Workers plan usage beyond it is billed by Cloudflare.
 """
+
 from __future__ import annotations
 
 import base64
@@ -56,8 +57,16 @@ class ImageProvider:
 class CloudflareImageProvider(ImageProvider):
     name = "cloudflare"
 
-    def __init__(self, account_id: str, api_token: str, *, model: str, steps: int = 4, timeout: float = 120.0,
-                 transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        account_id: str,
+        api_token: str,
+        *,
+        model: str,
+        steps: int = 4,
+        timeout: float = 120.0,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self._url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run/{model}"
         self._token = api_token
         self._steps = max(1, min(8, steps))
@@ -68,18 +77,23 @@ class CloudflareImageProvider(ImageProvider):
     async def generate(self, prompt: str) -> GeneratedImage:
         try:
             async with httpx.AsyncClient(timeout=self._timeout, transport=self._transport) as client:
-                response = await client.post(self._url, json={"prompt": prompt, "steps": self._steps},
-                                             headers={"Authorization": f"Bearer {self._token}"})
+                response = await client.post(
+                    self._url,
+                    json={"prompt": prompt, "steps": self._steps},
+                    headers={"Authorization": f"Bearer {self._token}"},
+                )
         except httpx.TimeoutException as exc:
             raise ImageProviderError("The image service took too long to answer.") from exc
         except httpx.HTTPError as exc:
             raise ImageProviderError("Couldn't reach the image service (Cloudflare Workers AI).") from exc
         if response.status_code in (401, 403):
-            raise ImageProviderError("Cloudflare refused the API token (check GARVIS_CLOUDFLARE_API_TOKEN and its "
-                                     "Workers AI permission).")
+            raise ImageProviderError(
+                "Cloudflare refused the API token (check GARVIS_CLOUDFLARE_API_TOKEN and its Workers AI permission)."
+            )
         if response.status_code == 429:
-            raise ImageProviderError("The image service's limit is reached (the daily free allocation may be used "
-                                     "up). Try again later.")
+            raise ImageProviderError(
+                "The image service's limit is reached (the daily free allocation may be used up). Try again later."
+            )
         if response.status_code >= 400:
             detail = ""
             try:
@@ -88,8 +102,10 @@ class CloudflareImageProvider(ImageProvider):
             except ValueError:
                 pass
             log_extra(logger, 30, "images.provider_error", status=response.status_code)
-            raise ImageProviderError(f"The image service refused the request (HTTP {response.status_code})"
-                                     + (f": {detail}" if detail else "."))
+            raise ImageProviderError(
+                f"The image service refused the request (HTTP {response.status_code})"
+                + (f": {detail}" if detail else ".")
+            )
         content_type = response.headers.get("content-type", "")
         if content_type.startswith("image/"):
             data = response.content
@@ -101,8 +117,9 @@ class CloudflareImageProvider(ImageProvider):
             encoded = (body.get("result") or {}).get("image") if isinstance(body.get("result"), dict) else None
             encoded = encoded or body.get("image")
             if not isinstance(encoded, str) or not encoded:
-                raise ImageProviderError("The image service answered without an image (the prompt may have been "
-                                         "refused).")
+                raise ImageProviderError(
+                    "The image service answered without an image (the prompt may have been refused)."
+                )
             try:
                 data = base64.b64decode(encoded, validate=True)
             except (binascii.Error, ValueError) as exc:
@@ -117,14 +134,22 @@ def build_image_provider(settings: Settings) -> tuple[ImageProvider | None, str]
     """-> (provider, "") or (None, what is missing -- user-facing, no secrets)."""
     choice = (settings.image_provider or "").strip().lower()
     if not choice:
-        return None, ("Image generation isn't set up. To turn it on, set GARVIS_IMAGE_PROVIDER=cloudflare, "
-                      "GARVIS_CLOUDFLARE_ACCOUNT_ID and GARVIS_CLOUDFLARE_API_TOKEN in Garvis's .env and "
-                      "restart Garvis.")
+        return None, (
+            "Image generation isn't set up. To turn it on, set GARVIS_IMAGE_PROVIDER=cloudflare, "
+            "GARVIS_CLOUDFLARE_ACCOUNT_ID and GARVIS_CLOUDFLARE_API_TOKEN in Garvis's .env and "
+            "restart Garvis."
+        )
     if choice != "cloudflare":
         return None, f"Unknown GARVIS_IMAGE_PROVIDER {choice!r} (supported: cloudflare)."
     if not settings.cloudflare_account_id or not settings.cloudflare_api_token:
-        return None, ("GARVIS_IMAGE_PROVIDER=cloudflare needs GARVIS_CLOUDFLARE_ACCOUNT_ID and "
-                      "GARVIS_CLOUDFLARE_API_TOKEN in Garvis's .env.")
-    return CloudflareImageProvider(settings.cloudflare_account_id, settings.cloudflare_api_token,
-                                   model=settings.image_model, steps=settings.image_steps,
-                                   timeout=settings.image_timeout_seconds), ""
+        return None, (
+            "GARVIS_IMAGE_PROVIDER=cloudflare needs GARVIS_CLOUDFLARE_ACCOUNT_ID and "
+            "GARVIS_CLOUDFLARE_API_TOKEN in Garvis's .env."
+        )
+    return CloudflareImageProvider(
+        settings.cloudflare_account_id,
+        settings.cloudflare_api_token,
+        model=settings.image_model,
+        steps=settings.image_steps,
+        timeout=settings.image_timeout_seconds,
+    ), ""

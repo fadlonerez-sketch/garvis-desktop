@@ -6,6 +6,7 @@ Qt's software GL -- not the "offscreen" platform):
 
     python scripts/render_orb_still.py
 """
+
 from __future__ import annotations
 
 import sys

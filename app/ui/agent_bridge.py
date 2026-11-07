@@ -22,6 +22,7 @@ just because Garvis started (only when the user ticks "Wake word standby"),
 and every wake listener, session or push-to-talk opens it only once the
 ownership manager grants it -- and closes it the moment it says SLEEP.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -221,10 +222,15 @@ class AgentBridge(QObject):
 
                 self._companion.phraser.use_model(self._agent.llm)
                 ReminderPhrasingWorker(self._companion.reminders, self._companion.phraser, self._loop, get_zone).start()
-            self._agent.register_tools(build_companion_tools(
-                settings, self._companion,
-                phone_ready=lambda: self._mobile is not None and self._mobile.pairing.device_count(kind="phone") > 0,
-            ))
+            self._agent.register_tools(
+                build_companion_tools(
+                    settings,
+                    self._companion,
+                    phone_ready=lambda: (
+                        self._mobile is not None and self._mobile.pairing.device_count(kind="phone") > 0
+                    ),
+                )
+            )
         self._tool_names = {entry["name"] for entry in self.tool_catalog()}
         self._tasks = TaskManager(
             self._agent,
@@ -304,9 +310,7 @@ class AgentBridge(QObject):
         elif event.type == EventType.TOOL_STARTED:
             self.tool_started.emit(payload.get("name", ""), payload.get("arguments", {}))
         elif event.type == EventType.TOOL_FINISHED:
-            self.tool_finished.emit(
-                payload.get("name", ""), bool(payload.get("success")), payload.get("error") or ""
-            )
+            self.tool_finished.emit(payload.get("name", ""), bool(payload.get("success")), payload.get("error") or "")
             if payload.get("sources"):
                 self.tool_sources.emit(payload.get("name", ""), list(payload["sources"]))
         elif event.type == EventType.CONFIRMATION_REQUESTED:
@@ -363,9 +367,7 @@ class AgentBridge(QObject):
         await self._start_standby()
 
     def resolve_confirmation(self, request_id: str, approved: bool) -> None:
-        self._loop.call_soon_threadsafe(
-            self._agent.confirmations.resolve, request_id, approved
-        )
+        self._loop.call_soon_threadsafe(self._agent.confirmations.resolve, request_id, approved)
 
     # -------------------------------------------------------------- voice
     def set_voice_replies_enabled(self, enabled: bool) -> None:
@@ -395,8 +397,12 @@ class AgentBridge(QObject):
             self._ptt_cancelled = True
             self._end_claim(claim.id)
             if granted is None and self._ptt_claim == claim.id:
-                await self._events.publish(AgentEvent(type=EventType.ERROR, payload={
-                    "message": "Another Garvis device still has the microphone -- try again in a moment."}))
+                await self._events.publish(
+                    AgentEvent(
+                        type=EventType.ERROR,
+                        payload={"message": "Another Garvis device still has the microphone -- try again in a moment."},
+                    )
+                )
             return
         try:
             self._voice.start_listening()
@@ -510,14 +516,16 @@ class AgentBridge(QObject):
         for tool in registry.all_tools():
             risk = RiskLevel(getattr(tool, "risk_level", RiskLevel.LOW))
             decision = permissions.evaluate(tool).decision
-            catalog.append({
-                "name": tool.name,
-                "description": getattr(tool, "description", "") or "",
-                "risk": risk.name.lower(),
-                "confirm": decision == PermissionDecision.REQUIRE_CONFIRMATION,
-                # Decides per call (e.g. PowerShell: anything not read-only asks first).
-                "conditional": type(tool).confirmation_reason is not Tool.confirmation_reason,
-            })
+            catalog.append(
+                {
+                    "name": tool.name,
+                    "description": getattr(tool, "description", "") or "",
+                    "risk": risk.name.lower(),
+                    "confirm": decision == PermissionDecision.REQUIRE_CONFIRMATION,
+                    # Decides per call (e.g. PowerShell: anything not read-only asks first).
+                    "conditional": type(tool).confirmation_reason is not Tool.confirmation_reason,
+                }
+            )
         return catalog
 
     def request_usage(self) -> None:
@@ -550,8 +558,9 @@ class AgentBridge(QObject):
         try:
             # A wake-phrase session is only possible on the device that was listening; a click is
             # the user's explicit choice and takes the voice from a conversation elsewhere.
-            claim, _ = self.voice_ownership.claim(DESKTOP_ENDPOINT, "active", "wake" if greet else "session",
-                                                  explicit=not greet)
+            claim, _ = self.voice_ownership.claim(
+                DESKTOP_ENDPOINT, "active", "wake" if greet else "session", explicit=not greet
+            )
         except VoiceClaimRefused as exc:
             log_extra(logger, 20, "agent_bridge.session_refused", code=exc.code)
             asyncio.run_coroutine_threadsafe(self._session_refused(str(exc)), self._loop)
@@ -770,8 +779,11 @@ class AgentBridge(QObject):
         owner = (view.get("owner") or {}).get("label") or "another device"
         log_extra(logger, 20, "agent_bridge.session_preempted")
         await session.stop()  # publishes SESSION_STATE idle: the window ends the session view
-        await self._events.publish(AgentEvent(type=EventType.STATUS, payload={
-            "status": f"Voice moved to {owner} -- this PC stopped listening."}))
+        await self._events.publish(
+            AgentEvent(
+                type=EventType.STATUS, payload={"status": f"Voice moved to {owner} -- this PC stopped listening."}
+            )
+        )
 
     async def _wait_for_microphone(self, claim_id: str) -> dict | None:
         """Wait until this PC's claim is granted (ACTIVE). None if the claim was dropped
@@ -783,12 +795,18 @@ class AgentBridge(QObject):
 
         view = manager.view(DESKTOP_ENDPOINT)
         if not settled(view):
-            owner = next((e["label"] for e in view["endpoints"] if not e["you"] and e["state"] != "disconnected"),
-                         "the other device")
-            await self._events.publish(AgentEvent(type=EventType.STATUS, payload={
-                "status": f"Waiting for {owner} to release its microphone..."}))
-        view = await manager.wait_for(DESKTOP_ENDPOINT, settled,
-                                      manager.lease_seconds + manager.release_timeout_seconds + 2.0)
+            owner = next(
+                (e["label"] for e in view["endpoints"] if not e["you"] and e["state"] != "disconnected"),
+                "the other device",
+            )
+            await self._events.publish(
+                AgentEvent(
+                    type=EventType.STATUS, payload={"status": f"Waiting for {owner} to release its microphone..."}
+                )
+            )
+        view = await manager.wait_for(
+            DESKTOP_ENDPOINT, settled, manager.lease_seconds + manager.release_timeout_seconds + 2.0
+        )
         if view is None or view["state"] != VoiceState.ACTIVE.value:
             return None
         return view
@@ -819,6 +837,7 @@ class AgentBridge(QObject):
     def run_protocol(self, protocol_id: str) -> None:
         """Ask the TaskManager to run a saved protocol (desktop origin). A
         refusal comes back as task_error."""
+
         async def _submit() -> None:
             from app.tasks.manager import TaskError
 
@@ -842,6 +861,7 @@ class AgentBridge(QObject):
 
     def tasks_snapshot(self, limit: int = 50) -> list[dict]:
         """Current task summaries, read on the loop that owns them."""
+
         async def _read() -> list[dict]:
             return [task.summary() for task in self._tasks.list(limit)]
 
@@ -959,8 +979,11 @@ def describe_voice_owner(view: dict) -> str:
     if view.get("reason") == "waiting_for_release":
         return "Waiting for another device to release its microphone..."
     if owner:
-        doing = {"standby": "listening for \u201cHey Garvis\u201d", "active": "in a conversation",
-                 "priority": "delivering a reminder or call"}.get(owner.get("state"), "using the voice")
+        doing = {
+            "standby": "listening for \u201cHey Garvis\u201d",
+            "active": "in a conversation",
+            "priority": "delivering a reminder or call",
+        }.get(owner.get("state"), "using the voice")
         queued = " This PC is next in line." if view.get("wants_standby") else ""
         return f"{owner.get('label', 'Another device')} is {doing} -- this PC's microphone is off.{queued}"
     return "No device is listening for \u201cHey Garvis\u201d -- this PC's microphone is off."

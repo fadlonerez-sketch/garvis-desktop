@@ -14,6 +14,7 @@ content is invented (example.com addresses, placeholder paths); the fake
 bridge reports an API key as configured, but no request is ever made. --dialog also
 renders the approval dialog over the window (desktop_dialog.png).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -46,7 +47,7 @@ def demo_content(win) -> None:
     """Sample content through the window's real entry points (no Agent)."""
     from app.system.telemetry import Disk, GpuAdapter, Snapshot, StaticInfo
 
-    gib = 1024 ** 3
+    gib = 1024**3
     bridge = win._bridge
     request = "Open the Garvis project folder and summarize what changed today"
     win._append_conversation("You", request)
@@ -54,8 +55,10 @@ def demo_content(win) -> None:
     bridge.status_changed.emit("Thinking...")
     bridge.tool_started.emit("open_path", {"path": r"C:\Users\me\Projects\garvis"})
     bridge.tool_finished.emit("open_path", True, "")
-    reply = (r"Opened <b>C:\Users\me\Projects\garvis</b>. Today's changes: the plasma orb, a separate "
-             "logo module, and the approval dialog.")
+    reply = (
+        r"Opened <b>C:\Users\me\Projects\garvis</b>. Today's changes: the plasma orb, a separate "
+        "logo module, and the approval dialog."
+    )
     bridge.assistant_message.emit(reply)
     bridge.status_changed.emit("Done.")
     second = "How much free space is left on C:?"
@@ -70,39 +73,113 @@ def demo_content(win) -> None:
     bridge.user_message.emit(research)
     bridge.tool_started.emit("web_research", {"query": "Artemis program news"})
     bridge.tool_finished.emit("web_research", True, "")
-    bridge.tool_sources.emit("web_research", [
-        {"tool": "web_research", "kind": "read", "title": "Artemis II crew completes launch rehearsal",
-         "url": "https://news.example/artemis-ii-rehearsal", "publisher": "news.example",
-         "snippet": "The four astronauts completed a full countdown rehearsal at Kennedy Space Center."},
-        {"tool": "web_research", "kind": "search_result", "title": "Artemis program overview",
-         "url": "https://space.example/artemis", "publisher": "space.example", "snippet": ""}])
+    bridge.tool_sources.emit(
+        "web_research",
+        [
+            {
+                "tool": "web_research",
+                "kind": "read",
+                "title": "Artemis II crew completes launch rehearsal",
+                "url": "https://news.example/artemis-ii-rehearsal",
+                "publisher": "news.example",
+                "snippet": "The four astronauts completed a full countdown rehearsal at Kennedy Space Center.",
+            },
+            {
+                "tool": "web_research",
+                "kind": "search_result",
+                "title": "Artemis program overview",
+                "url": "https://space.example/artemis",
+                "publisher": "space.example",
+                "snippet": "",
+            },
+        ],
+    )
     bridge.assistant_message.emit("The Artemis II crew finished its launch rehearsal this week.")
     bridge.status_changed.emit("Done.")
     bridge.status_changed.emit("Idle.")
-    days = [{"day": f"2026-10-{18 + i:02d}", "cost_usd": c, "calls": n}
-            for i, (c, n) in enumerate([(0.02, 4), (0.0, 0), (0.06, 9), (0.11, 14), (0.03, 5), (0.0, 0), (0.08, 10),
-                                        (0.05, 7), (0.09, 12), (0.02, 3), (0.12, 16), (0.07, 9), (0.01, 2),
-                                        (0.04, 12)])]
-    today = {"cost_usd": 0.04, "calls": 12, "ok": 12, "errors": 0, "tasks": 5, "input_tokens": 48_210,
-             "output_tokens": 6_120, "cache_read_tokens": 120_400, "cache_write_tokens": 9_800}
-    recent = [{"ts": "2026-10-31T14:52:10", "tier": "main", "status": "ok", "error_type": None,
-               "input_tokens": 4100, "output_tokens": 380, "cache_read_tokens": 11_000, "cost_usd": 0.0031,
-               "latency_ms": 1800, "model": "claude-haiku-5-5"}] * 4
-    win._on_usage_updated({"available": True, "today": today, "month": {"cost_usd": 1.18, "calls": 212},
-                           "daily": days, "recent": recent})
+    days = [
+        {"day": f"2026-10-{18 + i:02d}", "cost_usd": c, "calls": n}
+        for i, (c, n) in enumerate(
+            [
+                (0.02, 4),
+                (0.0, 0),
+                (0.06, 9),
+                (0.11, 14),
+                (0.03, 5),
+                (0.0, 0),
+                (0.08, 10),
+                (0.05, 7),
+                (0.09, 12),
+                (0.02, 3),
+                (0.12, 16),
+                (0.07, 9),
+                (0.01, 2),
+                (0.04, 12),
+            ]
+        )
+    ]
+    today = {
+        "cost_usd": 0.04,
+        "calls": 12,
+        "ok": 12,
+        "errors": 0,
+        "tasks": 5,
+        "input_tokens": 48_210,
+        "output_tokens": 6_120,
+        "cache_read_tokens": 120_400,
+        "cache_write_tokens": 9_800,
+    }
+    recent = [
+        {
+            "ts": "2026-10-31T14:52:10",
+            "tier": "main",
+            "status": "ok",
+            "error_type": None,
+            "input_tokens": 4100,
+            "output_tokens": 380,
+            "cache_read_tokens": 11_000,
+            "cost_usd": 0.0031,
+            "latency_ms": 1800,
+            "model": "claude-haiku-5-5",
+        }
+    ] * 4
+    win._on_usage_updated(
+        {"available": True, "today": today, "month": {"cost_usd": 1.18, "calls": 212}, "daily": days, "recent": recent}
+    )
     monitor = win.telemetry
-    monitor._on_static(StaticInfo(cpu_model="Example 16-thread CPU", logical_cpus=16, base_mhz=1400,
-                                  total_ram=32 * gib, gpus=(GpuAdapter("Example Graphics", 0),),
-                                  os_name="Windows 11"))
+    monitor._on_static(
+        StaticInfo(
+            cpu_model="Example 16-thread CPU",
+            logical_cpus=16,
+            base_mhz=1400,
+            total_ram=32 * gib,
+            gpus=(GpuAdapter("Example Graphics", 0),),
+            os_name="Windows 11",
+        )
+    )
     now = time.time()
     for i in range(30):
-        monitor._on_sampled(Snapshot(
-            at=now - 30 + i, detail=True, cpu_percent=18 + (i * 7) % 11, ram_total=32 * gib,
-            ram_available=32 * gib * 0.39, process_cpu_percent=1.2, process_memory=310 * 1024 ** 2,
-            process_private=290 * 1024 ** 2, uptime_seconds=93_784.0,
-            per_core=tuple(float((i * 13 + k * 17) % 60) for k in range(16)), cpu_mhz=3100.0,
-            disks=(Disk("C:", total=1000 * gib, free=412 * gib),), disk_read_bps=1.2 * 1024 ** 2,
-            disk_write_bps=0.4 * 1024 ** 2, gpu_percent=9.0, gpu_memory_used=0, gpu_shared_used=gib))
+        monitor._on_sampled(
+            Snapshot(
+                at=now - 30 + i,
+                detail=True,
+                cpu_percent=18 + (i * 7) % 11,
+                ram_total=32 * gib,
+                ram_available=32 * gib * 0.39,
+                process_cpu_percent=1.2,
+                process_memory=310 * 1024**2,
+                process_private=290 * 1024**2,
+                uptime_seconds=93_784.0,
+                per_core=tuple(float((i * 13 + k * 17) % 60) for k in range(16)),
+                cpu_mhz=3100.0,
+                disks=(Disk("C:", total=1000 * gib, free=412 * gib),),
+                disk_read_bps=1.2 * 1024**2,
+                disk_write_bps=0.4 * 1024**2,
+                gpu_percent=9.0,
+                gpu_memory_used=0,
+                gpu_shared_used=gib,
+            )
+        )
 
 
 def demo_protocol() -> None:
@@ -111,19 +188,29 @@ def demo_protocol() -> None:
     from app.tasks.protocols import Protocol, ProtocolStore, Step
 
     store = ProtocolStore(get_settings().data_dir / "protocols")
-    store.save(Protocol(name="Programming workspace", description="Open the project and get ready to work.",
-                        steps=[Step(type="open_path", params={"path": r"C:\Users\me\Projects\garvis"}),
-                               Step(type="wait", params={"seconds": 2}),
-                               Step(type="notify", params={"title": "Workspace ready", "message": ""})]))
+    store.save(
+        Protocol(
+            name="Programming workspace",
+            description="Open the project and get ready to work.",
+            steps=[
+                Step(type="open_path", params={"path": r"C:\Users\me\Projects\garvis"}),
+                Step(type="wait", params={"seconds": 2}),
+                Step(type="notify", params={"title": "Workspace ready", "message": ""}),
+            ],
+        )
+    )
 
 
 def render_dialog(win, out: Path, suffix: str) -> Path:
     from app.ui.approval import ApprovalDialog
 
-    dialog = ApprovalDialog("gmail_send", {"to": "dana@example.com", "subject": "Monthly report — October",
-                                           "attach": "report-october.pdf"},
-                            "Sending email always asks first.", win,
-                            title="Garvis wants to send an email")
+    dialog = ApprovalDialog(
+        "gmail_send",
+        {"to": "dana@example.com", "subject": "Monthly report — October", "attach": "report-october.pdf"},
+        "Sending email always asks first.",
+        win,
+        title="Garvis wants to send an email",
+    )
     dialog.setAttribute(Qt.WidgetAttribute.WA_DontShowOnScreen, True)
     dialog.show()
     wait(400)
@@ -155,6 +242,7 @@ def main() -> int:
     main_window.TelemetryMonitor = fakes._QuietMonitor
     if args.demo:
         demo_protocol()
+
         class _DemoMonitor(fakes._QuietMonitor):
             """No sampling thread: the demo's samples stay on screen."""
 

@@ -31,6 +31,7 @@ on the workspace is only brought to the user's desktop when the user's
 desktop is explicitly the target (the model's `target_desktop`, or the
 user's own wording such as "show me").
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -95,8 +96,9 @@ class CommitGuard:
     """Decides, from facts rather than the LLM's say-so, whether an input
     action commits something and so needs the user's confirmation."""
 
-    def __init__(self, controller: DesktopController, uia: UiInspector | None = None,
-                 commit_apps: str = DEFAULT_COMMIT_APPS) -> None:
+    def __init__(
+        self, controller: DesktopController, uia: UiInspector | None = None, commit_apps: str = DEFAULT_COMMIT_APPS
+    ) -> None:
         self._controller = controller
         self._uia = uia
         self._commit_apps = {_app_key(a) for a in commit_apps.split(",") if a.strip()}
@@ -111,8 +113,7 @@ class CommitGuard:
         except DesktopError:
             return None  # the action itself will fail with a clear error
         if _app_key(target.process_name) in self._commit_apps:
-            return (f"{what} in '{target.title[:60]}' ({target.process_name}) may send a message "
-                    "or run a command.")
+            return f"{what} in '{target.title[:60]}' ({target.process_name}) may send a message or run a command."
         return None
 
     async def for_point(self, x: int | None, y: int | None) -> str | None:
@@ -148,7 +149,10 @@ class _ConfirmableDesktopTool(_DesktopTool):
     risk_level = RiskLevel.MEDIUM
 
     def __init__(
-        self, controller: DesktopController, require_confirmation: bool = False, guard: CommitGuard | None = None,
+        self,
+        controller: DesktopController,
+        require_confirmation: bool = False,
+        guard: CommitGuard | None = None,
         routing: DesktopRouting | None = None,
     ) -> None:
         super().__init__(controller, routing)
@@ -178,13 +182,18 @@ class ScreenInfoTool(_DesktopTool):
 
 class ListWindowsInput(BaseModel):
     target_desktop: TargetDesktop | None = Field(
-        default=None, description="Only list windows on this desktop: 'user_desktop' (the one the user is "
-        "looking at) or 'garvis_workspace'. Omit to list every desktop."
+        default=None,
+        description="Only list windows on this desktop: 'user_desktop' (the one the user is "
+        "looking at) or 'garvis_workspace'. Omit to list every desktop.",
     )
 
 
-_DESKTOP_LABELS = {"user": "user_desktop", "garvis_workspace": "garvis_workspace", "other": "other_user_desktop",
-                   "unknown": "user_desktop"}
+_DESKTOP_LABELS = {
+    "user": "user_desktop",
+    "garvis_workspace": "garvis_workspace",
+    "other": "other_user_desktop",
+    "unknown": "user_desktop",
+}
 
 
 class ListWindowsTool(_DesktopTool):
@@ -258,8 +267,9 @@ class ScreenCaptureTool(_DesktopTool):
 class FocusWindowInput(BaseModel):
     window: str = Field(description="Window title or app name to switch to, e.g. 'chrome', 'WhatsApp'.")
     target_desktop: TargetDesktop | None = Field(
-        default=None, description="'user_desktop' also brings the window over if it is on Garvis's workspace "
-        "(do this when the user wants to see or use it). Focusing always happens on the user's desktop."
+        default=None,
+        description="'user_desktop' also brings the window over if it is on Garvis's workspace "
+        "(do this when the user wants to see or use it). Focusing always happens on the user's desktop.",
     )
 
 
@@ -283,8 +293,15 @@ class FocusWindowTool(_DesktopTool):
             )
         except DesktopError as exc:
             return ToolResult.fail(str(exc))
-        return ToolResult.ok({"focused": window.title, "app": window.process_name, "verified": True,
-                              "target_desktop": "user_desktop", "on_user_desktop": window.on_current_desktop})
+        return ToolResult.ok(
+            {
+                "focused": window.title,
+                "app": window.process_name,
+                "verified": True,
+                "target_desktop": "user_desktop",
+                "on_user_desktop": window.on_current_desktop,
+            }
+        )
 
 
 class SwitchWindowTool(_DesktopTool):
@@ -424,8 +441,10 @@ class KeyboardTypeTool(_ConfirmableDesktopTool):
             return ToolResult.fail(str(exc))
         result["text_verified"] = await _verify_typed(uia, result["handle"], args.text, before, args.window is None)
         if result["text_verified"] is False:
-            result["note"] = ("The keys were sent to the window, but its focused field doesn't show the text. "
-                              "Check with inspect_ui or read_screen_text before reporting success.")
+            result["note"] = (
+                "The keys were sent to the window, but its focused field doesn't show the text. "
+                "Check with inspect_ui or read_screen_text before reporting success."
+            )
         return ToolResult.ok(result)
 
 
@@ -453,10 +472,14 @@ class KeyboardPressTool(_ConfirmableDesktopTool):
         if args.target_desktop == DesktopTarget.WORKSPACE:
             return ToolResult.fail(_INPUT_NOT_ON_WORKSPACE)
         try:
-            return ToolResult.ok(await self._controller.press_key(
-                args.key, repeat=args.repeat, window=args.window,
-                bring_from_workspace=self._bring_to_user(args.target_desktop),
-            ))
+            return ToolResult.ok(
+                await self._controller.press_key(
+                    args.key,
+                    repeat=args.repeat,
+                    window=args.window,
+                    bring_from_workspace=self._bring_to_user(args.target_desktop),
+                )
+            )
         except DesktopError as exc:
             return ToolResult.fail(str(exc))
 
@@ -488,9 +511,11 @@ class KeyboardHotkeyTool(_ConfirmableDesktopTool):
         if args.target_desktop == DesktopTarget.WORKSPACE:
             return ToolResult.fail(_INPUT_NOT_ON_WORKSPACE)
         try:
-            return ToolResult.ok(await self._controller.hotkey(
-                args.keys, window=args.window, bring_from_workspace=self._bring_to_user(args.target_desktop)
-            ))
+            return ToolResult.ok(
+                await self._controller.hotkey(
+                    args.keys, window=args.window, bring_from_workspace=self._bring_to_user(args.target_desktop)
+                )
+            )
         except DesktopError as exc:
             return ToolResult.fail(str(exc))
 
@@ -502,8 +527,9 @@ async def _safe_focused_text(uia: UiInspector, handle: int) -> str | None:
         return None
 
 
-async def _verify_typed(uia: UiInspector | None, handle: int, text: str, before: str | None,
-                        have_before: bool) -> bool | None:
+async def _verify_typed(
+    uia: UiInspector | None, handle: int, text: str, before: str | None, have_before: bool
+) -> bool | None:
     """True when the target's focused field now contains the typed text (one
     more time than before typing); False when it's readable but doesn't;
     None when the field can't be read (e.g. a canvas or terminal)."""
@@ -630,8 +656,7 @@ class ReadScreenTextTool(_DesktopTool):
         except DesktopError as exc:
             return ToolResult.fail(str(exc))
         lines = [
-            {"text": redact_secrets(line.text), "center": list(line.center)}
-            for line in result.lines[:_MAX_OCR_LINES]
+            {"text": redact_secrets(line.text), "center": list(line.center)} for line in result.lines[:_MAX_OCR_LINES]
         ]
         text = redact_secrets(result.text)
         payload: dict = {
@@ -690,14 +715,20 @@ class InspectUiTool(_DesktopTool):
                 if summary.get(key):
                     summary[key] = redact_secrets(summary[key])
             controls.append(summary)
-        payload = {"window": window.title, "app": window.process_name, "minimized": window.is_minimized,
-                   "control_count": len(controls), "controls": controls}
-        payload["desktop"] = "user_desktop" if window.on_current_desktop else (
-            args.target_desktop or "other_desktop")
+        payload = {
+            "window": window.title,
+            "app": window.process_name,
+            "minimized": window.is_minimized,
+            "control_count": len(controls),
+            "controls": controls,
+        }
+        payload["desktop"] = "user_desktop" if window.on_current_desktop else (args.target_desktop or "other_desktop")
         if not window.on_current_desktop:
-            payload["note"] = ("This window is on another virtual desktop; some apps hide their content there. "
-                               "If it looks empty and the user wants it, bring it over with focus_window "
-                               "(target_desktop='user_desktop').")
+            payload["note"] = (
+                "This window is on another virtual desktop; some apps hide their content there. "
+                "If it looks empty and the user wants it, bring it over with focus_window "
+                "(target_desktop='user_desktop')."
+            )
         return ToolResult.ok(payload)
 
 
@@ -706,8 +737,9 @@ class ClickUiElementInput(BaseModel):
     control_type: str | None = Field(default=None, description="Optional type to disambiguate, e.g. 'button'")
     window: str | None = Field(default=None, description="Window title or app name; omit for the active window.")
     target_desktop: TargetDesktop | None = Field(
-        default=None, description="Only look for the window on this desktop. On 'garvis_workspace' the control "
-        "is pressed through UI Automation without touching the user's screen."
+        default=None,
+        description="Only look for the window on this desktop. On 'garvis_workspace' the control "
+        "is pressed through UI Automation without touching the user's screen.",
     )
 
 
@@ -719,9 +751,14 @@ class ClickUiElementTool(_ConfirmableDesktopTool):
     )
     input_model = ClickUiElementInput
 
-    def __init__(self, controller: DesktopController, uia: UiInspector | None,
-                 require_confirmation: bool = False, guard: CommitGuard | None = None,
-                 routing: DesktopRouting | None = None) -> None:
+    def __init__(
+        self,
+        controller: DesktopController,
+        uia: UiInspector | None,
+        require_confirmation: bool = False,
+        guard: CommitGuard | None = None,
+        routing: DesktopRouting | None = None,
+    ) -> None:
         super().__init__(controller, require_confirmation, guard, routing)
         self._uia = uia
 

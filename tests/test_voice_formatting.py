@@ -6,6 +6,7 @@ for speech only at the voice boundary. Purely deterministic string
 transforms -- no LLM involved -- so these tests assert exact behavior, not
 model creativity.
 """
+
 from __future__ import annotations
 
 import re
@@ -101,7 +102,7 @@ def test_restaurant_names_are_never_altered():
 
 
 def test_hebrew_and_emoji_pass_through_untouched():
-    text = "שלום עולם \U0001F600 Sir, done."
+    text = "שלום עולם \U0001f600 Sir, done."
     assert to_spoken_text(text) == text
 
 
@@ -159,8 +160,7 @@ def name_override(monkeypatch):
     """The shipped table is empty (users add their own names); install one entry."""
     import app.voice.formatting as formatting
 
-    monkeypatch.setattr(formatting, "_PRONUNCIATION_OVERRIDES",
-                        {re.compile(r"\bAlex\b", re.IGNORECASE): "Aleks"})
+    monkeypatch.setattr(formatting, "_PRONUNCIATION_OVERRIDES", {re.compile(r"\bAlex\b", re.IGNORECASE): "Aleks"})
 
 
 def test_name_is_respelled_for_correct_pronunciation(name_override):

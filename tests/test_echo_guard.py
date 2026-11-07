@@ -2,6 +2,7 @@
 like speech, while new speech -- alone or over the echo -- still does.
 Deterministic synthetic signals (tests/echo_signals.py), streamed in the
 block size and timestamps the real recorder produces."""
+
 from __future__ import annotations
 
 import numpy as np
@@ -11,11 +12,11 @@ from app.voice.echo import EchoGuard
 from app.voice.vad import VoiceActivityDetector
 from tests.echo_signals import MIC_RATE, TTS_RATE, blocks, mix, noise, room_echo, speech_like
 
-DAC = 10.0          # when the clip's first sample reached the output device
-MIC_START = 9.5     # the recorder has been running for half a second already
-ACOUSTIC = 0.04     # true speaker->mic delay beyond the DAC time
-REPLY = speech_like(4.0, f0=110, seed=1)               # "Garvis"
-USER = speech_like(1.6, f0=215, seed=2, level=5000)    # a different voice
+DAC = 10.0  # when the clip's first sample reached the output device
+MIC_START = 9.5  # the recorder has been running for half a second already
+ACOUSTIC = 0.04  # true speaker->mic delay beyond the DAC time
+REPLY = speech_like(4.0, f0=110, seed=1)  # "Garvis"
+USER = speech_like(1.6, f0=215, seed=2, level=5000)  # a different voice
 
 
 def _timeline(seconds: float) -> int:
@@ -28,8 +29,15 @@ def _echo_signal(length_s: float = 6.0, gain: float = 0.6, room: float = 150.0, 
     return mix(n, (echo_at, room_echo(REPLY, 0.0, gain)), *extra) + noise(n, room)
 
 
-def _run(signal: np.ndarray, guard: EchoGuard | None, *, end_at: float | None = None, block: int = 416,
-         threshold: float = 900.0, clip_pcm=REPLY):
+def _run(
+    signal: np.ndarray,
+    guard: EchoGuard | None,
+    *,
+    end_at: float | None = None,
+    block: int = 416,
+    threshold: float = 900.0,
+    clip_pcm=REPLY,
+):
     clip = None
     if guard is not None:
         clip = guard.start_reference(clip_pcm, TTS_RATE, DAC)
@@ -114,7 +122,9 @@ def test_interrupted_playback_stops_masking_immediately_after_its_tail():
     n = _timeline(5.0)
     played = REPLY[: int(1.0 * TTS_RATE)]
     user_at = _timeline(stop + 0.35 - MIC_START)
-    signal = mix(n, (_timeline(DAC - MIC_START + ACOUSTIC), room_echo(played, 0.0, 0.6)), (user_at, USER)) + noise(n, 150.0)
+    signal = mix(n, (_timeline(DAC - MIC_START + ACOUSTIC), room_echo(played, 0.0, 0.6)), (user_at, USER)) + noise(
+        n, 150.0
+    )
     starts, residuals = _run(signal, EchoGuard(), end_at=stop)
     assert all(r is None for t, r in residuals if t > stop + 0.45)
     assert [s for s in starts if stop + 0.3 <= s <= stop + 0.9], starts

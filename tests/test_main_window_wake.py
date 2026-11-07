@@ -5,6 +5,7 @@ session with a greeting, and the Standby indicator follows the bridge.
 Same approach as tests/test_main_window_session_gating.py: the real
 MainWindow against a fake AgentBridge exposing the same Qt signals.
 """
+
 from __future__ import annotations
 
 import os

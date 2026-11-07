@@ -35,6 +35,7 @@ differences from the browser API:
   (AuthFailureLimiter): too many in a few minutes and that address gets 429
   until they age out.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -90,8 +91,12 @@ class AuthFailureLimiter:
 
     MAX_ADDRESSES = 1024
 
-    def __init__(self, limit: int = AUTH_FAILURE_LIMIT, window: float = AUTH_FAILURE_WINDOW_SECONDS,
-                 clock: Callable[[], float] = time.monotonic) -> None:
+    def __init__(
+        self,
+        limit: int = AUTH_FAILURE_LIMIT,
+        window: float = AUTH_FAILURE_WINDOW_SECONDS,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._limit = limit
         self._window = window
         self._clock = clock
@@ -132,8 +137,9 @@ def _error(status: int, message: str, code: str = "") -> web.Response:
 
 
 def _too_many(wait: float) -> web.Response:
-    response = _error(429, "Too many failed sign-in attempts from this device. Try again in a few minutes.",
-                      "rate_limited")
+    response = _error(
+        429, "Too many failed sign-in attempts from this device. Try again in a few minutes.", "rate_limited"
+    )
     response.headers["Retry-After"] = str(int(wait) + 1)
     return response
 
@@ -163,8 +169,16 @@ def register_native_routes(
     def auth_failed(request: web.Request, reason: str) -> None:
         """Count and log a refused sign-in: where from and why -- never the token or code."""
         limiter.failed(request.remote or "")
-        log_extra(logger, 30, "mobile.native.auth_failed", remote=request.remote, path=request.path,
-                  reason=reason, via="tailscale" if is_remote(request) else "lan")
+        log_extra(
+            logger,
+            30,
+            "mobile.native.auth_failed",
+            remote=request.remote,
+            path=request.path,
+            reason=reason,
+            via="tailscale" if is_remote(request) else "lan",
+        )
+
     station_turns: dict[str, deque[str]] = {}
     """Station device id -> the turns (task ids) it started: a station reads only its own."""
 
@@ -201,6 +215,7 @@ def register_native_routes(
 
     def authed(handler=None, *, stations: bool = False):
         """Needs a paired device's token; a station token only where `stations`."""
+
         def decorate(handler):
             async def wrapper(request: web.Request) -> web.StreamResponse:
                 if (wait := limiter.retry_after(request.remote or "")) > 0:
@@ -213,7 +228,9 @@ def register_native_routes(
                 if device.kind == "station" and not stations:
                     return _error(403, "Eye Station can't use this part of Garvis.", "station_scope")
                 return await handler(request, device)
+
             return wrapper
+
         return decorate(handler) if handler is not None else decorate
 
     def garvis_state() -> dict[str, Any]:
@@ -230,9 +247,14 @@ def register_native_routes(
     async def hello(request: web.Request) -> web.Response:
         # Lets the app check it reached a Garvis PC (TLS already verified)
         # before asking for a pairing code. Says nothing private.
-        return web.json_response({"api": API_VERSION, "server": "garvis",
-                                  "paired": pairing.verify(_bearer(request)) is not None,
-                                  "remote": bool(is_remote(request))})
+        return web.json_response(
+            {
+                "api": API_VERSION,
+                "server": "garvis",
+                "paired": pairing.verify(_bearer(request)) is not None,
+                "remote": bool(is_remote(request)),
+            }
+        )
 
     async def pair(request: web.Request) -> web.Response:
         if (wait := limiter.retry_after(request.remote or "")) > 0:
@@ -243,16 +265,25 @@ def register_native_routes(
         name = str(data.get("device_name") or "Android")[:40]
         station = data.get("client") == STATION_CLIENT
         try:
-            token = pairing.redeem(data["code"], label=STATION_LABEL if station else "Android",
-                                   kind="station" if station else "phone")
+            token = pairing.redeem(
+                data["code"], label=STATION_LABEL if station else "Android", kind="station" if station else "phone"
+            )
         except PairingError as exc:
             auth_failed(request, "pairing_refused")
             return _error(403, str(exc), "pairing_refused")
         limiter.succeeded(request.remote or "")
         record = pairing.verify(token)
         log_extra(logger, 20, "mobile.native.paired", device=record.id, kind=record.kind, name_length=len(name))
-        return web.json_response({"token": token, "device_id": record.id, "expires_at": record.expires_at,
-                                  "api": API_VERSION, "kind": record.kind}, status=201)
+        return web.json_response(
+            {
+                "token": token,
+                "device_id": record.id,
+                "expires_at": record.expires_at,
+                "api": API_VERSION,
+                "kind": record.kind,
+            },
+            status=201,
+        )
 
     @authed(stations=True)
     async def refresh(request: web.Request, device: DeviceRecord) -> web.Response:
@@ -272,13 +303,21 @@ def register_native_routes(
     # --------------------------------------------------------------- status
     @authed(stations=True)
     async def status(request: web.Request, device: DeviceRecord) -> web.Response:
-        return web.json_response({
-            "api": API_VERSION, "device_id": device.id, "kind": device.kind, "token_expires_at": device.expires_at,
-            "server_time": time.time(), "time_zone": companion.zone.current(),
-            "garvis": garvis_state(), "features": companion.features(), "remote": bool(is_remote(request)),
-            # The phone saves these as its away-from-home address (no typing a 100.x address).
-            "remote_urls": await remote_urls(request) if remote_urls is not None else [],
-        })
+        return web.json_response(
+            {
+                "api": API_VERSION,
+                "device_id": device.id,
+                "kind": device.kind,
+                "token_expires_at": device.expires_at,
+                "server_time": time.time(),
+                "time_zone": companion.zone.current(),
+                "garvis": garvis_state(),
+                "features": companion.features(),
+                "remote": bool(is_remote(request)),
+                # The phone saves these as its away-from-home address (no typing a 100.x address).
+                "remote_urls": await remote_urls(request) if remote_urls is not None else [],
+            }
+        )
 
     @authed
     async def events(request: web.Request, device: DeviceRecord) -> web.Response:
@@ -296,11 +335,14 @@ def register_native_routes(
             after = 0  # Garvis restarted: the client's cursor belongs to the old log
 
         def has_news() -> bool:
-            return (after != service.last_seq or (epoch and epoch != service.epoch)
-                    or known_reminders != companion.reminders.version
-                    or known_images != companion.images.version
-                    or (tasks is not None and known_tasks != tasks.version)
-                    or {a["id"] for a in companion.phone.pending_for(device.id)} != known_actions)
+            return (
+                after != service.last_seq
+                or (epoch and epoch != service.epoch)
+                or known_reminders != companion.reminders.version
+                or known_images != companion.images.version
+                or (tasks is not None and known_tasks != tasks.version)
+                or {a["id"] for a in companion.phone.pending_for(device.id)} != known_actions
+            )
 
         signal = service.change_signal()
         if wait > 0 and not has_news():
@@ -346,8 +388,9 @@ def register_native_routes(
         if request_id and tasks is not None:
             existing = next((t for t in tasks.list(200) if t.request_id == request_id), None)
             if existing is not None and station_may_see(device, existing.id):  # a retried upload: never run it twice
-                return web.json_response({"turn_id": existing.id, "transcript": existing.text,
-                                          "task": existing.summary()}, status=202)
+                return web.json_response(
+                    {"turn_id": existing.id, "transcript": existing.text, "task": existing.summary()}, status=202
+                )
         audio = await request.read()
         if len(audio) > max_audio_bytes:
             return _error(413, "The recording is too large.")
@@ -371,8 +414,9 @@ def register_native_routes(
         if device.kind == "station":
             station_turns.setdefault(device.id, deque(maxlen=50)).append(turn.id)
         task = tasks.get(turn.id) if tasks is not None else None
-        return web.json_response({"turn_id": turn.id, "transcript": transcript,
-                                  "task": task.summary() if task else None}, status=202)
+        return web.json_response(
+            {"turn_id": turn.id, "transcript": transcript, "task": task.summary() if task else None}, status=202
+        )
 
     @authed(stations=True)
     async def task_speech(request: web.Request, device: DeviceRecord) -> web.Response:
@@ -431,8 +475,7 @@ def register_native_routes(
         if not _PROTOCOL_ID.match(protocol_id) or data is None:
             return _error(400, "Expected JSON for a known protocol.")
         try:
-            return web.json_response(service.run_protocol(protocol_id, request_id_of(data), device.label),
-                                     status=202)
+            return web.json_response(service.run_protocol(protocol_id, request_id_of(data), device.label), status=202)
         except LookupError as exc:
             return _error(404, str(exc))
         except ValueError as exc:
@@ -440,8 +483,11 @@ def register_native_routes(
 
     # ------------------------------------------------------------ reminders
     def reminder_payload() -> dict[str, Any]:
-        return {"version": companion.reminders.version, "time_zone": companion.zone.current(),
-                "reminders": [r.public() for r in companion.reminders.list()]}
+        return {
+            "version": companion.reminders.version,
+            "time_zone": companion.zone.current(),
+            "reminders": [r.public() for r in companion.reminders.list()],
+        }
 
     @authed
     async def reminders_list(request: web.Request, device: DeviceRecord) -> web.Response:
@@ -505,7 +551,7 @@ def register_native_routes(
                     occurrence = data.get("occurrence")
                     if not isinstance(occurrence, (int, float)):
                         return _error(400, "'occurrence' must be epoch seconds.")
-                    rang_before = (store.get(reminder_id).fire_count if store.get(reminder_id) else 0)
+                    rang_before = store.get(reminder_id).fire_count if store.get(reminder_id) else 0
                     reminder = store.fired(reminder_id, float(occurrence))
                     if reminder.fire_count > rang_before:
                         companion.presence.notify("reminder")
@@ -514,6 +560,7 @@ def register_native_routes(
                 status = 404 if str(exc) == "Unknown reminder." else 400
                 return _error(status, str(exc), "invalid_reminder")
             return web.json_response({"reminder": reminder.public(), "version": store.version})
+
         return handler
 
     @authed
@@ -526,8 +573,15 @@ def register_native_routes(
         if lang != companion.pc_voice_language:
             # The PC's Piper voice can't say it (a Hebrew reminder, an English voice): the phone's own
             # voice does, from the same sentence -- which it also has from the reminder sync.
-            return web.json_response({"error": "Garvis's voice on the PC doesn't speak this language.",
-                                      "code": "voice_language", "spoken": spoken, "lang": lang}, status=415)
+            return web.json_response(
+                {
+                    "error": "Garvis's voice on the PC doesn't speak this language.",
+                    "code": "voice_language",
+                    "spoken": spoken,
+                    "lang": lang,
+                },
+                status=415,
+            )
         try:
             audio = await service.synthesize_text(spoken)
         except TextToSpeechError as exc:
@@ -566,14 +620,20 @@ def register_native_routes(
         try:
             seen = max(0, int(data.get("version", 0)))
             wait = min(VOICE_POLL_MAX_SECONDS, max(0.0, float(data.get("wait", 0))))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return _error(400, "Invalid 'version' or 'wait'.")
         epoch = str(data.get("epoch", ""))[:32]
         if not ownership.bound:  # normally AgentBridge binds it to this same loop at startup
             ownership.bind(asyncio.get_running_loop())
-        view = ownership.heartbeat(device.id, kind=device.kind, label=endpoint_label(device),
-                                   want_standby=None if want is None else want == "standby",
-                                   mic_open=mic, seen_version=seen, seen_epoch=epoch)
+        view = ownership.heartbeat(
+            device.id,
+            kind=device.kind,
+            label=endpoint_label(device),
+            want_standby=None if want is None else want == "standby",
+            mic_open=mic,
+            seen_version=seen,
+            seen_epoch=epoch,
+        )
         if wait > 0 and epoch == view["epoch"] and view["version"] <= seen:
             # `lease_seconds` stays the lease as renewed on arrival: the client counts it from
             # when it SENT this request, which is never later -- so it always stops first.
@@ -590,20 +650,36 @@ def register_native_routes(
             return _error(400, "Expected JSON with 'mode': 'active' or 'priority'.")
         reason, ref = data.get("reason", ""), data.get("ref", "")
         explicit, max_seconds = data.get("explicit", False), data.get("max_seconds")
-        if (not isinstance(reason, str) or (reason and not _CLAIM_REASON.match(reason))
-                or not isinstance(ref, str) or len(ref) > 64 or not isinstance(explicit, bool)
-                or (max_seconds is not None and (isinstance(max_seconds, bool)
-                                                 or not isinstance(max_seconds, (int, float)) or max_seconds <= 0))):
+        if (
+            not isinstance(reason, str)
+            or (reason and not _CLAIM_REASON.match(reason))
+            or not isinstance(ref, str)
+            or len(ref) > 64
+            or not isinstance(explicit, bool)
+            or (
+                max_seconds is not None
+                and (isinstance(max_seconds, bool) or not isinstance(max_seconds, (int, float)) or max_seconds <= 0)
+            )
+        ):
             return _error(400, "Invalid claim.")
         if data["mode"] == "priority" and device.kind == "station":
             # Reminders and calls ring on the phone; a station only ever converses.
             return _error(403, "Eye Station can't take priority.", "station_scope")
         try:
-            claim, view = ownership.claim(device.id, data["mode"], reason, ref=ref, explicit=explicit,
-                                          max_seconds=max_seconds, kind=device.kind, label=endpoint_label(device))
+            claim, view = ownership.claim(
+                device.id,
+                data["mode"],
+                reason,
+                ref=ref,
+                explicit=explicit,
+                max_seconds=max_seconds,
+                kind=device.kind,
+                label=endpoint_label(device),
+            )
         except VoiceClaimRefused as exc:
-            return web.json_response({"error": str(exc), "code": exc.code, "voice": ownership.view(device.id)},
-                                     status=409)
+            return web.json_response(
+                {"error": str(exc), "code": exc.code, "voice": ownership.view(device.id)}, status=409
+            )
         return web.json_response({"claim": claim.public(), "voice": view})
 
     @authed(stations=True)
@@ -625,8 +701,14 @@ def register_native_routes(
     @authed
     async def images_list(request: web.Request, device: DeviceRecord) -> web.Response:
         images = companion.images
-        return web.json_response({"version": images.version, "available": images.available,
-                                  "reason": images.unavailable_reason, "images": [j.public() for j in images.list()]})
+        return web.json_response(
+            {
+                "version": images.version,
+                "available": images.available,
+                "reason": images.unavailable_reason,
+                "images": [j.public() for j in images.list()],
+            }
+        )
 
     @authed
     async def image_create(request: web.Request, device: DeviceRecord) -> web.Response:
@@ -667,6 +749,7 @@ def register_native_routes(
                 return web.json_response({"deleted": True})
             except ImageError as exc:
                 return _error(404 if "Unknown" in str(exc) else 409, str(exc))
+
         return handler
 
     # ---------------------------------------------------------- phone actions
@@ -676,8 +759,9 @@ def register_native_routes(
         if data is None or not isinstance(data.get("capabilities"), list):
             return _error(400, "Expected JSON with a 'capabilities' list.")
         capabilities = [c for c in data["capabilities"] if isinstance(c, str) and c in CAPABILITIES]
-        companion.phone.report(device.id, capabilities, paused=bool(data.get("paused")),
-                               accessibility=bool(data.get("accessibility")))
+        companion.phone.report(
+            device.id, capabilities, paused=bool(data.get("paused")), accessibility=bool(data.get("accessibility"))
+        )
         return web.json_response(companion.phone.describe())
 
     @authed
@@ -689,8 +773,9 @@ def register_native_routes(
         result_data = data.get("data") if isinstance(data.get("data"), dict) else None
         if result_data is not None and len(str(result_data)) > 20000:
             result_data = {"text": str(result_data.get("text", ""))[:20000]}
-        if not companion.phone.complete(device.id, action_id, data["status"], str(data.get("message") or ""),
-                                        result_data):
+        if not companion.phone.complete(
+            device.id, action_id, data["status"], str(data.get("message") or ""), result_data
+        ):
             return _error(404, "That action is no longer waiting for a result.", "gone")
         return web.json_response({"ok": True})
 

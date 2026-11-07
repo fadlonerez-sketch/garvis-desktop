@@ -24,6 +24,7 @@ Tools (app/tools/desktop.py) only ever call this class. It:
 The backend is created lazily on first use via `backend_factory`, so merely
 constructing the agent (tests, non-Windows machines) never loads user32.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -112,7 +113,7 @@ class DesktopController:
         self._window_mover = workspace.move_window_to_current
 
     async def window_location(self, handle: int) -> str:
-        """"user", "garvis_workspace", "other" or "unknown"."""
+        """ "user", "garvis_workspace", "other" or "unknown"."""
         workspace = getattr(self, "_workspace", None)
         if workspace is None:
             info = await self.window_info(handle)
@@ -329,8 +330,12 @@ class DesktopController:
         wanted = "garvis_workspace" if desktop == "garvis_workspace" else "user"
         if desktop == "garvis_workspace" and windows and all(v == "unknown" for v in locations.values()):
             raise DesktopError("Garvis's workspace desktop isn't available, so there are no windows on it.")
-        candidates = [w for w in windows if locations.get(w.handle) == wanted
-                      or (wanted == "user" and locations.get(w.handle) == "unknown" and w.on_current_desktop)]
+        candidates = [
+            w
+            for w in windows
+            if locations.get(w.handle) == wanted
+            or (wanted == "user" and locations.get(w.handle) == "unknown" and w.on_current_desktop)
+        ]
         where = "Garvis's workspace" if wanted == "garvis_workspace" else "your desktop"
         if query:
             window = match_window(query, candidates)
@@ -383,10 +388,13 @@ class DesktopController:
                 time.sleep(0.5)
                 still_open = backend.window_info(window.handle)
                 return {
-                    "window": window.title, "app": window.process_name, "action": "close",
+                    "window": window.title,
+                    "app": window.process_name,
+                    "action": "close",
                     "closed": still_open is None,
-                    "note": None if still_open is None else
-                    "The window is still open -- it may be asking to save changes. Use inspect_ui to see the prompt.",
+                    "note": None
+                    if still_open is None
+                    else "The window is still open -- it may be asking to save changes. Use inspect_ui to see the prompt.",
                 }
             state = WindowState(action)
             if not window.on_current_desktop and state != WindowState.MINIMIZE:
@@ -401,8 +409,13 @@ class DesktopController:
             backend.set_window_state(window.handle, state)
             time.sleep(_SETTLE_SECONDS * 4)
             after = backend.window_info(window.handle) or window
-            return {"window": after.title, "app": after.process_name, "action": str(action),
-                    "minimized": after.is_minimized, "on_current_desktop": after.on_current_desktop}
+            return {
+                "window": after.title,
+                "app": after.process_name,
+                "action": str(action),
+                "minimized": after.is_minimized,
+                "on_current_desktop": after.on_current_desktop,
+            }
 
         async with self._lock:
             result = await self._run(_do)
@@ -434,7 +447,9 @@ class DesktopController:
         unchanged. Raises DesktopError if the workspace can't be used."""
         workspace = getattr(self, "_workspace", None)
         if workspace is None:
-            raise DesktopError("Garvis's workspace desktop isn't available, so the app was not started in the background.")
+            raise DesktopError(
+                "Garvis's workspace desktop isn't available, so the app was not started in the background."
+            )
         try:
             await workspace.ensure()
         except Exception as exc:
@@ -486,12 +501,18 @@ class DesktopController:
         if location != "garvis_workspace":
             raise DesktopError(f"'{window.title}' did not stay on Garvis's workspace (it is on: {location}).")
         after = await self._run(lambda backend: backend.foreground_window())
-        log_extra(logger, 20, "desktop.app_started_in_workspace", app=app, title=window.title,
-                  focus_returned=focus_returned)
+        log_extra(
+            logger, 20, "desktop.app_started_in_workspace", app=app, title=window.title, focus_returned=focus_returned
+        )
         return {
-            "window": window.title, "app": window.process_name, "handle": window.handle, "new_window": new_window,
-            "target_desktop": "garvis_workspace", "on_workspace": True,
-            "user_focus_unchanged": user_foreground is None or (after is not None and after.handle == user_foreground.handle),
+            "window": window.title,
+            "app": window.process_name,
+            "handle": window.handle,
+            "new_window": new_window,
+            "target_desktop": "garvis_workspace",
+            "on_workspace": True,
+            "user_focus_unchanged": user_foreground is None
+            or (after is not None and after.handle == user_foreground.handle),
             "focus_had_to_be_returned": focus_returned,
         }
 
@@ -506,9 +527,13 @@ class DesktopController:
             await self._run(self._ensure_input_possible)
             activated = await self._activate(window, from_workspace=True)
         focused: WindowInfo = activated["window"]
-        return {"window": focused.title, "app": focused.process_name, "focused": True,
-                "on_user_desktop": focused.on_current_desktop,
-                "moved_from_other_desktop": activated["moved_from_other_desktop"]}
+        return {
+            "window": focused.title,
+            "app": focused.process_name,
+            "focused": True,
+            "on_user_desktop": focused.on_current_desktop,
+            "moved_from_other_desktop": activated["moved_from_other_desktop"],
+        }
 
     async def focus_window(self, query: str, bring_from_workspace: bool = False) -> WindowInfo:
         async with self._lock:
@@ -554,12 +579,24 @@ class DesktopController:
             await self._run(self._ensure_input_possible)
             activated = await self._activate(window, from_workspace=True)
         focused: WindowInfo = activated["window"]
-        log_extra(logger, 20, "desktop.app_window_ready", app=app, title=focused.title, new_window=new_window,
-                  moved=activated["moved_from_other_desktop"])
+        log_extra(
+            logger,
+            20,
+            "desktop.app_window_ready",
+            app=app,
+            title=focused.title,
+            new_window=new_window,
+            moved=activated["moved_from_other_desktop"],
+        )
         return {
-            "window": focused.title, "app": focused.process_name, "handle": focused.handle,
-            "new_window": new_window, "moved_from_other_desktop": activated["moved_from_other_desktop"],
-            "focused": True, "target_desktop": "user_desktop", "on_user_desktop": focused.on_current_desktop,
+            "window": focused.title,
+            "app": focused.process_name,
+            "handle": focused.handle,
+            "new_window": new_window,
+            "moved_from_other_desktop": activated["moved_from_other_desktop"],
+            "focused": True,
+            "target_desktop": "user_desktop",
+            "on_user_desktop": focused.on_current_desktop,
         }
 
     async def switch_to_previous_window(self) -> WindowInfo:
@@ -602,9 +639,7 @@ class DesktopController:
             await self._run(_do)
         log_extra(logger, 20, "desktop.mouse_move", x=x, y=y)
 
-    async def click(
-        self, x: int | None, y: int | None, button: MouseButton = MouseButton.LEFT, count: int = 1
-    ) -> dict:
+    async def click(self, x: int | None, y: int | None, button: MouseButton = MouseButton.LEFT, count: int = 1) -> dict:
         if (x is None) != (y is None):
             raise DesktopError("Give both x and y, or neither (to click at the current cursor position).")
 
@@ -620,7 +655,8 @@ class DesktopController:
             cx, cy = backend.cursor_position()
             foreground = backend.foreground_window()
             return {
-                "x": cx, "y": cy,
+                "x": cx,
+                "y": cy,
                 "foreground_window": foreground.title if foreground else None,
                 "foreground_app": foreground.process_name if foreground else None,
             }
@@ -708,7 +744,9 @@ class DesktopController:
         log_extra(logger, 20, "desktop.keyboard_type", length=len(text), window=result["window"])
         return result
 
-    async def press_key(self, key: str, repeat: int = 1, window: str | None = None, bring_from_workspace: bool = False) -> dict:
+    async def press_key(
+        self, key: str, repeat: int = 1, window: str | None = None, bring_from_workspace: bool = False
+    ) -> dict:
         if not 1 <= repeat <= _MAX_REPEAT:
             raise DesktopError(f"repeat must be between 1 and {_MAX_REPEAT}.")
         try:
@@ -729,7 +767,9 @@ class DesktopController:
         log_extra(logger, 20, "desktop.keyboard_press", key=key, repeat=repeat, window=result["window"])
         return result
 
-    async def hotkey(self, keys: str | list[str], window: str | None = None, bring_from_workspace: bool = False) -> dict:
+    async def hotkey(
+        self, keys: str | list[str], window: str | None = None, bring_from_workspace: bool = False
+    ) -> dict:
         try:
             parsed = parse_hotkey(keys)
         except ValueError as exc:
@@ -771,8 +811,10 @@ class DesktopController:
             if area is not None:
                 screen = backend.virtual_screen()
                 region = Rect(
-                    left=max(area.left, screen.left), top=max(area.top, screen.top),
-                    right=min(area.right, screen.right), bottom=min(area.bottom, screen.bottom),
+                    left=max(area.left, screen.left),
+                    top=max(area.top, screen.top),
+                    right=min(area.right, screen.right),
+                    bottom=min(area.bottom, screen.bottom),
                 )
                 if region.width <= 0 or region.height <= 0:
                     raise DesktopError("That region is outside the screen.")
@@ -790,8 +832,10 @@ class DesktopController:
                 screen = backend.virtual_screen()
                 r = captured_window.rect
                 region = Rect(
-                    left=max(r.left, screen.left), top=max(r.top, screen.top),
-                    right=min(r.right, screen.right), bottom=min(r.bottom, screen.bottom),
+                    left=max(r.left, screen.left),
+                    top=max(r.top, screen.top),
+                    right=min(r.right, screen.right),
+                    bottom=min(r.bottom, screen.bottom),
                 )
             width, height = backend.capture_screen(path, region)
             self._prune_screenshots()
@@ -806,5 +850,7 @@ class DesktopController:
             }
 
         result = await self._run(_do)
-        log_extra(logger, 20, "desktop.screen_capture", path=result["path"], width=result["width"], height=result["height"])
+        log_extra(
+            logger, 20, "desktop.screen_capture", path=result["path"], width=result["width"], height=result["height"]
+        )
         return result

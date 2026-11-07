@@ -1,5 +1,6 @@
 """Tests for DesktopController (app/desktop/controller.py) against an
 in-memory fake backend -- validation, window matching, focus recovery."""
+
 from __future__ import annotations
 
 import pytest
@@ -18,8 +19,11 @@ def backend() -> FakeDesktopBackend:
 @pytest.fixture
 def controller(backend, tmp_path) -> DesktopController:
     return DesktopController(
-        backend_factory=lambda: backend, screenshot_dir=tmp_path / "shots", max_type_chars=50,
-        screenshot_keep=2, own_pid=GARVIS_PID,
+        backend_factory=lambda: backend,
+        screenshot_dir=tmp_path / "shots",
+        max_type_chars=50,
+        screenshot_keep=2,
+        own_pid=GARVIS_PID,
     )
 
 
@@ -100,8 +104,13 @@ async def test_scroll_bounds(controller, backend):
 async def test_type_text_goes_to_focused_window(controller, backend):
     result = await controller.type_text("hello")
     assert backend.calls == [("type", "hello", 1)]
-    assert result == {"typed_chars": 5, "window": "Untitled - Notepad", "app": "Notepad.exe", "handle": 1,
-                      "target_verified": True}
+    assert result == {
+        "typed_chars": 5,
+        "window": "Untitled - Notepad",
+        "app": "Notepad.exe",
+        "handle": 1,
+        "target_verified": True,
+    }
 
 
 async def test_type_text_length_cap(controller, backend):

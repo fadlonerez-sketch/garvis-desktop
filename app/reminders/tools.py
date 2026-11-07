@@ -6,6 +6,7 @@ phone reports its IANA zone, GARVIS_REMINDERS_TIMEZONE overrides it. The
 deterministic parsing lives in schedule.py -- the model passes the words
 ("tomorrow", "20:00", "sunday"), never a computed timestamp.
 """
+
 from __future__ import annotations
 
 import time
@@ -40,8 +41,14 @@ class ReminderZone:
 
 
 def _summary(reminder: Reminder) -> dict:
-    data = {"id": reminder.id, "text": reminder.text, "kind": reminder.kind, "status": reminder.status,
-            "when": describe(reminder.due_at, reminder.tz) if reminder.due_at else "", "repeat": reminder.repeat}
+    data = {
+        "id": reminder.id,
+        "text": reminder.text,
+        "kind": reminder.kind,
+        "status": reminder.status,
+        "when": describe(reminder.due_at, reminder.tz) if reminder.due_at else "",
+        "repeat": reminder.repeat,
+    }
     if reminder.repeat == "weekly":
         data["days"] = reminder.days
     if reminder.repeat != "none":
@@ -52,8 +59,13 @@ def _summary(reminder: Reminder) -> dict:
 class _Base(Tool):
     risk_level = RiskLevel.LOW
 
-    def __init__(self, store: ReminderStore, zone: ReminderZone,
-                 phone_ready: Callable[[], bool] = lambda: True, clock: Callable[[], float] = time.time) -> None:
+    def __init__(
+        self,
+        store: ReminderStore,
+        zone: ReminderZone,
+        phone_ready: Callable[[], bool] = lambda: True,
+        clock: Callable[[], float] = time.time,
+    ) -> None:
         self._store = store
         self._zone = zone
         self._phone_ready = phone_ready
@@ -66,17 +78,24 @@ class _Base(Tool):
         return found
 
     def _note(self) -> str:
-        return "" if self._phone_ready() else (
-            "No phone with the Garvis app is paired, so nothing will ring until one is paired.")
+        return (
+            ""
+            if self._phone_ready()
+            else ("No phone with the Garvis app is paired, so nothing will ring until one is paired.")
+        )
 
-    def _schedule_args(self, *, time_: str | None, date: str | None, in_minutes: float | None, repeat: str,
-                       weekdays: list[str] | None) -> dict:
+    def _schedule_args(
+        self, *, time_: str | None, date: str | None, in_minutes: float | None, repeat: str, weekdays: list[str] | None
+    ) -> dict:
         """-> keyword arguments for ReminderStore.create/update."""
         tz = self._zone.current()
         now = self._clock()
         if repeat == "none":
-            return {"tz": tz, "due_at": resolve_once(tz=tz, now=now, time=time_, date=date, in_minutes=in_minutes),
-                    "repeat": "none"}
+            return {
+                "tz": tz,
+                "due_at": resolve_once(tz=tz, now=now, time=time_, date=date, in_minutes=in_minutes),
+                "repeat": "none",
+            }
         if in_minutes is not None or not time_:
             raise ScheduleError("A repeating reminder needs a time of day (HH:MM).")
         days = list(weekdays or [])
@@ -90,13 +109,18 @@ class _Base(Tool):
 class CreateReminderInput(BaseModel):
     text: str = Field(description="What to remind the user about, phrased for them, e.g. 'Take your book'.")
     time: str | None = Field(default=None, description="Time of day, HH:MM 24-hour (e.g. '20:00', '07:00').")
-    date: str | None = Field(default=None, description="'today', 'tomorrow', a weekday name or YYYY-MM-DD. "
-                             "Omit for the next time `time` comes round.")
+    date: str | None = Field(
+        default=None,
+        description="'today', 'tomorrow', a weekday name or YYYY-MM-DD. Omit for the next time `time` comes round.",
+    )
     in_minutes: float | None = Field(default=None, description="Relative delay instead of time/date, e.g. 30.")
     repeat: Repeat = Field(default="none")
     weekdays: list[str] | None = Field(default=None, description="For repeat='weekly': e.g. ['sunday'].")
-    call: bool = Field(default=False, description="True when the user asks to be CALLED: the phone rings with "
-                       "an incoming Garvis call and Garvis speaks the reminder. False = a notification.")
+    call: bool = Field(
+        default=False,
+        description="True when the user asks to be CALLED: the phone rings with "
+        "an incoming Garvis call and Garvis speaks the reminder. False = a notification.",
+    )
 
 
 class CreateReminderTool(_Base):
@@ -112,10 +136,12 @@ class CreateReminderTool(_Base):
 
     async def execute(self, args: CreateReminderInput) -> ToolResult:
         try:
-            schedule = self._schedule_args(time_=args.time, date=args.date, in_minutes=args.in_minutes,
-                                           repeat=args.repeat, weekdays=args.weekdays)
-            reminder = self._store.create(args.text, kind="call" if args.call else "notify", origin="assistant",
-                                          **schedule)
+            schedule = self._schedule_args(
+                time_=args.time, date=args.date, in_minutes=args.in_minutes, repeat=args.repeat, weekdays=args.weekdays
+            )
+            reminder = self._store.create(
+                args.text, kind="call" if args.call else "notify", origin="assistant", **schedule
+            )
         except (ReminderError, ScheduleError) as exc:
             return ToolResult.fail(str(exc))
         result = _summary(reminder)
@@ -165,8 +191,15 @@ class UpdateReminderTool(_Base):
             if any(v is not None for v in (args.time, args.date, args.in_minutes, args.repeat, args.weekdays)):
                 repeat = args.repeat or ("none" if args.in_minutes is not None else reminder.repeat)
                 time_ = args.time or (reminder.local_time if repeat != "none" else None)
-                changes.update(self._schedule_args(time_=time_, date=args.date, in_minutes=args.in_minutes,
-                                                   repeat=repeat, weekdays=args.weekdays or reminder.days or None))
+                changes.update(
+                    self._schedule_args(
+                        time_=time_,
+                        date=args.date,
+                        in_minutes=args.in_minutes,
+                        repeat=repeat,
+                        weekdays=args.weekdays or reminder.days or None,
+                    )
+                )
             reminder = self._store.update(reminder.id, **changes)
         except (ReminderError, ScheduleError) as exc:
             return ToolResult.fail(str(exc))
@@ -219,8 +252,17 @@ class SnoozeReminderTool(_Base):
         return ToolResult.ok(_summary(reminder))
 
 
-def build_reminder_tools(store: ReminderStore, zone: ReminderZone,
-                         phone_ready: Callable[[], bool] = lambda: True) -> list[Tool]:
-    return [cls(store, zone, phone_ready) for cls in (CreateReminderTool, ListRemindersTool, UpdateReminderTool,
-                                                       CancelReminderTool, CompleteReminderTool, SnoozeReminderTool)]
-
+def build_reminder_tools(
+    store: ReminderStore, zone: ReminderZone, phone_ready: Callable[[], bool] = lambda: True
+) -> list[Tool]:
+    return [
+        cls(store, zone, phone_ready)
+        for cls in (
+            CreateReminderTool,
+            ListRemindersTool,
+            UpdateReminderTool,
+            CancelReminderTool,
+            CompleteReminderTool,
+            SnoozeReminderTool,
+        )
+    ]

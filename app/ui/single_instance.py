@@ -16,6 +16,7 @@ milliseconds instead of loading the whole app.
 - If that window is hung, or never appears, the launch reports it instead
   of starting a second Garvis.
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -106,10 +107,14 @@ class ForwardResult:
         if self.status == "activated":
             return "Garvis is already running; brought its window to the front."
         if self.status == "not_responding":
-            return (f"Garvis is already running (process {self.pid}) but its window is not responding. "
-                    "Wait a moment, or end that process in Task Manager and start Garvis again.")
-        return ("Garvis is already running but its window couldn't be found (it may still be starting). "
-                "Try again in a few seconds.")
+            return (
+                f"Garvis is already running (process {self.pid}) but its window is not responding. "
+                "Wait a moment, or end that process in Task Manager and start Garvis again."
+            )
+        return (
+            "Garvis is already running but its window couldn't be found (it may still be starting). "
+            "Try again in a few seconds."
+        )
 
 
 class InstanceLock:
@@ -135,8 +140,13 @@ class InstanceLock:
             self._handle = 0
 
 
-def forward_activation(api: Win32Api | None = None, wait_seconds: float = 10.0, poll_seconds: float = 0.25,
-                       clock=time.monotonic, sleep=time.sleep) -> ForwardResult:
+def forward_activation(
+    api: Win32Api | None = None,
+    wait_seconds: float = 10.0,
+    poll_seconds: float = 0.25,
+    clock=time.monotonic,
+    sleep=time.sleep,
+) -> ForwardResult:
     """Ask the running instance to show its window."""
     api = api or Win32Api()
     deadline = clock() + wait_seconds

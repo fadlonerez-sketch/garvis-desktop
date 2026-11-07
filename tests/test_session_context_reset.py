@@ -8,6 +8,7 @@ AgentBridge._start_session_async calls Agent.reset_conversation() at each
 new session. That drops the user/assistant/tool history and keeps the
 system prompt, which includes long-term memory.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -69,11 +70,13 @@ async def test_messages_accumulate_inside_one_session(tmp_path):
 
 @pytest.mark.asyncio
 async def test_new_session_does_not_contain_previous_session_messages(tmp_path):
-    llm = _RecordingLLM([
-        tool_call_response("calculator", {"expression": "2 + 2"}),
-        final_response("4"),
-        final_response("hello again"),
-    ])
+    llm = _RecordingLLM(
+        [
+            tool_call_response("calculator", {"expression": "2 + 2"}),
+            final_response("4"),
+            final_response("hello again"),
+        ]
+    )
     agent = _agent(tmp_path, llm)
     await agent.handle_user_message("secret from session one: 2 + 2")
 
@@ -152,9 +155,14 @@ class _FakeSession:
 
 
 def _bridge(tmp_path) -> AgentBridge:
-    return AgentBridge(settings=Settings(
-        _env_file=None, memory_db_path=tmp_path / "b.db", llm_provider="tiered", omniroute_api_key="fake-test-key",
-    ))
+    return AgentBridge(
+        settings=Settings(
+            _env_file=None,
+            memory_db_path=tmp_path / "b.db",
+            llm_provider="tiered",
+            omniroute_api_key="fake-test-key",
+        )
+    )
 
 
 def _run_on_bridge_loop(bridge: AgentBridge, coro):

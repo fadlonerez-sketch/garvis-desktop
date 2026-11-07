@@ -8,6 +8,7 @@ duck-typed stand-in rather than constructing a real AgentBridge, since a
 real one spins up an LLM-provider-backed Agent, a background asyncio loop,
 and the voice pipeline -- none of which this logging logic touches.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -36,13 +37,9 @@ def test_assistant_message_dispatch_is_logged_with_fingerprint(caplog):
     text = "Acknowledged, Sir. Your name is Alex."
 
     with caplog.at_level(logging.INFO, logger="garvis.ui.agent_bridge"):
-        AgentBridge._on_event(
-            fake, AgentEvent(type=EventType.ASSISTANT_MESSAGE, payload={"text": text})
-        )
+        AgentBridge._on_event(fake, AgentEvent(type=EventType.ASSISTANT_MESSAGE, payload={"text": text}))
 
-    records = [
-        r for r in caplog.records if r.getMessage() == "agent_bridge.assistant_message_dispatch"
-    ]
+    records = [r for r in caplog.records if r.getMessage() == "agent_bridge.assistant_message_dispatch"]
     assert len(records) == 1
     fields = records[0].extra_fields
     assert fields["seq"] == 1
@@ -65,9 +62,7 @@ def test_repeated_dispatch_of_identical_content_is_distinguishable_in_logs(caplo
         AgentBridge._on_event(fake, event)
         AgentBridge._on_event(fake, event)
 
-    records = [
-        r for r in caplog.records if r.getMessage() == "agent_bridge.assistant_message_dispatch"
-    ]
+    records = [r for r in caplog.records if r.getMessage() == "agent_bridge.assistant_message_dispatch"]
     assert [r.extra_fields["seq"] for r in records] == [1, 2]
     assert records[0].extra_fields["content_hash"] == records[1].extra_fields["content_hash"]
     assert fake.assistant_message.emit.call_count == 2
@@ -85,9 +80,7 @@ def test_user_message_dispatch_is_logged_with_fingerprint(caplog):
     text = "what is two plus two"
 
     with caplog.at_level(logging.INFO, logger="garvis.ui.agent_bridge"):
-        AgentBridge._on_event(
-            fake, AgentEvent(type=EventType.USER_MESSAGE, payload={"text": text})
-        )
+        AgentBridge._on_event(fake, AgentEvent(type=EventType.USER_MESSAGE, payload={"text": text}))
 
     records = [r for r in caplog.records if r.getMessage() == "agent_bridge.user_message_dispatch"]
     assert len(records) == 1

@@ -1,5 +1,6 @@
 """Image jobs (with a fake provider and the Cloudflare adapter on a mocked
 transport -- no network) and the phone-action broker/tool."""
+
 from __future__ import annotations
 
 import asyncio
@@ -48,17 +49,22 @@ def test_no_provider_unless_configured():
     assert provider is None and "GARVIS_IMAGE_PROVIDER" in reason
     provider, reason = build_image_provider(Settings(_env_file=None, image_provider="cloudflare"))
     assert provider is None and "ACCOUNT_ID" in reason
-    provider, reason = build_image_provider(Settings(_env_file=None, image_provider="openai",
-                                                     cloudflare_account_id="a", cloudflare_api_token="t"))
+    provider, reason = build_image_provider(
+        Settings(_env_file=None, image_provider="openai", cloudflare_account_id="a", cloudflare_api_token="t")
+    )
     assert provider is None and "Unknown" in reason
-    provider, _ = build_image_provider(Settings(_env_file=None, image_provider="cloudflare",
-                                                cloudflare_account_id="acct", cloudflare_api_token="secret"))
+    provider, _ = build_image_provider(
+        Settings(
+            _env_file=None, image_provider="cloudflare", cloudflare_account_id="acct", cloudflare_api_token="secret"
+        )
+    )
     assert isinstance(provider, CloudflareImageProvider)
 
 
 def _cloudflare(handler) -> CloudflareImageProvider:
-    return CloudflareImageProvider("acct", "secret-token", model="@cf/black-forest-labs/flux-1-schnell",
-                                   transport=httpx.MockTransport(handler))
+    return CloudflareImageProvider(
+        "acct", "secret-token", model="@cf/black-forest-labs/flux-1-schnell", transport=httpx.MockTransport(handler)
+    )
 
 
 async def test_cloudflare_request_and_json_response():
@@ -78,18 +84,22 @@ async def test_cloudflare_request_and_json_response():
 
 
 async def test_cloudflare_raw_image_response():
-    image = await _cloudflare(lambda r: httpx.Response(200, content=PNG, headers={"content-type": "image/png"})
-                              ).generate("x")
+    image = await _cloudflare(
+        lambda r: httpx.Response(200, content=PNG, headers={"content-type": "image/png"})
+    ).generate("x")
     assert image.mime == "image/png"
 
 
-@pytest.mark.parametrize("response,fragment", [
-    (httpx.Response(401, json={"errors": []}), "token"),
-    (httpx.Response(429, json={}), "limit"),
-    (httpx.Response(400, json={"errors": [{"message": "NSFW"}]}), "NSFW"),
-    (httpx.Response(200, json={"result": {}}), "without an image"),
-    (httpx.Response(200, json={"result": {"image": base64.b64encode(b"not an image").decode()}}), "isn't an image"),
-])
+@pytest.mark.parametrize(
+    "response,fragment",
+    [
+        (httpx.Response(401, json={"errors": []}), "token"),
+        (httpx.Response(429, json={}), "limit"),
+        (httpx.Response(400, json={"errors": [{"message": "NSFW"}]}), "NSFW"),
+        (httpx.Response(200, json={"result": {}}), "without an image"),
+        (httpx.Response(200, json={"result": {"image": base64.b64encode(b"not an image").decode()}}), "isn't an image"),
+    ],
+)
 async def test_cloudflare_failures_are_reported_without_secrets(response, fragment):
     with pytest.raises(ImageProviderError) as info:
         await _cloudflare(lambda r: response).generate("x")

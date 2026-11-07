@@ -4,6 +4,7 @@ The agent core must never import Qt. Instead it publishes ``AgentEvent``
 objects here; the UI subscribes and renders them. This keeps the agent
 usable headlessly (tests, future API layer) while still driving a rich UI.
 """
+
 from __future__ import annotations
 
 import asyncio

@@ -4,6 +4,7 @@ external LLM provider (GARVIS_LLM_PROVIDER, default 'tiered').
 Not part of the automated pytest suite (network + provider-key dependent).
 Run with: python scripts/smoke_test_agent.py
 """
+
 from __future__ import annotations
 
 import asyncio

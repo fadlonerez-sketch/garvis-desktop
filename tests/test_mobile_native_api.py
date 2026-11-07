@@ -6,6 +6,7 @@ and the Tailscale-only remote guard.
 
 In-process aiohttp test server on 127.0.0.1; a real Agent with a gated/
 scripted LLM and fake STT/TTS (no model, desktop, microphone or network)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -74,15 +75,25 @@ async def _start(tmp_path, *, image_provider=None, networks="", remote_access=Fa
     )
     companion.reminders.add_listener(service.poke)
     companion.phone.add_listener(service.poke)
-    companion.images.add_listener(lambda job: service.post_entry("image", image_id=job.id)
-                                  if job.status == "completed" else service.poke())
+    companion.images.add_listener(
+        lambda job: service.post_entry("image", image_id=job.id) if job.status == "completed" else service.poke()
+    )
     pairing = PairingManager(tmp_path / "devices.json")
-    app = create_app(service, pairing, allowed_networks=parse_networks(networks), allowed_hosts=None,
-                     ca_cert_der=None, max_audio_bytes=1_000_000, companion=companion, remote_access=remote_access)
+    app = create_app(
+        service,
+        pairing,
+        allowed_networks=parse_networks(networks),
+        allowed_hosts=None,
+        ca_cert_der=None,
+        max_audio_bytes=1_000_000,
+        companion=companion,
+        remote_access=remote_access,
+    )
     client = TestClient(TestServer(app, host="127.0.0.1"))
     await client.start_server()
-    return _App(client=client, service=service, tasks=tasks, companion=companion, pairing=pairing, llm=llm,
-                stt=stt, tts=tts)
+    return _App(
+        client=client, service=service, tasks=tasks, companion=companion, pairing=pairing, llm=llm, stt=stt, tts=tts
+    )
 
 
 @pytest.fixture
@@ -108,18 +119,35 @@ async def test_hello_is_public_but_says_nothing_private(tmp_path):
         await h.client.close()
 
 
-ROUTES = [("GET", "/api/v1/status"), ("GET", "/api/v1/events"), ("POST", "/api/v1/messages"),
-          ("POST", "/api/v1/voice"), ("GET", "/api/v1/tasks"), ("GET", "/api/v1/tasks/abc"),
-          ("POST", "/api/v1/tasks/abc/cancel"), ("GET", "/api/v1/reminders"), ("POST", "/api/v1/reminders"),
-          ("POST", "/api/v1/reminders/abc/snooze"), ("GET", "/api/v1/images"), ("POST", "/api/v1/images"),
-          ("GET", "/api/v1/images/abc/file"), ("POST", "/api/v1/phone/capabilities"),
-          ("POST", "/api/v1/token/refresh"), ("POST", "/api/v1/unpair"), ("GET", "/api/v1/protocols")]
+ROUTES = [
+    ("GET", "/api/v1/status"),
+    ("GET", "/api/v1/events"),
+    ("POST", "/api/v1/messages"),
+    ("POST", "/api/v1/voice"),
+    ("GET", "/api/v1/tasks"),
+    ("GET", "/api/v1/tasks/abc"),
+    ("POST", "/api/v1/tasks/abc/cancel"),
+    ("GET", "/api/v1/reminders"),
+    ("POST", "/api/v1/reminders"),
+    ("POST", "/api/v1/reminders/abc/snooze"),
+    ("GET", "/api/v1/images"),
+    ("POST", "/api/v1/images"),
+    ("GET", "/api/v1/images/abc/file"),
+    ("POST", "/api/v1/phone/capabilities"),
+    ("POST", "/api/v1/token/refresh"),
+    ("POST", "/api/v1/unpair"),
+    ("GET", "/api/v1/protocols"),
+]
 
 
 @pytest.mark.parametrize("method,path", ROUTES)
 async def test_every_route_needs_a_valid_bearer_token(phone, method, path):
-    for headers in ({}, {"Authorization": "Bearer not-a-token"}, {"Authorization": phone.token},
-                    {"Cookie": f"{COOKIE_NAME}={phone.token}", "X-Garvis-Client": "1"}):
+    for headers in (
+        {},
+        {"Authorization": "Bearer not-a-token"},
+        {"Authorization": phone.token},
+        {"Cookie": f"{COOKIE_NAME}={phone.token}", "X-Garvis-Client": "1"},
+    ):
         response = await phone.client.request(method, path, headers=headers, json={})
         assert response.status == 401, (headers, path)
         assert (await response.json())["code"] == "unpaired"
@@ -162,8 +190,11 @@ async def test_status_reports_state_features_and_time_zone(phone):
     response = await phone.client.get("/api/v1/status", headers=phone.auth(**{"X-Garvis-Timezone": "Asia/Jerusalem"}))
     data = await response.json()
     assert data["garvis"]["state"] == "online"
-    assert data["features"]["images"] == {"available": False, "provider": "",
-                                          "reason": "Image generation isn't set up."}
+    assert data["features"]["images"] == {
+        "available": False,
+        "provider": "",
+        "reason": "Image generation isn't set up.",
+    }
     assert data["time_zone"] == "Asia/Jerusalem"
     assert data["token_expires_at"] > time.time()
 
@@ -221,8 +252,13 @@ async def test_cancel_a_running_task(tmp_path):
 
 async def test_events_long_poll_waits_and_wakes(phone):
     snapshot = await _events(phone)
-    known = {"after": snapshot["last_seq"], "epoch": snapshot["epoch"], "rv": snapshot["reminders_version"],
-             "iv": snapshot["images_version"], "tv": snapshot["tasks_version"]}
+    known = {
+        "after": snapshot["last_seq"],
+        "epoch": snapshot["epoch"],
+        "rv": snapshot["reminders_version"],
+        "iv": snapshot["images_version"],
+        "tv": snapshot["tasks_version"],
+    }
     started = time.monotonic()
     await _events(phone, **{**known, "after": known.pop("after"), "wait": 0.3})
     assert time.monotonic() - started >= 0.25  # nothing new: it waited
@@ -233,9 +269,15 @@ async def test_events_long_poll_waits_and_wakes(phone):
 
     asyncio.ensure_future(later())
     started = time.monotonic()
-    snapshot2 = await _events(phone, after=snapshot["last_seq"], epoch=snapshot["epoch"],
-                              rv=snapshot["reminders_version"], iv=snapshot["images_version"],
-                              tv=snapshot["tasks_version"], wait=5)
+    snapshot2 = await _events(
+        phone,
+        after=snapshot["last_seq"],
+        epoch=snapshot["epoch"],
+        rv=snapshot["reminders_version"],
+        iv=snapshot["images_version"],
+        tv=snapshot["tasks_version"],
+        wait=5,
+    )
     assert time.monotonic() - started < 3
     assert snapshot2["reminders_version"] == snapshot["reminders_version"] + 1
 
@@ -260,8 +302,9 @@ async def test_voice_upload_is_transcribed_once_per_request_id(phone):
 
 
 async def test_voice_rejects_bad_audio(phone):
-    response = await phone.client.post("/api/v1/voice", data=b"garbage",
-                                       headers=phone.auth(**{"Content-Type": "audio/wav"}))
+    response = await phone.client.post(
+        "/api/v1/voice", data=b"garbage", headers=phone.auth(**{"Content-Type": "audio/wav"})
+    )
     assert response.status == 415 and (await response.json())["code"] == "audio_unsupported"
     response = await phone.client.post("/api/v1/voice", data=b"x", headers=phone.auth(**{"Content-Type": "audio/ogg"}))
     assert response.status == 415
@@ -270,12 +313,17 @@ async def test_voice_rejects_bad_audio(phone):
 # ---------------------------------------------------------------- reminders
 async def test_reminder_lifecycle_over_the_api(phone):
     due = time.time() + 3600
-    created = await phone.post("/api/v1/reminders", {"text": "Meeting", "kind": "call", "due_at": due,
-                                                     "tz": "Asia/Jerusalem", "request_id": "rem-0000001"})
+    created = await phone.post(
+        "/api/v1/reminders",
+        {"text": "Meeting", "kind": "call", "due_at": due, "tz": "Asia/Jerusalem", "request_id": "rem-0000001"},
+    )
     assert created.status == 201
     reminder = (await created.json())["reminder"]
-    duplicate = await (await phone.post("/api/v1/reminders", {"text": "Meeting", "kind": "call", "due_at": due,
-                                                              "request_id": "rem-0000001"})).json()
+    duplicate = await (
+        await phone.post(
+            "/api/v1/reminders", {"text": "Meeting", "kind": "call", "due_at": due, "request_id": "rem-0000001"}
+        )
+    ).json()
     assert duplicate["reminder"]["id"] == reminder["id"]
     listed = await (await phone.get("/api/v1/reminders")).json()
     assert [r["id"] for r in listed["reminders"]] == [reminder["id"]]
@@ -288,8 +336,9 @@ async def test_reminder_lifecycle_over_the_api(phone):
     again = await (await phone.post(f"/api/v1/reminders/{reminder['id']}/fired", {"occurrence": occurrence})).json()
     assert again["reminder"]["fire_count"] == 1
 
-    updated = await phone.post(f"/api/v1/reminders/{reminder['id']}",
-                               {"repeat": "weekly", "local_time": "09:00", "days": [6]})
+    updated = await phone.post(
+        f"/api/v1/reminders/{reminder['id']}", {"repeat": "weekly", "local_time": "09:00", "days": [6]}
+    )
     assert (await updated.json())["reminder"]["repeat"] == "weekly"
     cancelled = await (await phone.post(f"/api/v1/reminders/{reminder['id']}/cancel")).json()
     assert cancelled["reminder"]["status"] == "cancelled"
@@ -301,8 +350,15 @@ async def test_reminder_lifecycle_over_the_api(phone):
 
 def _phone_call_body(due: float, request_id: str = "Q2FsbE1lQXQ4UE0tMTIz") -> dict:
     # Exactly what ReminderRepository.create queues on the phone for "Garvis calls me", once.
-    return {"text": "Call me about the meeting", "kind": "call", "tz": "Asia/Jerusalem", "repeat": "none",
-            "local_id": "local-" + request_id, "due_at": due, "request_id": request_id}
+    return {
+        "text": "Call me about the meeting",
+        "kind": "call",
+        "tz": "Asia/Jerusalem",
+        "repeat": "none",
+        "local_id": "local-" + request_id,
+        "due_at": due,
+        "request_id": request_id,
+    }
 
 
 async def test_phone_call_reminder_syncs_when_the_pc_lacks_tzdata(tmp_path, monkeypatch, caplog):
@@ -332,11 +388,18 @@ async def test_phone_call_reminder_syncs_when_the_pc_lacks_tzdata(tmp_path, monk
         # Persisted: a restarted PC still has it and still de-duplicates the retry.
         restarted = ReminderStore(tmp_path / "reminders.json")
         assert restarted.get(reminder["id"]).kind == "call"
-        assert restarted.create("Call me about the meeting", tz="Asia/Jerusalem", due_at=due, kind="call",
-                                request_id="Q2FsbE1lQXQ4UE0tMTIz").id == reminder["id"]
+        assert (
+            restarted.create(
+                "Call me about the meeting",
+                tz="Asia/Jerusalem",
+                due_at=due,
+                kind="call",
+                request_id="Q2FsbE1lQXQ4UE0tMTIz",
+            ).id
+            == reminder["id"]
+        )
         # A repeating one can't be scheduled without zones: refused with the fix, and logged on the PC.
-        body = {**_phone_call_body(due, "cmVwZWF0aW5nLWNhbGwtMQ"), "repeat": "daily", "local_time": "09:00",
-                "days": []}
+        body = {**_phone_call_body(due, "cmVwZWF0aW5nLWNhbGwtMQ"), "repeat": "daily", "local_time": "09:00", "days": []}
         body.pop("due_at")
         refused = await h.post("/api/v1/reminders", body)
         assert refused.status == 400
@@ -357,22 +420,26 @@ async def test_phone_call_reminder_round_trip_with_time_zones(phone):
     reminder = (await response.json())["reminder"]
     assert reminder["tz"] == "Asia/Jerusalem" and reminder["due_local"].endswith("(Asia/Jerusalem)")
     listed = await (await phone.get("/api/v1/reminders")).json()
-    assert [(r["id"], r["kind"], r["due_at"]) for r in listed["reminders"]] == [(reminder["id"], "call", reminder["due_at"])]
+    assert [(r["id"], r["kind"], r["due_at"]) for r in listed["reminders"]] == [
+        (reminder["id"], "call", reminder["due_at"])
+    ]
     speech = await phone.get(f"/api/v1/reminders/{reminder['id']}/speech")
     assert speech.status == 200 and (await speech.read())[:4] == b"RIFF"
     # What the PC's voice says is the reminder's own sentence ("Call me about" is the request, not the content).
     assert phone.tts.texts[-1] == phone.companion.spoken(phone.companion.reminders.get(reminder["id"]))
     assert "the meeting" in phone.tts.texts[-1] and "call you" not in phone.tts.texts[-1]
     for _ in range(2):
-        fired = await (await phone.post(f"/api/v1/reminders/{reminder['id']}/fired",
-                                        {"occurrence": reminder["due_at"]})).json()
+        fired = await (
+            await phone.post(f"/api/v1/reminders/{reminder['id']}/fired", {"occurrence": reminder["due_at"]})
+        ).json()
     assert fired["reminder"]["status"] == "completed" and fired["reminder"]["fire_count"] == 1
 
 
 async def test_reminder_create_auth_and_validation_failures(phone):
     due = time.time() + 600
-    unauthenticated = await phone.client.post("/api/v1/reminders", json=_phone_call_body(due),
-                                              headers={"Authorization": "Bearer wrong"})
+    unauthenticated = await phone.client.post(
+        "/api/v1/reminders", json=_phone_call_body(due), headers={"Authorization": "Bearer wrong"}
+    )
     assert unauthenticated.status == 401 and (await unauthenticated.json())["code"] == "unpaired"
     late = await phone.post("/api/v1/reminders", _phone_call_body(time.time() - 7200, "bGF0ZS1jYWxsLTAwMDE"))
     assert late.status == 400 and (await late.json())["code"] == "invalid_reminder"
@@ -384,8 +451,9 @@ async def test_reminder_create_auth_and_validation_failures(phone):
 async def test_reminder_validation(phone):
     assert (await phone.post("/api/v1/reminders", {"text": "x", "due_at": time.time() - 7200})).status == 400
     assert (await phone.post("/api/v1/reminders", {"text": "x", "due_at": "soon"})).status == 400
-    assert (await phone.post("/api/v1/reminders", {"text": "x", "repeat": "hourly",
-                                                   "local_time": "09:00"})).status == 400
+    assert (
+        await phone.post("/api/v1/reminders", {"text": "x", "repeat": "hourly", "local_time": "09:00"})
+    ).status == 400
     assert (await phone.post("/api/v1/reminders/nope/complete")).status == 404
 
 
@@ -421,16 +489,18 @@ async def test_image_generation_round_trip(tmp_path):
 
 # ------------------------------------------------------------ phone actions
 async def test_phone_action_round_trip_through_the_event_stream(phone):
-    response = await phone.post("/api/v1/phone/capabilities",
-                                {"capabilities": ["apps", "root_access"], "paused": False, "accessibility": False})
+    response = await phone.post(
+        "/api/v1/phone/capabilities", {"capabilities": ["apps", "root_access"], "paused": False, "accessibility": False}
+    )
     assert (await response.json())["capabilities"] == ["apps", "images"]  # unknown names are dropped
     request = asyncio.ensure_future(phone.companion.phone.request("open_app", {"app": "Spotify"}, timeout=5))
     await wait_until(lambda: phone.companion.phone.pending_for(phone.pairing.devices()[0].id))
     snapshot = await _events(phone)
     (action,) = snapshot["phone_actions"]
     assert action["action"] == "open_app" and action["confirm"] is False
-    response = await phone.post(f"/api/v1/phone/actions/{action['id']}/result",
-                                {"status": "done", "message": "Opened Spotify"})
+    response = await phone.post(
+        f"/api/v1/phone/actions/{action['id']}/result", {"status": "done", "message": "Opened Spotify"}
+    )
     assert response.status == 200
     assert (await request)["status"] == "done"
     assert (await phone.post(f"/api/v1/phone/actions/{action['id']}/result", {"status": "done"})).status == 404
@@ -551,13 +621,22 @@ def test_bridge_registers_the_companion_tools_and_serves_api_v1_over_tls(tmp_pat
     from app.ui.agent_bridge import AgentBridge
     from tests.test_mobile_integration import _bridge_settings, _wait
 
-    bridge = AgentBridge(settings=_bridge_settings(
-        tmp_path, mobile_enabled=True, mobile_host="127.0.0.1", mobile_port=0, mobile_data_dir=tmp_path / "mobile"))
+    bridge = AgentBridge(
+        settings=_bridge_settings(
+            tmp_path, mobile_enabled=True, mobile_host="127.0.0.1", mobile_port=0, mobile_data_dir=tmp_path / "mobile"
+        )
+    )
     try:
         _wait(lambda: bridge.mobile.is_running)
         names = {entry["name"] for entry in bridge.tool_catalog()}
-        assert {"create_reminder", "list_reminders", "snooze_reminder", "cancel_reminder", "generate_image",
-                "phone_action"} <= names
+        assert {
+            "create_reminder",
+            "list_reminders",
+            "snooze_reminder",
+            "cancel_reminder",
+            "generate_image",
+            "phone_action",
+        } <= names
         # The TaskManager may run them: they are in the tool set it validates against.
         assert "phone_action" in bridge._tool_names
         context = ssl.create_default_context(cafile=str(tmp_path / "mobile" / "ca.crt"))
@@ -640,8 +719,9 @@ async def test_a_hebrew_call_reminder_is_handed_to_the_phones_voice(phone):
     body = await response.json()
     assert response.status == 415 and body["code"] == "voice_language" and body["lang"] == "he"
     assert body["spoken"].startswith("היי") and "להתקשר לאמא שלך" in body["spoken"]
-    english = await (await phone.post("/api/v1/reminders", {**_phone_call_body(due, "RW5nbGlzaENhbGwtMDAx"),
-                                                            "text": "call mom"})).json()
+    english = await (
+        await phone.post("/api/v1/reminders", {**_phone_call_body(due, "RW5nbGlzaENhbGwtMDAx"), "text": "call mom"})
+    ).json()
     speech = await phone.get(f"/api/v1/reminders/{english['reminder']['id']}/speech")
     assert speech.status == 200 and (await speech.read())[:4] == b"RIFF"
     assert "call your mom" in phone.tts.texts[-1]

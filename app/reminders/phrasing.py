@@ -18,6 +18,7 @@ PC is away, and every paired phone:
   language, the reminder's details kept, no number or name that isn't in it,
   the time still said, short. If anything fails, the rules' sentence stays.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -41,18 +42,42 @@ MAX_SPOKEN = 220
 
 
 def language(text: str) -> str:
-    """"he" or "en": the script the reminder starts in ("לקנות iPhone" is
+    """ "he" or "en": the script the reminder starts in ("לקנות iPhone" is
     Hebrew, "Call Dana at דיזנגוף" English)."""
     first = re.search(r"[A-Za-zא-ת]", text or "")
     return "he" if first is not None and _HEBREW.match(first.group(0)) else "en"
 
 
 # ----------------------------------------------------------------- clock words
-_HE_HOURS = {1: "אחת", 2: "שתיים", 3: "שלוש", 4: "ארבע", 5: "חמש", 6: "שש", 7: "שבע", 8: "שמונה", 9: "תשע",
-             10: "עשר", 11: "אחת עשרה", 12: "שתים עשרה"}
+_HE_HOURS = {
+    1: "אחת",
+    2: "שתיים",
+    3: "שלוש",
+    4: "ארבע",
+    5: "חמש",
+    6: "שש",
+    7: "שבע",
+    8: "שמונה",
+    9: "תשע",
+    10: "עשר",
+    11: "אחת עשרה",
+    12: "שתים עשרה",
+}
 _HE_MINUTES = {0: "", 5: " וחמישה", 10: " ועשרה", 15: " ורבע", 20: " ועשרים", 30: " וחצי"}
-_EN_HOURS = {1: "one", 2: "two", 3: "three", 4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine",
-             10: "ten", 11: "eleven", 12: "twelve"}
+_EN_HOURS = {
+    1: "one",
+    2: "two",
+    3: "three",
+    4: "four",
+    5: "five",
+    6: "six",
+    7: "seven",
+    8: "eight",
+    9: "nine",
+    10: "ten",
+    11: "eleven",
+    12: "twelve",
+}
 
 
 def clock_words(hour: int, minute: int, lang: str) -> str | None:
@@ -66,8 +91,12 @@ def clock_words(hour: int, minute: int, lang: str) -> str | None:
         if minute == 45:
             return "רבע ל" + _HE_HOURS[nxt]
         return _HE_HOURS[h12] + _HE_MINUTES[minute] if minute in _HE_MINUTES else None
-    return {0: _EN_HOURS[h12], 15: "quarter past " + _EN_HOURS[h12], 30: "half past " + _EN_HOURS[h12],
-            45: "quarter to " + _EN_HOURS[nxt]}.get(minute)
+    return {
+        0: _EN_HOURS[h12],
+        15: "quarter past " + _EN_HOURS[h12],
+        30: "half past " + _EN_HOURS[h12],
+        45: "quarter to " + _EN_HOURS[nxt],
+    }.get(minute)
 
 
 def _times_in(text: str, lang: str) -> list[tuple[str, int, int]]:
@@ -105,35 +134,133 @@ def _speak_times(text: str, lang: str) -> str:
 _HE_PREFIX_LETTERS = "ובלהמשכ"
 _HE_REQUEST = re.compile(
     r"^(?:בבקשה\s+)?(?:(?:תתקשר|להתקשר|תצלצל)\s+(?:אליי|אלי)\s*(?:בקשר\s+ל|לגבי\s+|על\s+|ב-?|כדי\s+)?"
-    r"(?:(?:להזכיר|ולהזכיר|תזכיר)\s+לי\s*)?|תזכיר(?:י)?\s+לי|להזכיר\s+לי|תזכורת)\s*[:,-]?\s*(?:ש(?=\S{3,}))?")
+    r"(?:(?:להזכיר|ולהזכיר|תזכיר)\s+לי\s*)?|תזכיר(?:י)?\s+לי|להזכיר\s+לי|תזכורת)\s*[:,-]?\s*(?:ש(?=\S{3,}))?"
+)
 _EN_REQUEST = re.compile(
     r"^(?:please\s+)?(?:call\s+me\s+(?:about|regarding|re:?|to\s+remind\s+me\s+(?:to|about)|to|for)\s+"
     r"|remind\s+me\s+(?:to\s+|that\s+|about\s+)?|reminder\s*[:,-]?\s*|remember\s+to\s+|don'?t\s+forget\s+to\s+)",
-    re.I)
+    re.I,
+)
 _HE_FIRST_PERSON = {"שלי": "שלך", "לי": "לך", "אותי": "אותך", "איתי": "איתך", "אליי": "אליך", "בשבילי": "בשבילך"}
 _EN_FIRST_PERSON = {"my": "your", "me": "you", "myself": "yourself", "mine": "yours"}
 _HE_FAMILY = {"אמא", "אבא", "סבתא", "סבא"}
-_EN_FAMILY = re.compile(r"(?<!your )(?<!my )(?<!his )(?<!her )(?<!their )(?<!our )(?<!the )\b(mom|mum|dad|grandma|grandpa)\b(?!'s)", re.I)
+_EN_FAMILY = re.compile(
+    r"(?<!your )(?<!my )(?<!his )(?<!her )(?<!their )(?<!our )(?<!the )\b(mom|mum|dad|grandma|grandpa)\b(?!'s)", re.I
+)
 
 _HE_CALL = {"להתקשר", "לטלפן", "להרים"}
 _HE_DEADLINE = {"להגיש", "לשלוח", "לסיים", "למסור", "לשלם", "להחזיר", "לחדש"}
 _HE_SHOP = {"לקנות"}
-_HE_EVENT = {"פגישה", "ישיבה", "תור", "ראיון", "מבחן", "בוחן", "שיעור", "אימון", "טיסה", "הרצאה", "ארוחה", "ארוחת",
-             "מסיבה", "חתונה", "שיחה", "זום", "משמרת", "הופעה", "סדנה"}
+_HE_EVENT = {
+    "פגישה",
+    "ישיבה",
+    "תור",
+    "ראיון",
+    "מבחן",
+    "בוחן",
+    "שיעור",
+    "אימון",
+    "טיסה",
+    "הרצאה",
+    "ארוחה",
+    "ארוחת",
+    "מסיבה",
+    "חתונה",
+    "שיחה",
+    "זום",
+    "משמרת",
+    "הופעה",
+    "סדנה",
+}
 _HE_MEDICINE = re.compile(r"^לקחת\s.*(כדור|תרופ|ויטמין|אנטיביוטיקה|משאף)")
 _HE_NOT_VERBS = {"לחם", "לילה", "לוח", "לימון", "לקוח", "לקוחה"}
-_HE_TIME_WORDS = re.compile(r"(?<![\w])(היום|מחר|מחרתיים|הערב|הבוקר|בערב|בבוקר|בצהריים|הלילה|השבוע|עד|לפני|אחרי|ביום|בשעה)(?![\w])|\d")
+_HE_TIME_WORDS = re.compile(
+    r"(?<![\w])(היום|מחר|מחרתיים|הערב|הבוקר|בערב|בבוקר|בצהריים|הלילה|השבוע|עד|לפני|אחרי|ביום|בשעה)(?![\w])|\d"
+)
 _EN_CALL = {"call", "phone", "ring"}
 _EN_DEADLINE = {"submit", "send", "finish", "hand", "pay", "return", "renew", "file"}
 _EN_SHOP = {"buy", "get", "pick"}
-_EN_EVENT = {"meeting", "appointment", "interview", "exam", "test", "class", "lesson", "flight", "dinner", "lunch",
-             "training", "practice", "call", "party", "wedding", "shift", "zoom", "lecture"}
-_EN_VERBS = _EN_CALL | _EN_DEADLINE | _EN_SHOP | {
-    "take", "check", "email", "text", "write", "read", "study", "clean", "book", "cancel", "order", "bring", "feed",
-    "water", "walk", "go", "visit", "meet", "prepare", "print", "sign", "charge", "drink", "eat", "start", "stop",
-    "turn", "open", "close", "wash", "fix", "move", "put", "message", "reply", "answer", "ask", "tell", "pack",
-    "leave", "update", "review", "practice", "exercise", "plan", "schedule", "confirm", "make", "do", "see", "watch"}
-_EN_TIME_WORDS = re.compile(r"\b(today|tonight|tomorrow|this (morning|evening|afternoon|week)|by|before|until|at \d|on \w+day)\b|\d", re.I)
+_EN_EVENT = {
+    "meeting",
+    "appointment",
+    "interview",
+    "exam",
+    "test",
+    "class",
+    "lesson",
+    "flight",
+    "dinner",
+    "lunch",
+    "training",
+    "practice",
+    "call",
+    "party",
+    "wedding",
+    "shift",
+    "zoom",
+    "lecture",
+}
+_EN_VERBS = (
+    _EN_CALL
+    | _EN_DEADLINE
+    | _EN_SHOP
+    | {
+        "take",
+        "check",
+        "email",
+        "text",
+        "write",
+        "read",
+        "study",
+        "clean",
+        "book",
+        "cancel",
+        "order",
+        "bring",
+        "feed",
+        "water",
+        "walk",
+        "go",
+        "visit",
+        "meet",
+        "prepare",
+        "print",
+        "sign",
+        "charge",
+        "drink",
+        "eat",
+        "start",
+        "stop",
+        "turn",
+        "open",
+        "close",
+        "wash",
+        "fix",
+        "move",
+        "put",
+        "message",
+        "reply",
+        "answer",
+        "ask",
+        "tell",
+        "pack",
+        "leave",
+        "update",
+        "review",
+        "practice",
+        "exercise",
+        "plan",
+        "schedule",
+        "confirm",
+        "make",
+        "do",
+        "see",
+        "watch",
+    }
+)
+_EN_TIME_WORDS = re.compile(
+    r"\b(today|tonight|tomorrow|this (morning|evening|afternoon|week)|by|before|until|at \d|on \w+day)\b|\d", re.I
+)
 _EN_MEDICINE = re.compile(r"^take\b.*\b(pill|pills|medicine|medication|meds|vitamin|vitamins|antibiotic|inhaler)", re.I)
 _HE_HOME_WAY = re.compile(r"\s*(?<![\w])בדרך\s+הביתה(?![\w])\s*")
 _EN_HOME_WAY = re.compile(r"\s*\bon\s+(?:the|my)\s+way\s+home\b\s*", re.I)
@@ -170,9 +297,11 @@ def _second_person(text: str, lang: str) -> str:
         for i, word in enumerate(words):
             bare = word.rstrip(",.")
             nxt = words[i + 1] if i + 1 < len(words) else ""
-            family = bare in _HE_FAMILY or any(bare.startswith(p) and bare[len(p):] in _HE_FAMILY for p in ("ל", "ול", "ו"))
+            family = bare in _HE_FAMILY or any(
+                bare.startswith(p) and bare[len(p) :] in _HE_FAMILY for p in ("ל", "ול", "ו")
+            )
             if family and nxt not in ("שלך", "של", "שלו", "שלה"):
-                word = bare + " שלך" + word[len(bare):]
+                word = bare + " שלך" + word[len(bare) :]
             out.append(word)
         return " ".join(out)
     words = [_EN_FIRST_PERSON.get(w.lower(), w) if w.lower() in _EN_FIRST_PERSON else w for w in words]
@@ -207,8 +336,12 @@ def _category(text: str, lang: str) -> str:
     words = re.sub(r"^(a|an|the|your|my)\s+", "", text, flags=re.I).split()
     noun = words[0].lower() if words else ""
     # "dentist appointment (at 4)": the event word second, then nothing or a preposition.
-    compound = (len(words) > 1 and words[1].lower() in _EN_EVENT and first not in _EN_VERBS
-                and (len(words) == 2 or words[2].lower() in ("with", "at", "on", "in", "for", "tomorrow", "today")))
+    compound = (
+        len(words) > 1
+        and words[1].lower() in _EN_EVENT
+        and first not in _EN_VERBS
+        and (len(words) == 2 or words[2].lower() in ("with", "at", "on", "in", "for", "tomorrow", "today"))
+    )
     if noun in _EN_EVENT or compound:
         return "event"
     if first in _EN_VERBS:
@@ -264,8 +397,7 @@ class Composed:
     template: str
 
 
-def compose(text: str, *, name: str = "", gender: str = "male", variant: int = 0,
-            avoid: str = "") -> Composed:
+def compose(text: str, *, name: str = "", gender: str = "male", variant: int = 0, avoid: str = "") -> Composed:
     """The rules' sentence for a reminder's text. `variant` picks among the
     category's wordings; `avoid` (a template id) is skipped when possible so
     two reminders in a row don't sound the same."""
@@ -306,20 +438,163 @@ def compose(text: str, *, name: str = "", gender: str = "male", variant: int = 0
 
 
 # ------------------------------------------------------------- faithfulness
-_HE_STOP = {"את", "עם", "של", "על", "אל", "גם", "רק", "או", "לי", "שלי", "לך", "שלך", "אני", "זה", "זאת", "בשעה",
-            "יש", "כל", "הזה", "הזאת", "צריך", "צריכה", "בבקשה", "תזכיר", "להזכיר", "תזכורת", "ש", "ו", "ב", "ל", "ה"}
-_EN_STOP = {"to", "the", "a", "an", "at", "on", "in", "with", "and", "or", "of", "for", "my", "me", "i", "your",
-            "you", "remind", "reminder", "please", "remember", "don't", "dont", "forget", "am", "pm", "is", "be"}
+_HE_STOP = {
+    "את",
+    "עם",
+    "של",
+    "על",
+    "אל",
+    "גם",
+    "רק",
+    "או",
+    "לי",
+    "שלי",
+    "לך",
+    "שלך",
+    "אני",
+    "זה",
+    "זאת",
+    "בשעה",
+    "יש",
+    "כל",
+    "הזה",
+    "הזאת",
+    "צריך",
+    "צריכה",
+    "בבקשה",
+    "תזכיר",
+    "להזכיר",
+    "תזכורת",
+    "ש",
+    "ו",
+    "ב",
+    "ל",
+    "ה",
+}
+_EN_STOP = {
+    "to",
+    "the",
+    "a",
+    "an",
+    "at",
+    "on",
+    "in",
+    "with",
+    "and",
+    "or",
+    "of",
+    "for",
+    "my",
+    "me",
+    "i",
+    "your",
+    "you",
+    "remind",
+    "reminder",
+    "please",
+    "remember",
+    "don't",
+    "dont",
+    "forget",
+    "am",
+    "pm",
+    "is",
+    "be",
+}
 
 
 _PHRASING_WORDS = {
-    "he": {"היי", "הי", "רק", "אל", "תשכח", "תשכחי", "לשכוח", "תזכור", "תזכרי", "לזכור", "תזכורת", "קטנה", "זה", "הזמן",
-           "הגיע", "יש", "לך", "שלך", "היום", "כשתחזור", "כשתחזרי", "הביתה", "לעצור", "שים", "שימי", "לב", "צריך",
-           "לא", "מזכיר", "מזכירה", "בשבילך", "עכשיו", "את", "עם", "של", "אז", "בדיוק", "כבר", "פשוט", "שאתה", "שאת",
-           "אתה", "חשוב", "בדרך", "תורך", "מחכה", "לבצע", "ואל"},
-    "en": {"hey", "hi", "just", "a", "an", "reminder", "don't", "dont", "forget", "remember", "to", "it's", "its", "time",
-           "you", "have", "your", "quick", "heads-up", "heads", "up", "today", "on", "way", "home", "stop", "and",
-           "the", "at", "now", "about", "that", "is", "so", "got", "coming", "for", "friendly", "reminding"},
+    "he": {
+        "היי",
+        "הי",
+        "רק",
+        "אל",
+        "תשכח",
+        "תשכחי",
+        "לשכוח",
+        "תזכור",
+        "תזכרי",
+        "לזכור",
+        "תזכורת",
+        "קטנה",
+        "זה",
+        "הזמן",
+        "הגיע",
+        "יש",
+        "לך",
+        "שלך",
+        "היום",
+        "כשתחזור",
+        "כשתחזרי",
+        "הביתה",
+        "לעצור",
+        "שים",
+        "שימי",
+        "לב",
+        "צריך",
+        "לא",
+        "מזכיר",
+        "מזכירה",
+        "בשבילך",
+        "עכשיו",
+        "את",
+        "עם",
+        "של",
+        "אז",
+        "בדיוק",
+        "כבר",
+        "פשוט",
+        "שאתה",
+        "שאת",
+        "אתה",
+        "חשוב",
+        "בדרך",
+        "תורך",
+        "מחכה",
+        "לבצע",
+        "ואל",
+    },
+    "en": {
+        "hey",
+        "hi",
+        "just",
+        "a",
+        "an",
+        "reminder",
+        "don't",
+        "dont",
+        "forget",
+        "remember",
+        "to",
+        "it's",
+        "its",
+        "time",
+        "you",
+        "have",
+        "your",
+        "quick",
+        "heads-up",
+        "heads",
+        "up",
+        "today",
+        "on",
+        "way",
+        "home",
+        "stop",
+        "and",
+        "the",
+        "at",
+        "now",
+        "about",
+        "that",
+        "is",
+        "so",
+        "got",
+        "coming",
+        "for",
+        "friendly",
+        "reminding",
+    },
 }
 MAX_ADDED_WORDS = 5
 """Words a model sentence may add beyond the reminder's own, the greeting and
@@ -340,12 +615,15 @@ def _content_words(text: str, lang: str) -> list[str]:
         body = body.replace(matched, " ")
     stop = _HE_STOP if lang == "he" else _EN_STOP
     raw = [w for w in _WORD.findall(body) if w and not _DIGITS.fullmatch(w)]
-    return [t for w, t in zip(raw, _tokens(" ".join(raw), lang), strict=False) if w.lower() not in stop and t not in stop]
+    return [
+        t for w, t in zip(raw, _tokens(" ".join(raw), lang), strict=False) if w.lower() not in stop and t not in stop
+    ]
 
 
 def _has(token: str, pool: set[str]) -> bool:
-    return token in pool or any(len(token) >= 3 and len(p) >= 3 and (p.startswith(token) or token.startswith(p))
-                                for p in pool)
+    return token in pool or any(
+        len(token) >= 3 and len(p) >= 3 and (p.startswith(token) or token.startswith(p)) for p in pool
+    )
 
 
 def faithful(original: str, candidate: str, *, name: str = "") -> str | None:
@@ -374,7 +652,9 @@ def faithful(original: str, candidate: str, *, name: str = "") -> str | None:
     missing = [w for w in content if not _has(w, pool)]
     if len(missing) > (len(content) - 1) // 3:
         return "details_dropped"
-    known = set(_tokens(original, lang)) | set(_tokens(name, lang)) | set(_tokens(" ".join(_PHRASING_WORDS[lang]), lang))
+    known = (
+        set(_tokens(original, lang)) | set(_tokens(name, lang)) | set(_tokens(" ".join(_PHRASING_WORDS[lang]), lang))
+    )
     for _, hour, minute in _times_in(_clean(original, lang), lang):
         known |= set(_tokens(clock_words(hour, minute, lang) or "", lang))
     added = [t for t in _tokens(candidate, lang) if not _DIGITS.fullmatch(t) and not _has(t, known)]
@@ -384,7 +664,9 @@ def faithful(original: str, candidate: str, *, name: str = "") -> str | None:
         return "added_details"
     # No new when: "today" only where the rules say it too (a deadline that rings on the day).
     time_words = _HE_TIME_WORDS if lang == "he" else _EN_TIME_WORDS
-    said = {m.group(0).lower() for m in time_words.finditer(candidate)} - {m.group(0).lower() for m in time_words.finditer(original)}
+    said = {m.group(0).lower() for m in time_words.finditer(candidate)} - {
+        m.group(0).lower() for m in time_words.finditer(original)
+    }
     if said - ({"היום", "today"} if category == "deadline" else set()) - set("0123456789"):
         return "added_time"
     if lang == "en":
@@ -423,8 +705,9 @@ Examples (Hebrew, user Alex):
 class ReminderPhraser:
     """Rules now, a model-refined sentence when the model is available."""
 
-    def __init__(self, *, name_en: str = "", name_he: str = "", gender: str = "male",
-                 llm=None, timeout: float = 15.0) -> None:
+    def __init__(
+        self, *, name_en: str = "", name_he: str = "", gender: str = "male", llm=None, timeout: float = 15.0
+    ) -> None:
         self.name_en = name_en.strip()
         self.name_he = name_he.strip() or self.name_en
         self.gender = gender if gender in _HE_GENDER else "male"
@@ -449,8 +732,13 @@ class ReminderPhraser:
         False: the stable sentence for this reminder, history untouched."""
         lang = language(text)
         variant = int(hashlib.sha1(reminder_id.encode()).hexdigest()[:6], 16)
-        composed = compose(text, name=self.name_for(lang), gender=self.gender, variant=variant,
-                           avoid=self._last_template if remember else "")
+        composed = compose(
+            text,
+            name=self.name_for(lang),
+            gender=self.gender,
+            variant=variant,
+            avoid=self._last_template if remember else "",
+        )
         if remember:
             self._last_template = composed.template
             self._recent.append(composed.text)
@@ -468,16 +756,27 @@ class ReminderPhraser:
         greeting = ("היי" if lang == "he" else "Hey") + (f" {name}" if name else "")
         hint = compose(text, name=name, gender=self.gender)
         avoid = ("- Don't start like these recent ones: " + " | ".join(self._recent)) if self._recent else ""
-        system = _SYSTEM.format(greeting=greeting, avoid=avoid,
-                                gender_he="woman (feminine forms)" if self.gender == "female" else "man (masculine forms)")
-        user = json.dumps({"reminder": text, "type_guess": hint.category, "rings": when,
-                           "delivered_as": "a phone call" if kind == "call" else "a notification"}, ensure_ascii=False)
+        system = _SYSTEM.format(
+            greeting=greeting,
+            avoid=avoid,
+            gender_he="woman (feminine forms)" if self.gender == "female" else "man (masculine forms)",
+        )
+        user = json.dumps(
+            {
+                "reminder": text,
+                "type_guess": hint.category,
+                "rings": when,
+                "delivered_as": "a phone call" if kind == "call" else "a notification",
+            },
+            ensure_ascii=False,
+        )
         try:
             with task_meter() as meter:
                 meter.category = "reminder_phrasing"
                 response = await asyncio.wait_for(
                     self._llm.chat([Message(role=Role.SYSTEM, content=system), Message(role=Role.USER, content=user)]),
-                    timeout=self._timeout)
+                    timeout=self._timeout,
+                )
         except Exception as exc:  # noqa: BLE001 -- no key, budget, offline, timeout: the rules' sentence stays
             log_extra(logger, 30, "reminder.phrasing_unavailable", error_type=type(exc).__name__)
             return None
@@ -496,13 +795,14 @@ def _parse(content: str) -> str | None:
         return None
     try:
         value = json.loads(match.group(0)).get("spoken")
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return None
     return " ".join(value.split()) if isinstance(value, str) else None
 
 
-def describe_when(due_at: float | None, tz_name: str, repeat: str, local_time: str, days: list[int],
-                  zone: Callable[[str], dt.tzinfo]) -> str:
+def describe_when(
+    due_at: float | None, tz_name: str, repeat: str, local_time: str, days: list[int], zone: Callable[[str], dt.tzinfo]
+) -> str:
     """How the reminder rings, for the model ("once, Fri 31 Oct 17:00")."""
     if repeat != "none":
         names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -530,8 +830,9 @@ class ReminderPhrasingWorker:
     One attempt per text (a refusal or failure isn't retried until the text
     changes), one at a time; notifications keep the rules' sentence."""
 
-    def __init__(self, store, phraser: ReminderPhraser, loop: asyncio.AbstractEventLoop,
-                 zone: Callable[[str], dt.tzinfo]) -> None:
+    def __init__(
+        self, store, phraser: ReminderPhraser, loop: asyncio.AbstractEventLoop, zone: Callable[[str], dt.tzinfo]
+    ) -> None:
         self._store = store
         self._phraser = phraser
         self._loop = loop
@@ -557,16 +858,20 @@ class ReminderPhrasingWorker:
             self._loop.create_task(self._drain())
 
     def _pending(self) -> list:
-        return [r for r in self._store.list(include_finished=False)
-                if r.kind == "call" and r.spoken_by == "rules" and r.spoken_key and r.spoken_key not in self._tried]
+        return [
+            r
+            for r in self._store.list(include_finished=False)
+            if r.kind == "call" and r.spoken_by == "rules" and r.spoken_key and r.spoken_key not in self._tried
+        ]
 
     async def _drain(self) -> None:
         try:
             while pending := self._pending():
                 reminder = pending[0]
                 self._tried.add(reminder.spoken_key)
-                when = describe_when(reminder.due_at, reminder.tz, reminder.repeat, reminder.local_time,
-                                     reminder.days, self._zone)
+                when = describe_when(
+                    reminder.due_at, reminder.tz, reminder.repeat, reminder.local_time, reminder.days, self._zone
+                )
                 spoken = await self._phraser.refine(reminder.text, when=when, kind=reminder.kind)
                 if spoken:
                     self._store.set_spoken(reminder.id, spoken, key=reminder.spoken_key)

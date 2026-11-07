@@ -6,6 +6,7 @@ happen while a manual turn still owns that context. The real MainWindow is
 built against a fake AgentBridge (same Qt signals, records calls), so no
 Agent, LLM, microphone or background loop is created.
 """
+
 from __future__ import annotations
 
 import os

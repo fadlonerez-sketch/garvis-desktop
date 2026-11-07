@@ -10,6 +10,7 @@ The former two-provider `LLMRouter` was removed: it routed requests between
 two different models. Its keyword rules (`_classify()` and helpers) remain,
 used by classify_tier().
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -50,26 +51,72 @@ one."""
 # doesn't trip these. Kept short and skimmable on purpose -- this is a
 # handful of unambiguous signals, not an exhaustive keyword list.
 _TOOL_PHRASES = (
-    "search for", "search the web", "web search", "look up", "look for",
-    "browse to", "open the browser", "navigate to", "go to http",
-    "check my email", "send an email", "draft an email", "read my email",
-    "my emails", "book a", "find a restaurant", "find restaurants",
-    "places near", "near me", "weather in", "weather for", "latest news",
-    "remind me", "schedule a", "open chrome", "open notepad", "click on",
-    "research", "screenshot", "double click", "double-click", "right click",
-    "right-click", "scroll down", "scroll up", "switch to", "press enter",
+    "search for",
+    "search the web",
+    "web search",
+    "look up",
+    "look for",
+    "browse to",
+    "open the browser",
+    "navigate to",
+    "go to http",
+    "check my email",
+    "send an email",
+    "draft an email",
+    "read my email",
+    "my emails",
+    "book a",
+    "find a restaurant",
+    "find restaurants",
+    "places near",
+    "near me",
+    "weather in",
+    "weather for",
+    "latest news",
+    "remind me",
+    "schedule a",
+    "open chrome",
+    "open notepad",
+    "click on",
+    "research",
+    "screenshot",
+    "double click",
+    "double-click",
+    "right click",
+    "right-click",
+    "scroll down",
+    "scroll up",
+    "switch to",
+    "press enter",
     "open whatsapp",
 )
 _TOOL_WORDS = ("gmail", "inbox")
 
 _COMPLEX_PHRASES = (
-    "pros and cons", "difference between", "which is better",
-    "help me decide", "step by step", "figure out", "write a function",
-    "write some code", "write code", "fix this bug", "fix my code",
+    "pros and cons",
+    "difference between",
+    "which is better",
+    "help me decide",
+    "step by step",
+    "figure out",
+    "write a function",
+    "write some code",
+    "write code",
+    "fix this bug",
+    "fix my code",
 )
 _COMPLEX_WORDS = (
-    "why", "explain", "compare", "analyze", "analyse", "debug", "refactor",
-    "algorithm", "architecture", "recommend", "traceback",
+    "why",
+    "explain",
+    "compare",
+    "analyze",
+    "analyse",
+    "debug",
+    "refactor",
+    "algorithm",
+    "architecture",
+    "recommend",
+    "traceback",
 )
 
 _TOOL_WORD_RE = re.compile(r"\b(?:" + "|".join(_TOOL_WORDS) + r")\b", re.IGNORECASE)
@@ -315,33 +362,80 @@ class TieredLLMRouter(LLMProvider):
                 response = await provider.chat(messages, tools=tools)
             except LLMBilledError as exc:
                 status = "model_mismatch" if isinstance(exc, LLMModelMismatchError) else "refusal"
-                self._record(provider, tier, task, started, status=status, error=exc, label=label,
-                             usage=exc.usage, served_model=exc.served_model, request_id=exc.request_id)
-                log_extra(logger, 40 if status == "model_mismatch" else 30, f"llm.router.{status}",
-                          tier=tier.value, model=label, served_model=exc.served_model)
+                self._record(
+                    provider,
+                    tier,
+                    task,
+                    started,
+                    status=status,
+                    error=exc,
+                    label=label,
+                    usage=exc.usage,
+                    served_model=exc.served_model,
+                    request_id=exc.request_id,
+                )
+                log_extra(
+                    logger,
+                    40 if status == "model_mismatch" else 30,
+                    f"llm.router.{status}",
+                    tier=tier.value,
+                    model=label,
+                    served_model=exc.served_model,
+                )
                 raise
             except LLMError as exc:
                 self._record(provider, tier, task, started, status="error", error=exc)
                 if retry_same_model(exc) and attempt < self._max_retries:
-                    delay = min(self._retry_backoff * (2 ** attempt), _MAX_RETRY_DELAY_SECONDS)
+                    delay = min(self._retry_backoff * (2**attempt), _MAX_RETRY_DELAY_SECONDS)
                     attempt += 1
-                    log_extra(logger, 30, "llm.router.retry", tier=tier.value, model=label,
-                              error_type=type(exc).__name__, error=str(exc)[:300], attempt=attempt,
-                              max_retries=self._max_retries, delay_seconds=delay)
+                    log_extra(
+                        logger,
+                        30,
+                        "llm.router.retry",
+                        tier=tier.value,
+                        model=label,
+                        error_type=type(exc).__name__,
+                        error=str(exc)[:300],
+                        attempt=attempt,
+                        max_retries=self._max_retries,
+                        delay_seconds=delay,
+                    )
                     await self._sleep(delay)
                     continue
                 log_extra(
-                    logger, 40 if isinstance(exc, LLMAuthenticationError) else 30, "llm.router.failed",
-                    tier=tier.value, model=label, error_type=type(exc).__name__, error=str(exc)[:300],
-                    attempts=attempt + 1, note="no other model is used",
+                    logger,
+                    40 if isinstance(exc, LLMAuthenticationError) else 30,
+                    "llm.router.failed",
+                    tier=tier.value,
+                    model=label,
+                    error_type=type(exc).__name__,
+                    error=str(exc)[:300],
+                    attempts=attempt + 1,
+                    note="no other model is used",
                 )
                 raise
-            self._record(provider, tier, task, started, status="ok", usage=response.usage, label=label,
-                         served_model=response.served_model, request_id=response.request_id,
-                         tools_requested=[call.name for call in response.message.tool_calls])
+            self._record(
+                provider,
+                tier,
+                task,
+                started,
+                status="ok",
+                usage=response.usage,
+                label=label,
+                served_model=response.served_model,
+                request_id=response.request_id,
+                tools_requested=[call.name for call in response.message.tool_calls],
+            )
             self.last_selection = {"tier": tier.value, "reason": reason, "model": label, "attempt": attempt + 1}
-            log_extra(logger, 20, "llm.router.tier_selection", tier=tier.value, reason=reason, model=label,
-                      attempt=attempt + 1)
+            log_extra(
+                logger,
+                20,
+                "llm.router.tier_selection",
+                tier=tier.value,
+                reason=reason,
+                model=label,
+                attempt=attempt + 1,
+            )
             return response
 
     def _check_budget(self, provider: LLMProvider, task: TaskMeter, prompt_estimate: int) -> None:
@@ -352,9 +446,16 @@ class TieredLLMRouter(LLMProvider):
         try:
             self._budget.check(task, prompt_estimate, projected)
         except LLMBudgetExceededError as exc:
-            log_extra(logger, 30, "llm.budget.stopped", limit=exc.limit, task_id=task.task_id,
-                      task_calls=task.calls, task_cost_usd=round(task.cost_usd, 6),
-                      prompt_tokens_estimate=prompt_estimate)
+            log_extra(
+                logger,
+                30,
+                "llm.budget.stopped",
+                limit=exc.limit,
+                task_id=task.task_id,
+                task_calls=task.calls,
+                task_cost_usd=round(task.cost_usd, 6),
+                prompt_tokens_estimate=prompt_estimate,
+            )
             raise
 
     def _record(
@@ -385,10 +486,18 @@ class TieredLLMRouter(LLMProvider):
         model = getattr(provider, "model", type(provider).__name__)
         try:
             self._ledger.record(
-                status=status, model_requested=model, provider=type(provider).__name__, tier=tier.value,
-                task=task, model_served=served_model, request_id=request_id, usage=usage, cost_usd=cost,
+                status=status,
+                model_requested=model,
+                provider=type(provider).__name__,
+                tier=tier.value,
+                task=task,
+                model_served=served_model,
+                request_id=request_id,
+                usage=usage,
+                cost_usd=cost,
                 error_type=type(error).__name__ if error else None,
-                latency_ms=int((time.monotonic() - started) * 1000), tools_requested=tools_requested,
+                latency_ms=int((time.monotonic() - started) * 1000),
+                tools_requested=tools_requested,
             )
         except Exception as exc:  # accounting must never break a turn
             log_extra(logger, 40, "llm.usage.record_failed", error=str(exc)[:300])

@@ -1,4 +1,5 @@
 """Tests for OmniRouteProvider (app/llm/omniroute.py) -- httpx MockTransport, no network."""
+
 from __future__ import annotations
 
 import json
@@ -34,9 +35,7 @@ def _patch_transport(monkeypatch, handler) -> None:
 
 
 def _ok(message: dict, finish_reason: str = "stop", model: str = "gemini-3.1-flash-lite") -> httpx.Response:
-    return httpx.Response(
-        200, json={"model": model, "choices": [{"message": message, "finish_reason": finish_reason}]}
-    )
+    return httpx.Response(200, json={"model": model, "choices": [{"message": message, "finish_reason": finish_reason}]})
 
 
 def _provider(model="gemini/gemini-3.1-flash-lite", **kw) -> OmniRouteProvider:
@@ -47,7 +46,9 @@ _CALC = ToolSpec(
     name="calculator",
     description="calc",
     parameters={
-        "title": "CalcInput", "type": "object", "required": ["expression"],
+        "title": "CalcInput",
+        "type": "object",
+        "required": ["expression"],
         "properties": {"expression": {"title": "Expression", "type": "string", "default": "1"}},
     },
 )
@@ -73,14 +74,22 @@ def test_accepts_loopback_base_urls(url):
 
 
 @pytest.mark.parametrize(
-    "url", ["http://192.168.1.10:20128/v1", "https://omniroute.example.com/v1", "http://0.0.0.0:20128/v1", "ftp://127.0.0.1/v1"]
+    "url",
+    [
+        "http://192.168.1.10:20128/v1",
+        "https://omniroute.example.com/v1",
+        "http://0.0.0.0:20128/v1",
+        "ftp://127.0.0.1/v1",
+    ],
 )
 def test_refuses_non_local_base_urls(url):
     with pytest.raises(ConfigurationError, match="localhost-only"):
         _provider(base_url=url)
 
 
-@pytest.mark.parametrize("model", ["auto", "auto/best-free", "auto/coding:free", "AUTO/x", "combo/mine", "my-combo", "gemini/"])
+@pytest.mark.parametrize(
+    "model", ["auto", "auto/best-free", "auto/coding:free", "AUTO/x", "combo/mine", "my-combo", "gemini/"]
+)
 def test_refuses_automatic_or_implicit_routes(model):
     with pytest.raises(ConfigurationError):
         _provider(model=model)
@@ -139,7 +148,8 @@ async def test_gemini_tool_schemas_are_sanitized_but_others_are_not(monkeypatch)
     assert "title" not in gemini_params and "default" not in gemini_params["properties"]["expression"]
     assert groq_params == _CALC.parameters
     assert bodies[1]["tools"][0] == {
-        "type": "function", "function": {"name": "calculator", "description": "calc", "parameters": _CALC.parameters}
+        "type": "function",
+        "function": {"name": "calculator", "description": "calc", "parameters": _CALC.parameters},
     }
 
 
@@ -178,11 +188,14 @@ async def test_tool_calls_are_parsed_and_round_trip_with_opaque_fields(monkeypat
     assert second.message.content == "4"
     assistant, tool = bodies[1]["messages"][1], bodies[1]["messages"][2]
     assert assistant["content"] is None
-    assert assistant["tool_calls"] == [{
-        "id": "call_1", "type": "function",
-        "function": {"name": "calculator", "arguments": '{"expression": "2+2"}'},
-        "extra_content": {"google": {"thought_signature": "SIG-abc"}},
-    }]
+    assert assistant["tool_calls"] == [
+        {
+            "id": "call_1",
+            "type": "function",
+            "function": {"name": "calculator", "arguments": '{"expression": "2+2"}'},
+            "extra_content": {"google": {"thought_signature": "SIG-abc"}},
+        }
+    ]
     assert tool == {"role": "tool", "content": '{"data": 4}', "tool_call_id": "call_1", "name": "calculator"}
 
 
@@ -219,18 +232,21 @@ async def test_malformed_tool_call_is_an_error(monkeypatch):
 
 
 async def test_length_finish_and_list_content(monkeypatch):
-    _patch_transport(monkeypatch, lambda r: _ok(
-        {"role": "assistant", "content": [{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]},
-        finish_reason="length",
-    ))
+    _patch_transport(
+        monkeypatch,
+        lambda r: _ok(
+            {"role": "assistant", "content": [{"type": "text", "text": "a"}, {"type": "text", "text": "b"}]},
+            finish_reason="length",
+        ),
+    )
     response = await _provider().chat([Message(role=Role.USER, content="x")])
     assert response.message.content == "ab" and response.finish_reason == "length"
 
 
 async def test_reasoning_field_is_accepted_and_not_mixed_into_content(monkeypatch):
-    _patch_transport(monkeypatch, lambda r: _ok(
-        {"role": "assistant", "content": "answer", "reasoning_content": "thinking..."}
-    ))
+    _patch_transport(
+        monkeypatch, lambda r: _ok({"role": "assistant", "content": "answer", "reasoning_content": "thinking..."})
+    )
     response = await _provider(model="groq/openai/gpt-oss-120b").chat([Message(role=Role.USER, content="x")])
     assert response.message.content == "answer"
 
@@ -241,10 +257,18 @@ async def test_reasoning_field_is_accepted_and_not_mixed_into_content(monkeypatc
     [
         (401, {"error": {"message": "Invalid API key"}}, LLMAuthenticationError, "GARVIS_OMNIROUTE_API_KEY"),
         # Real OmniRoute body when the upstream provider isn't connected: not a Garvis key problem.
-        (401, {"error": {"message": "No active credentials for provider: groq."}}, LLMUnavailableError,
-         "no connection in OmniRoute.*No active credentials for provider: groq"),
-        (403, {"error": {"message": 'Model "ddgw/gpt-5.4-mini" is not allowed for this API key'}},
-         LLMAuthenticationError, "not allowed for this API key"),
+        (
+            401,
+            {"error": {"message": "No active credentials for provider: groq."}},
+            LLMUnavailableError,
+            "no connection in OmniRoute.*No active credentials for provider: groq",
+        ),
+        (
+            403,
+            {"error": {"message": 'Model "ddgw/gpt-5.4-mini" is not allowed for this API key'}},
+            LLMAuthenticationError,
+            "not allowed for this API key",
+        ),
         (403, {"error": {"message": "provider blocked"}}, LLMAuthenticationError, "provider blocked"),
         (429, {"error": {"message": "quota exhausted"}}, LLMRateLimitError, "refused, not billed.*quota exhausted"),
         (404, {"error": {"message": "no connection"}}, LLMUnavailableError, "connected in the OmniRoute dashboard"),

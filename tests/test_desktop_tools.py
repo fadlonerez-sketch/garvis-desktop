@@ -1,5 +1,6 @@
 """Tests for the desktop-control tools (app/tools/desktop.py): risk levels,
 confirmation policy, schema validation, result shapes, and agent wiring."""
+
 from __future__ import annotations
 
 import pytest
@@ -21,12 +22,26 @@ from app.tools.desktop import (
 from tests.desktop_fakes import GARVIS_PID, FakeDesktopBackend
 
 _INPUT_TOOLS = {
-    "mouse_click", "mouse_double_click", "mouse_right_click",
-    "keyboard_type", "keyboard_press", "keyboard_hotkey", "click_ui_element",
+    "mouse_click",
+    "mouse_double_click",
+    "mouse_right_click",
+    "keyboard_type",
+    "keyboard_press",
+    "keyboard_hotkey",
+    "click_ui_element",
 }
 _SAFE_TOOLS = {
-    "screen_info", "list_windows", "screen_capture", "focus_window", "switch_window",
-    "mouse_move", "scroll", "read_screen_text", "inspect_ui", "window_action", "wait_for_window",
+    "screen_info",
+    "list_windows",
+    "screen_capture",
+    "focus_window",
+    "switch_window",
+    "mouse_move",
+    "scroll",
+    "read_screen_text",
+    "inspect_ui",
+    "window_action",
+    "wait_for_window",
 }
 
 

@@ -28,6 +28,7 @@ A single API service client is lazily built on first use and kept alive
 across tool calls (cheaper than rebuilding per call), the same caching
 strategy `BrowserManager` uses for its browser/page.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -143,12 +144,7 @@ class GmailManager:
 
     def _search_sync(self, service, query: str, max_results: int) -> list[dict]:
         try:
-            listing = (
-                service.users()
-                .messages()
-                .list(userId="me", q=query, maxResults=max_results)
-                .execute()
-            )
+            listing = service.users().messages().list(userId="me", q=query, maxResults=max_results).execute()
         except Exception as exc:
             log_extra(logger, 40, "gmail.search_failed")
             raise GmailError(f"Gmail search failed: {exc}") from exc
@@ -238,12 +234,7 @@ class GmailManager:
     def _create_draft_sync(self, service, to: str, subject: str, body: str) -> str:
         raw = self._encode_message(to, subject, body)
         try:
-            draft = (
-                service.users()
-                .drafts()
-                .create(userId="me", body={"message": {"raw": raw}})
-                .execute()
-            )
+            draft = service.users().drafts().create(userId="me", body={"message": {"raw": raw}}).execute()
         except Exception as exc:
             log_extra(logger, 40, "gmail.draft_failed")
             raise GmailError(f"Could not create draft to '{to}': {exc}") from exc

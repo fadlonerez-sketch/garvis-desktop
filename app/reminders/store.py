@@ -17,6 +17,7 @@ the PC is off or the phone is offline.
   by the rules whenever the text or repeat rule changes, later replaced by a
   checked model-written sentence (`set_spoken`). Phones get it with the rest.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -114,8 +115,9 @@ def _clean_text(text: str) -> str:
 
 
 class ReminderStore:
-    def __init__(self, path: Path, *, clock: Callable[[], float] = time.time,
-                 phrase: Callable[[Reminder], str] | None = None) -> None:
+    def __init__(
+        self, path: Path, *, clock: Callable[[], float] = time.time, phrase: Callable[[Reminder], str] | None = None
+    ) -> None:
         """`phrase` (ReminderPhraser-based) writes `spoken` with the rules;
         None leaves it empty (callers then compose it on demand)."""
         self._path = Path(path)
@@ -152,9 +154,19 @@ class ReminderStore:
         return hits[0] if len(hits) == 1 else None
 
     # --------------------------------------------------------------- writes
-    def create(self, text: str, *, tz: str, due_at: float | None = None, kind: str = "notify",
-               repeat: str = "none", local_time: str = "", days=None, origin: str = "assistant",
-               request_id: str | None = None) -> Reminder:
+    def create(
+        self,
+        text: str,
+        *,
+        tz: str,
+        due_at: float | None = None,
+        kind: str = "notify",
+        repeat: str = "none",
+        local_time: str = "",
+        days=None,
+        origin: str = "assistant",
+        request_id: str | None = None,
+    ) -> Reminder:
         if request_id:
             if not _REQUEST_ID.match(request_id):
                 raise ReminderError("Invalid request id.")
@@ -162,10 +174,10 @@ class ReminderStore:
                 existing = next((r for r in self._items.values() if r.request_id == request_id), None)
             if existing is not None:
                 return existing
-        reminder = Reminder(id=secrets.token_urlsafe(9), text=_clean_text(text), origin=origin[:20],
-                            request_id=request_id or "")
-        self._apply_schedule(reminder, tz=tz, due_at=due_at, kind=kind, repeat=repeat, local_time=local_time,
-                             days=days)
+        reminder = Reminder(
+            id=secrets.token_urlsafe(9), text=_clean_text(text), origin=origin[:20], request_id=request_id or ""
+        )
+        self._apply_schedule(reminder, tz=tz, due_at=due_at, kind=kind, repeat=repeat, local_time=local_time, days=days)
         with self._lock:
             if sum(1 for r in self._items.values() if r.status == SCHEDULED) >= MAX_ACTIVE:
                 raise ReminderError(f"There are already {MAX_ACTIVE} scheduled reminders.")
@@ -173,9 +185,18 @@ class ReminderStore:
         self._changed("created", reminder)
         return reminder
 
-    def update(self, reminder_id: str, *, text: str | None = None, tz: str | None = None,
-               due_at: float | None = None, kind: str | None = None, repeat: str | None = None,
-               local_time: str | None = None, days=None) -> Reminder:
+    def update(
+        self,
+        reminder_id: str,
+        *,
+        text: str | None = None,
+        tz: str | None = None,
+        due_at: float | None = None,
+        kind: str | None = None,
+        repeat: str | None = None,
+        local_time: str | None = None,
+        days=None,
+    ) -> Reminder:
         reminder = self._require(reminder_id)
         if reminder.status == CANCELLED:
             raise ReminderError("That reminder was cancelled; create a new one instead.")
@@ -262,8 +283,9 @@ class ReminderStore:
         else:
             reminder.due_at = upcoming
 
-    def _apply_schedule(self, reminder: Reminder, *, tz: str, due_at: float | None, kind: str, repeat: str,
-                        local_time: str, days) -> None:
+    def _apply_schedule(
+        self, reminder: Reminder, *, tz: str, due_at: float | None, kind: str, repeat: str, local_time: str, days
+    ) -> None:
         if kind not in KINDS:
             raise ReminderError("kind must be 'notify' or 'call'.")
         if repeat not in REPEATS:
@@ -343,7 +365,7 @@ class ReminderStore:
             data = json.loads(self._path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             return
-        except (OSError, ValueError):
+        except OSError, ValueError:
             log_extra(logger, 30, "reminder.load_failed")
             return
         fields = set(Reminder.__dataclass_fields__)

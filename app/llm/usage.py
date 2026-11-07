@@ -19,6 +19,7 @@ Garvis from sending more requests; they are not a billing cap. The only hard
 cap is the provider's own (e.g. the Anthropic Console's monthly spend limit
 or a prepaid balance with auto-reload off).
 """
+
 from __future__ import annotations
 
 import contextvars
@@ -66,8 +67,11 @@ class TokenUsage(BaseModel):
 
     @property
     def cache_write_tokens(self) -> int:
-        return ((self.cache_write_5m_tokens or 0) + (self.cache_write_1h_tokens or 0)
-                + (self.cache_write_unknown_ttl_tokens or 0))
+        return (
+            (self.cache_write_5m_tokens or 0)
+            + (self.cache_write_1h_tokens or 0)
+            + (self.cache_write_unknown_ttl_tokens or 0)
+        )
 
 
 class PriceCard(BaseModel):
@@ -163,10 +167,15 @@ class TaskMeter:
 
     def summary(self) -> dict:
         return {
-            "task_id": self.task_id, "category": self.category, "calls": self.calls,
-            "cost_usd": round(self.cost_usd, 6), "unknown_cost_calls": self.unknown_cost_calls,
-            "input_tokens": self.input_tokens, "output_tokens": self.output_tokens,
-            "cache_read_tokens": self.cache_read_tokens, "cache_write_tokens": self.cache_write_tokens,
+            "task_id": self.task_id,
+            "category": self.category,
+            "calls": self.calls,
+            "cost_usd": round(self.cost_usd, 6),
+            "unknown_cost_calls": self.unknown_cost_calls,
+            "input_tokens": self.input_tokens,
+            "output_tokens": self.output_tokens,
+            "cache_read_tokens": self.cache_read_tokens,
+            "cache_write_tokens": self.cache_write_tokens,
             "models": list(self.models),
         }
 
@@ -260,10 +269,24 @@ class UsageLedger:
         u = usage or TokenUsage()
         row = (
             (now or datetime.now()).isoformat(timespec="seconds"),
-            task.task_id if task else None, task.category if task else None, tier, provider,
-            model_requested, model_served, request_id, status, error_type,
-            u.input_tokens, u.output_tokens, u.cache_read_tokens, u.cache_write_5m_tokens,
-            u.cache_write_1h_tokens, u.cache_write_unknown_ttl_tokens, u.reasoning_tokens, cost_usd, latency_ms,
+            task.task_id if task else None,
+            task.category if task else None,
+            tier,
+            provider,
+            model_requested,
+            model_served,
+            request_id,
+            status,
+            error_type,
+            u.input_tokens,
+            u.output_tokens,
+            u.cache_read_tokens,
+            u.cache_write_5m_tokens,
+            u.cache_write_1h_tokens,
+            u.cache_write_unknown_ttl_tokens,
+            u.reasoning_tokens,
+            cost_usd,
+            latency_ms,
             ",".join(tools_requested) if tools_requested else None,
         )
         with self._lock, self._connect() as conn:
@@ -301,7 +324,8 @@ class BudgetLimits(BaseModel):
     daily_budget_usd: float = Field(default=0.50, ge=0)
     monthly_budget_usd: float = Field(default=5.00, ge=0)
     max_prompt_tokens: int = Field(
-        default=60_000, ge=1000,
+        default=60_000,
+        ge=1000,
         description="Refuse a request whose estimated prompt is larger (keeps Haiku 5.5 below its "
         "100K-token long-context price tier with a wide margin for estimate error).",
     )
@@ -322,8 +346,9 @@ class BudgetGuard:
     (Settings.llm_output_reserve_tokens) -- one unusually long reply can
     overshoot a limit by the difference, after which nothing more is sent."""
 
-    def __init__(self, limits: BudgetLimits, ledger: UsageLedger | None,
-                 clock: Callable[[], datetime] = datetime.now) -> None:
+    def __init__(
+        self, limits: BudgetLimits, ledger: UsageLedger | None, clock: Callable[[], datetime] = datetime.now
+    ) -> None:
         self._limits = limits
         self._ledger = ledger
         self._clock = clock

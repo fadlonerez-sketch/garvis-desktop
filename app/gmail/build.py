@@ -2,6 +2,7 @@
 config from Settings so nothing about the OAuth client secret / token
 paths is hardcoded elsewhere.
 """
+
 from __future__ import annotations
 
 from app.core.config import Settings

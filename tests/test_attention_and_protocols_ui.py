@@ -3,6 +3,7 @@
 pacing, de-duplication and cleanup are checked here; how the pulse looks on
 a real desktop, real focus behaviour over other apps and real mixed-DPI
 monitors are in the manual checklist."""
+
 from __future__ import annotations
 
 import os
@@ -27,9 +28,16 @@ def qapp():
 
 
 def _payload(n: int, level: str = "prominent", **extra) -> dict:
-    data = {"id": f"id-{n}", "level": level, "kind": "website", "title": f"Page {n}",
-            "detail": f"https://site{n}.example", "url": f"https://site{n}.example", "handle": 100 + n,
-            "source": "desktop"}
+    data = {
+        "id": f"id-{n}",
+        "level": level,
+        "kind": "website",
+        "title": f"Page {n}",
+        "detail": f"https://site{n}.example",
+        "url": f"https://site{n}.example",
+        "handle": 100 + n,
+        "source": "desktop",
+    }
     data.update(extra)
     return data
 
@@ -55,8 +63,12 @@ def attention(qapp):
 def test_overlay_windows_never_take_focus_and_the_pulse_is_click_through(attention):
     for window in (attention.pulse, attention.card):
         flags = window.windowFlags()
-        for flag in (Qt.WindowType.Tool, Qt.WindowType.FramelessWindowHint, Qt.WindowType.WindowStaysOnTopHint,
-                     Qt.WindowType.WindowDoesNotAcceptFocus):
+        for flag in (
+            Qt.WindowType.Tool,
+            Qt.WindowType.FramelessWindowHint,
+            Qt.WindowType.WindowStaysOnTopHint,
+            Qt.WindowType.WindowDoesNotAcceptFocus,
+        ):
             assert flags & flag
         assert window.testAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
     assert attention.pulse.windowFlags() & Qt.WindowType.WindowTransparentForInput
@@ -214,8 +226,10 @@ def test_create_build_save_and_reopen_a_protocol(page):
     page._cards[1]._on_change()
     assert page.save()
     saved = page.store.protocols()[0]
-    assert saved.name == "Research workspace" and saved.steps[0].params["urls"] == ["https://a.example",
-                                                                                  "https://b.example"]
+    assert saved.name == "Research workspace" and saved.steps[0].params["urls"] == [
+        "https://a.example",
+        "https://b.example",
+    ]
     assert not page.dirty and not page.save_button.isEnabled()
     page.reload()
     assert page.library.count() == 1 and "2 steps · Ready" in page.library.item(0).text()
@@ -272,15 +286,31 @@ def test_run_saves_first_then_hands_the_protocol_to_the_task_system(page):
     page.run_or_stop()
     saved = page.store.protocols()[0]
     assert runs == [saved.id] and not page.dirty
-    page.on_task_updated({"id": "t1", "protocol_id": saved.id, "status": "running", "origin": "mobile",
-                          "progress": {"step": 1, "total": 1}, "steps": [{"label": "Pause 3 s", "status": "running"}]})
+    page.on_task_updated(
+        {
+            "id": "t1",
+            "protocol_id": saved.id,
+            "status": "running",
+            "origin": "mobile",
+            "progress": {"step": 1, "total": 1},
+            "steps": [{"label": "Pause 3 s", "status": "running"}],
+        }
+    )
     assert page.run_button.text() == "Stop"
     cancels = []
     page.cancel_requested.connect(cancels.append)
     page.run_or_stop()
     assert cancels == ["t1"]
-    page.on_task_updated({"id": "t1", "protocol_id": saved.id, "status": "completed", "origin": "mobile",
-                          "result_preview": "All 1 step done.", "steps": [{"label": "Pause 3 s", "status": "ok"}]})
+    page.on_task_updated(
+        {
+            "id": "t1",
+            "protocol_id": saved.id,
+            "status": "completed",
+            "origin": "mobile",
+            "result_preview": "All 1 step done.",
+            "steps": [{"label": "Pause 3 s", "status": "ok"}],
+        }
+    )
     assert page.run_button.text() == "Run"
 
 

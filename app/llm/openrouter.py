@@ -9,6 +9,7 @@ modules are kept separate (not merged behind a shared base) so neither
 provider's behavior can be accidentally affected by a change aimed at the
 other.
 """
+
 from __future__ import annotations
 
 import json
@@ -68,9 +69,7 @@ def _tool_spec_to_dict(spec: ToolSpec) -> dict[str, Any]:
 def _map_http_error(exc: httpx.HTTPStatusError) -> LLMError:
     status = exc.response.status_code
     if status in (401, 403):
-        return LLMAuthenticationError(
-            "OpenRouter rejected the request credentials. Check GARVIS_OPENROUTER_API_KEY."
-        )
+        return LLMAuthenticationError("OpenRouter rejected the request credentials. Check GARVIS_OPENROUTER_API_KEY.")
     if status == 429:
         return LLMRateLimitError("OpenRouter rate limit exceeded. Please try again shortly.")
     # Everything else -- including 402 (insufficient credits) and 503 (no
@@ -91,9 +90,7 @@ class OpenRouterProvider(LLMProvider):
         timeout_seconds: float = 60.0,
     ) -> None:
         if not api_key:
-            raise ConfigurationError(
-                "OpenRouter API key is not configured. Set GARVIS_OPENROUTER_API_KEY."
-            )
+            raise ConfigurationError("OpenRouter API key is not configured. Set GARVIS_OPENROUTER_API_KEY.")
         if not model:
             raise ConfigurationError(
                 "OpenRouter model is not configured. Set GARVIS_OPENROUTER_MODEL to a "
@@ -120,20 +117,14 @@ class OpenRouterProvider(LLMProvider):
         if tools:
             body["tools"] = [_tool_spec_to_dict(t) for t in tools]
 
-        log_extra(
-            logger, 20, "openrouter.chat.request", model=self._model, num_messages=len(messages)
-        )
+        log_extra(logger, 20, "openrouter.chat.request", model=self._model, num_messages=len(messages))
 
         try:
             async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
-                response = await client.post(
-                    "/chat/completions", json=body, headers=self._headers()
-                )
+                response = await client.post("/chat/completions", json=body, headers=self._headers())
                 response.raise_for_status()
         except httpx.ConnectError as exc:
-            raise LLMUnavailableError(
-                "Garvis can't reach OpenRouter. Check your network connection."
-            ) from exc
+            raise LLMUnavailableError("Garvis can't reach OpenRouter. Check your network connection.") from exc
         except httpx.TimeoutException as exc:
             raise LLMUnavailableError("OpenRouter did not respond in time.") from exc
         except httpx.HTTPStatusError as exc:

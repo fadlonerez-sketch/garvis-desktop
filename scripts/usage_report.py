@@ -9,6 +9,7 @@ split are priced at the 1-hour rate, so estimates err high. Your provider's
 console (Anthropic Console > Usage / Cost) is the billing source of truth.
 No prompt or reply text is stored, so none is shown.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -37,8 +38,10 @@ def _line(label: str, row: tuple) -> str:
     per_task = f"{calls / tasks:4.1f}" if tasks else " n/a"
     extra = f"  ({failed} failed)" if failed else ""
     extra += f"  ({unpriced} without usage/price)" if unpriced else ""
-    return (f"{label:12} ${cost:9.4f}  calls {calls:5} tasks {tasks:4} calls/task {per_task}  "
-            f"in {inp:>9,} out {out:>8,} cache-read {read:>9,} ({hit}) cache-write {write:>8,}{extra}")
+    return (
+        f"{label:12} ${cost:9.4f}  calls {calls:5} tasks {tasks:4} calls/task {per_task}  "
+        f"in {inp:>9,} out {out:>8,} cache-read {read:>9,} ({hit}) cache-write {write:>8,}{extra}"
+    )
 
 
 def report(ledger: UsageLedger, days: int, top: int, now: datetime | None = None) -> str:
@@ -47,8 +50,14 @@ def report(ledger: UsageLedger, days: int, top: int, now: datetime | None = None
     month0 = day0.replace(day=1)
     lines = [f"Garvis model usage -- ledger {ledger.path}", ""]
     for label, since in (("Today", day0), ("This month", month0)):
-        lines.append(_line(label, ledger.query(f"SELECT {_TOTALS} FROM llm_calls WHERE ts >= ?",
-                                               (since.isoformat(timespec="seconds"),))[0]))
+        lines.append(
+            _line(
+                label,
+                ledger.query(f"SELECT {_TOTALS} FROM llm_calls WHERE ts >= ?", (since.isoformat(timespec="seconds"),))[
+                    0
+                ],
+            )
+        )
     lines += ["", f"Last {days} days:"]
     since = (day0 - timedelta(days=days - 1)).isoformat(timespec="seconds")
     for day, *row in ledger.query(
@@ -60,7 +69,8 @@ def report(ledger: UsageLedger, days: int, top: int, now: datetime | None = None
     month = month0.isoformat(timespec="seconds")
     for category, calls, tasks, cost in ledger.query(
         "SELECT COALESCE(category, '?'), COUNT(*), COUNT(DISTINCT task_id), COALESCE(SUM(cost_usd), 0) "
-        "FROM llm_calls WHERE ts >= ? GROUP BY 1 ORDER BY 4 DESC", (month,)
+        "FROM llm_calls WHERE ts >= ? GROUP BY 1 ORDER BY 4 DESC",
+        (month,),
     ):
         lines.append(f"  {category:32} ${cost:8.4f}  {tasks:4} tasks  {calls:5} calls")
 
@@ -72,8 +82,10 @@ def report(ledger: UsageLedger, days: int, top: int, now: datetime | None = None
         (month, top),
     ):
         used = sorted({t for t in (tools or "").split(",") if t})
-        lines.append(f"  {started}  ${cost:8.5f}  {calls:2} calls  prompt {inp:>8,}  {category or '?':24} "
-                     f"tools: {', '.join(used) or '-'}  [{task_id}]")
+        lines.append(
+            f"  {started}  ${cost:8.5f}  {calls:2} calls  prompt {inp:>8,}  {category or '?':24} "
+            f"tools: {', '.join(used) or '-'}  [{task_id}]"
+        )
 
     mismatched = ledger.query("SELECT COUNT(*) FROM llm_calls WHERE status = 'model_mismatch'")[0][0]
     served = ledger.query(

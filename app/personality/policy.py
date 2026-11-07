@@ -19,6 +19,7 @@ preference that might otherwise be inferred or remembered, precisely so a
 stray stored note (e.g. via the remember_fact tool) can never re-establish
 Hebrew as the default.
 """
+
 from __future__ import annotations
 
 PERSONALITY_POLICY = """Personality and communication style (how you speak, not what you're allowed to do):

@@ -1,4 +1,5 @@
 """Tests for GeminiProvider (app/llm/gemini.py) -- httpx MockTransport, no network."""
+
 from __future__ import annotations
 
 import json
@@ -61,10 +62,16 @@ async def test_request_shape_auth_model_reasoning_and_tools(monkeypatch):
 
     _patch_transport(monkeypatch, handler)
     provider = GeminiProvider(api_key="test-key", model="gemini-3.1-flash-lite", reasoning_effort="minimal")
-    spec = ToolSpec(name="calculator", description="calc", parameters={
-        "title": "CalcInput", "type": "object", "required": ["expression"],
-        "properties": {"expression": {"title": "Expression", "type": "string", "description": "e"}},
-    })
+    spec = ToolSpec(
+        name="calculator",
+        description="calc",
+        parameters={
+            "title": "CalcInput",
+            "type": "object",
+            "required": ["expression"],
+            "properties": {"expression": {"title": "Expression", "type": "string", "description": "e"}},
+        },
+    )
     response = await provider.chat([Message(role=Role.USER, content="hi")], tools=[spec])
 
     assert response.message.content == "Hi." and response.finish_reason == "stop"
@@ -89,7 +96,9 @@ async def test_no_reasoning_effort_when_unset(monkeypatch):
 
 
 async def test_tool_calls_parsed_and_thought_signature_kept(monkeypatch):
-    _patch_transport(monkeypatch, lambda r: _ok({"role": "assistant", "content": None, "tool_calls": [_SIGNED_CALL]}, "tool_calls"))
+    _patch_transport(
+        monkeypatch, lambda r: _ok({"role": "assistant", "content": None, "tool_calls": [_SIGNED_CALL]}, "tool_calls")
+    )
     response = await GeminiProvider(api_key="k", model="m").chat([Message(role=Role.USER, content="2+2?")])
     call = response.message.tool_calls[0]
     assert response.finish_reason == "tool_calls"
@@ -106,8 +115,12 @@ async def test_thought_signature_is_echoed_back_and_foreign_calls_get_placeholde
         return _ok({"role": "assistant", "content": "4"})
 
     _patch_transport(monkeypatch, handler)
-    own = ToolCall(id="call_1", name="calculator", arguments={"expression": "2+2"},
-                   provider_metadata={"extra_content": {"google": {"thought_signature": "SIG-abc"}}})
+    own = ToolCall(
+        id="call_1",
+        name="calculator",
+        arguments={"expression": "2+2"},
+        provider_metadata={"extra_content": {"google": {"thought_signature": "SIG-abc"}}},
+    )
     foreign = ToolCall(id="call_2", name="datetime", arguments={})  # made by another model (failover)
     history = [
         Message(role=Role.USER, content="2+2 and time?"),
@@ -142,11 +155,19 @@ async def test_length_finish_reason(monkeypatch):
 @pytest.mark.parametrize(
     "status, payload, exc_type, fragment",
     [
-        (400, [{"error": {"code": 400, "message": "API key not valid. Please pass a valid API key."}}],
-         LLMAuthenticationError, "GARVIS_GEMINI_API_KEY"),
+        (
+            400,
+            [{"error": {"code": 400, "message": "API key not valid. Please pass a valid API key."}}],
+            LLMAuthenticationError,
+            "GARVIS_GEMINI_API_KEY",
+        ),
         (403, {"error": {"message": "permission denied"}}, LLMAuthenticationError, "API key"),
-        (429, {"error": {"message": "Quota exceeded for metric generate_content_free_tier_requests"}},
-         LLMRateLimitError, "Quota exceeded"),
+        (
+            429,
+            {"error": {"message": "Quota exceeded for metric generate_content_free_tier_requests"}},
+            LLMRateLimitError,
+            "Quota exceeded",
+        ),
         (404, {"error": {"message": "models/nope is not found"}}, LLMUnavailableError, "not found"),
         (500, {"error": {"message": "internal"}}, LLMUnavailableError, "500"),
         (400, {"error": {"message": "Invalid JSON payload"}}, LLMUnavailableError, "Invalid JSON"),
@@ -201,18 +222,25 @@ async def test_health_check(monkeypatch):
 # ------------------------------------------------------------ sanitize_schema
 def test_sanitize_schema_nullable_and_drops_unsupported_keys():
     schema = {
-        "title": "In", "type": "object", "required": ["a"],
+        "title": "In",
+        "type": "object",
+        "required": ["a"],
         "properties": {
             "a": {"title": "A", "type": "string", "description": "d"},
-            "b": {"anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}], "default": None, "title": "B",
-                  "description": "opt"},
+            "b": {
+                "anyOf": [{"type": "integer", "minimum": 1}, {"type": "null"}],
+                "default": None,
+                "title": "B",
+                "description": "opt",
+            },
             "c": {"type": "string", "enum": ["up", "down"], "title": "C"},
             "title": {"type": "string"},  # a *property* called "title" must survive
         },
     }
     out = sanitize_schema(schema)
     assert out == {
-        "type": "object", "required": ["a"],
+        "type": "object",
+        "required": ["a"],
         "properties": {
             "a": {"type": "string", "description": "d"},
             "b": {"type": "integer", "minimum": 1, "description": "opt", "nullable": True},
@@ -229,9 +257,23 @@ def test_sanitize_schema_handles_every_registered_tool():
 
     settings = Settings(_env_file=None)
     desktop, workspace, browser = build_browser_stack(settings)
-    registry = build_registry(object(), browser, object(), extra_tools=build_extra_tools(settings, desktop, workspace, browser))
-    allowed = {"type", "description", "properties", "required", "items", "enum", "minimum", "maximum",
-               "minItems", "maxItems", "format", "nullable"}
+    registry = build_registry(
+        object(), browser, object(), extra_tools=build_extra_tools(settings, desktop, workspace, browser)
+    )
+    allowed = {
+        "type",
+        "description",
+        "properties",
+        "required",
+        "items",
+        "enum",
+        "minimum",
+        "maximum",
+        "minItems",
+        "maxItems",
+        "format",
+        "nullable",
+    }
 
     def check(node):
         assert set(node) <= allowed, set(node) - allowed

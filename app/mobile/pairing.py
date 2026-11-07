@@ -16,6 +16,7 @@ routes and never treats it as a phone (phone actions, reminder ringing).
 Thread-safe: the desktop dialog runs on the Qt thread while the server
 redeems/verifies on the asyncio loop thread.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -91,7 +92,7 @@ class PairingManager:
             raw = json.loads(self._store_path.read_text(encoding="utf-8"))
         except FileNotFoundError:
             return {}
-        except (OSError, ValueError):
+        except OSError, ValueError:
             log_extra(logger, 30, "mobile.pairing.store_unreadable")
             return {}
         devices: dict[str, DeviceRecord] = {}
@@ -105,7 +106,7 @@ class PairingManager:
                     kind=item.get("kind") if item.get("kind") in DEVICE_KINDS else "phone",
                 )
                 token_hash = str(item["token_sha256"])
-            except (KeyError, TypeError, ValueError):
+            except KeyError, TypeError, ValueError:
                 continue
             devices[token_hash] = record
         return devices
@@ -161,7 +162,9 @@ class PairingManager:
             active = self._code
             if active is None or active.expires_at <= self._clock():
                 self._code = None
-                raise PairingError("No pairing code is active. Open the phone dialog on the PC (Settings > Phone > Pair phone...) for a new code.")
+                raise PairingError(
+                    "No pairing code is active. Open the phone dialog on the PC (Settings > Phone > Pair phone...) for a new code."
+                )
             if not hmac.compare_digest(submitted.encode(), active.code.encode()):
                 self._failed_attempts += 1
                 if self._failed_attempts >= MAX_CODE_ATTEMPTS:
@@ -221,8 +224,13 @@ class PairingManager:
                 return None
             new_token = secrets.token_urlsafe(32)
             now = self._clock()
-            renewed = DeviceRecord(id=record.id, label=record.label, created_at=record.created_at,
-                                   expires_at=now + self._token_ttl, kind=record.kind)
+            renewed = DeviceRecord(
+                id=record.id,
+                label=record.label,
+                created_at=record.created_at,
+                expires_at=now + self._token_ttl,
+                kind=record.kind,
+            )
             del self._devices[old_hash]
             self._devices[_hash_token(new_token)] = renewed
             self._save_locked()

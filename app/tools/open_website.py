@@ -9,6 +9,7 @@ can't be confirmed, the result says so instead of claiming success.
 Background browsing belongs in the controlled browser (browser_navigate
 with target_desktop='garvis_workspace'), never in the user's own browser.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -38,8 +39,9 @@ _POLL_SECONDS = 0.25
 class OpenWebsiteInput(BaseModel):
     url: str = Field(description="Full URL to open, e.g. 'https://www.example.com'")
     target_desktop: Literal["user_desktop", "garvis_workspace"] | None = Field(
-        default=None, description="Always the user's desktop (it's their own browser). For background "
-        "browsing use browser_navigate with target_desktop='garvis_workspace' instead."
+        default=None,
+        description="Always the user's desktop (it's their own browser). For background "
+        "browsing use browser_navigate with target_desktop='garvis_workspace' instead.",
     )
 
 
@@ -58,8 +60,9 @@ class OpenWebsiteTool(Tool):
     presentation = "prominent"  # the user asked to see it
     input_model = OpenWebsiteInput
 
-    def __init__(self, desktop=None, routing: DesktopRouting | None = None,
-                 verify_seconds: float = _VERIFY_SECONDS) -> None:
+    def __init__(
+        self, desktop=None, routing: DesktopRouting | None = None, verify_seconds: float = _VERIFY_SECONDS
+    ) -> None:
         self._desktop = desktop
         self._routing = routing or DesktopRouting()
         self._verify_seconds = verify_seconds
@@ -77,8 +80,11 @@ class OpenWebsiteTool(Tool):
         deadline = time.monotonic() + self._verify_seconds
         while True:
             windows = await self._desktop.list_windows(include_other_desktops=True)
-            changed = [w for w in windows if _is_browser(w.process_name)
-                       and (w.handle not in before or before[w.handle] != w.title)]
+            changed = [
+                w
+                for w in windows
+                if _is_browser(w.process_name) and (w.handle not in before or before[w.handle] != w.title)
+            ]
             if changed:
                 return next((w for w in changed if w.is_foreground), changed[0])
             if time.monotonic() >= deadline:
@@ -88,9 +94,7 @@ class OpenWebsiteTool(Tool):
     async def execute(self, args: OpenWebsiteInput) -> ToolResult:
         parsed = urlparse(args.url)
         if parsed.scheme not in _ALLOWED_SCHEMES or not parsed.netloc:
-            return ToolResult.fail(
-                f"Refusing to open '{args.url}': only http(s) URLs are allowed."
-            )
+            return ToolResult.fail(f"Refusing to open '{args.url}': only http(s) URLs are allowed.")
         resolution = self._routing.resolve("website", args.target_desktop, DesktopTarget.USER)
         if resolution.target == DesktopTarget.WORKSPACE:
             return ToolResult.fail(
@@ -116,15 +120,28 @@ class OpenWebsiteTool(Tool):
             window = await self._find_opened(before)
             if window is None:
                 data["visible_verified"] = False
-                data["note"] = ("The browser was asked to open the page, but no browser window showed it within "
-                                f"{self._verify_seconds:.0f} s, so it can't be confirmed on the user's screen.")
+                data["note"] = (
+                    "The browser was asked to open the page, but no browser window showed it within "
+                    f"{self._verify_seconds:.0f} s, so it can't be confirmed on the user's screen."
+                )
             else:
                 shown = await self._desktop.show_window(window.handle)
-                data.update(visible_verified=bool(shown["on_user_desktop"]), window=shown["window"], handle=window.handle,
-                            browser=shown["app"], moved_from_other_desktop=shown["moved_from_other_desktop"])
+                data.update(
+                    visible_verified=bool(shown["on_user_desktop"]),
+                    window=shown["window"],
+                    handle=window.handle,
+                    browser=shown["app"],
+                    moved_from_other_desktop=shown["moved_from_other_desktop"],
+                )
         except DesktopError as exc:
             data["visible_verified"] = False
             data["note"] = f"The page was opened, but showing it on the user's screen couldn't be verified: {exc}"
-        log_extra(logger, 20, "open_website.opened", url=args.url, verified=data["visible_verified"],
-                  moved=data.get("moved_from_other_desktop"))
+        log_extra(
+            logger,
+            20,
+            "open_website.opened",
+            url=args.url,
+            verified=data["visible_verified"],
+            moved=data.get("moved_from_other_desktop"),
+        )
         return ToolResult.ok(data)

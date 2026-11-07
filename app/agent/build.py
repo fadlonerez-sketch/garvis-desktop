@@ -3,6 +3,7 @@
 Kept in one place so the UI (and tests) construct a fully-configured
 `Agent` without duplicating wiring logic or depending on Qt.
 """
+
 from __future__ import annotations
 
 import sys
@@ -107,8 +108,12 @@ def build_registry(
         ReadTextFileTool(),
         RememberFactTool(memory_store),
         RecallFactsTool(memory_store),
-        NavigateTool(browser_manager, routing, placer=getattr(browser_manager, "page_hook", None),
-                     workspace_available=workspace_available),
+        NavigateTool(
+            browser_manager,
+            routing,
+            placer=getattr(browser_manager, "page_hook", None),
+            workspace_available=workspace_available,
+        ),
         ReadPageTool(browser_manager),
         ClickTool(browser_manager),
         TypeTextTool(browser_manager),
@@ -173,8 +178,9 @@ def build_extra_tools(
             max_sources=settings.research_max_sources,
             source_chars=settings.research_source_chars,
         )
-        tools.append(WebResearchTool(researcher, browser=browser_manager, routing=routing,
-                                     placer=browser_manager.page_hook))
+        tools.append(
+            WebResearchTool(researcher, browser=browser_manager, routing=routing, placer=browser_manager.page_hook)
+        )
     return tools
 
 
@@ -225,7 +231,9 @@ def _build_tiered_router(settings: Settings) -> TieredLLMRouter:
     }
     if not settings.anthropic_api_key:
         log_extra(
-            logger, 30, "llm.anthropic.no_key",
+            logger,
+            30,
+            "llm.anthropic.no_key",
             note="ANTHROPIC_API_KEY is not set: every model request will fail with an error until it is added to "
             "Garvis's .env (python scripts/check_anthropic.py --set-key). No other model is used.",
         )
@@ -243,8 +251,14 @@ def _build_tiered_router(settings: Settings) -> TieredLLMRouter:
             ),
             ledger,
         )
-    log_extra(logger, 20, "llm.usage.ledger", path=str(settings.llm_usage_db_path),
-              budget_enabled=budget is not None, max_retries=settings.llm_max_retries)
+    log_extra(
+        logger,
+        20,
+        "llm.usage.ledger",
+        path=str(settings.llm_usage_db_path),
+        budget_enabled=budget is not None,
+        max_retries=settings.llm_max_retries,
+    )
     return TieredLLMRouter(
         pools,
         required_model=REQUIRED_MODEL,
@@ -294,7 +308,12 @@ def build_agent(settings: Settings | None = None, events: EventBus | None = None
     events.subscribe(routing.on_event)
     extra_tools = build_extra_tools(settings, desktop, workspace, browser_manager, routing=routing)
     registry = build_registry(
-        memory_store, browser_manager, gmail_manager, extra_tools=extra_tools, desktop=desktop, routing=routing,
+        memory_store,
+        browser_manager,
+        gmail_manager,
+        extra_tools=extra_tools,
+        desktop=desktop,
+        routing=routing,
         workspace_available=workspace is not None,
     )
     llm = build_llm_provider(settings)

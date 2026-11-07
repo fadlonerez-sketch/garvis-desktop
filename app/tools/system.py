@@ -9,6 +9,7 @@
 
 All output is passed through redact_secrets() before it reaches the LLM.
 """
+
 from __future__ import annotations
 
 import os
@@ -61,12 +62,18 @@ class ListProcessesTool(Tool):
             return ToolResult.fail(str(exc))
         if args.name:
             needle = args.name.lower()
-            rows = [r for r in rows if needle in str(r.get("name", "")).lower()
-                    or needle in str(r.get("window_title") or "").lower()]
+            rows = [
+                r
+                for r in rows
+                if needle in str(r.get("name", "")).lower() or needle in str(r.get("window_title") or "").lower()
+            ]
         if args.not_responding_only:
             rows = [r for r in rows if r.get("responding") is False]
-        key = {"cpu": lambda r: -(r.get("cpu_percent") or 0), "memory": lambda r: -(r.get("memory_mb") or 0),
-               "name": lambda r: str(r.get("name", "")).lower()}[args.sort_by]
+        key = {
+            "cpu": lambda r: -(r.get("cpu_percent") or 0),
+            "memory": lambda r: -(r.get("memory_mb") or 0),
+            "name": lambda r: str(r.get("name", "")).lower(),
+        }[args.sort_by]
         rows.sort(key=key)
         for row in rows:
             if not row.get("window_title"):
@@ -96,7 +103,9 @@ class SystemStatusTool(Tool):
 
 class RecentErrorsInput(BaseModel):
     hours: float = Field(default=24, gt=0, le=24 * 30)
-    filter: str | None = Field(default=None, description="Only events whose source or message contains this, e.g. an app name")
+    filter: str | None = Field(
+        default=None, description="Only events whose source or message contains this, e.g. an app name"
+    )
     limit: int = Field(default=20, ge=1, le=100)
 
 
@@ -151,9 +160,10 @@ class RunPowerShellInput(BaseModel):
     working_directory: str | None = Field(default=None, description="Folder to run it in (default: your home folder)")
     timeout_seconds: float = Field(default=60, ge=1, le=600)
     target_desktop: Literal["user_desktop", "garvis_workspace"] | None = Field(
-        default=None, description="Only matters if the command starts programs with windows: 'garvis_workspace' "
+        default=None,
+        description="Only matters if the command starts programs with windows: 'garvis_workspace' "
         "moves the windows it opens to Garvis's background desktop; 'user_desktop' keeps them on the user's "
-        "screen. PowerShell itself always runs hidden. Prefer open_application for starting apps."
+        "screen. PowerShell itself always runs hidden. Prefer open_application for starting apps.",
     )
 
 
@@ -169,8 +179,9 @@ class RunPowerShellTool(Tool):
     risk_level = RiskLevel.MEDIUM
     input_model = RunPowerShellInput
 
-    def __init__(self, runner: PowerShellRunner | None = None, policy: CommandPolicy | None = None,
-                 desktop=None) -> None:
+    def __init__(
+        self, runner: PowerShellRunner | None = None, policy: CommandPolicy | None = None, desktop=None
+    ) -> None:
         """`desktop` (DesktopController with the workspace attached) lets
         windows opened by a command be found and put on their target desktop."""
         self._runner = runner or PowerShellRunner()
@@ -193,8 +204,9 @@ class RunPowerShellTool(Tool):
         anything the user already had open. Put on `target` when given."""
         handles, pids, user_foreground = before
         windows = await self._desktop.list_windows(include_other_desktops=True)
-        fresh = [w for w in windows if w.handle not in handles and w.pid not in pids
-                 and not self._desktop.is_own_window(w)]
+        fresh = [
+            w for w in windows if w.handle not in handles and w.pid not in pids and not self._desktop.is_own_window(w)
+        ]
         if not fresh:
             return []
         report = []
@@ -209,7 +221,8 @@ class RunPowerShellTool(Tool):
         locations = await self._desktop.locate_windows(fresh)
         for row, window in zip(report, fresh, strict=True):
             row["desktop"] = {"user": "user_desktop", "garvis_workspace": "garvis_workspace"}.get(
-                locations.get(window.handle), "other_desktop")
+                locations.get(window.handle), "other_desktop"
+            )
         return report
 
     async def confirmation_reason(self, args: RunPowerShellInput) -> str | None:
@@ -219,13 +232,19 @@ class RunPowerShellTool(Tool):
         if args.working_directory and os.path.expandvars(args.working_directory.strip()).startswith(("\\\\", "//")):
             # Checked before touching the path: even is_dir() on a UNC path contacts that server.
             return ToolResult.fail("Network (UNC) folders are not supported as a working directory.")
-        cwd = Path(os.path.expandvars(os.path.expanduser(args.working_directory))) if args.working_directory else Path.home()
+        cwd = (
+            Path(os.path.expandvars(os.path.expanduser(args.working_directory)))
+            if args.working_directory
+            else Path.home()
+        )
         if not cwd.is_dir():
             return ToolResult.fail(f"Folder not found: {cwd}")
         if args.target_desktop == "garvis_workspace":
             if self._desktop is None or not await self._desktop.workspace_available():
-                return ToolResult.fail("Garvis's workspace desktop isn't available, so the command was not run "
-                                       "(its windows would otherwise open on the user's screen).")
+                return ToolResult.fail(
+                    "Garvis's workspace desktop isn't available, so the command was not run "
+                    "(its windows would otherwise open on the user's screen)."
+                )
         before = await self._window_snapshot()
         try:
             result = await self._runner.run(args.command, cwd=cwd, timeout_seconds=args.timeout_seconds)

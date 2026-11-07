@@ -4,6 +4,7 @@ Garvis's agent core talks only to `LLMProvider`. Swapping the backend
 (OmniRoute, Gemini, Groq, ... -- always an external API; Garvis never runs
 an AI model locally) must never require touching agent code.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
@@ -77,7 +78,7 @@ def served_model_matches(requested_model: str, served: str | None) -> bool:
     name = served.lower()
     if "/" in name and "/" not in expected:
         name = name.rpartition("/")[2]
-    suffix = name[len(expected) + 1:]
+    suffix = name[len(expected) + 1 :]
     return name == expected or (name.startswith(expected + "-") and suffix.isdigit())
 
 

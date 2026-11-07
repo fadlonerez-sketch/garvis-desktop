@@ -7,6 +7,7 @@ through open_application, which resolves only installed apps), as are
 credential files and network (UNC) paths. Nothing is created, changed or
 deleted.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -51,16 +52,20 @@ def refusal(path: Path) -> str | None:
     if not path.exists():
         return f"Nothing exists at '{text}'."
     if path.is_file() and path.suffix.lower() in BLOCKED_SUFFIXES:
-        return (f"'{path.name}' is a {path.suffix.lower()} file, which runs or changes something when opened; "
-                "Garvis only opens folders and documents. Use open_application for installed apps.")
+        return (
+            f"'{path.name}' is a {path.suffix.lower()} file, which runs or changes something when opened; "
+            "Garvis only opens folders and documents. Use open_application for installed apps."
+        )
     if not (path.is_file() or path.is_dir()):
         return f"'{text}' is neither a regular file nor a folder."
     return None
 
 
 class OpenPathInput(BaseModel):
-    path: str = Field(description="Absolute path of an existing folder or document, e.g. "
-                                  "'C:\\\\Users\\\\me\\\\Projects\\\\garvis' or '%USERPROFILE%\\\\Documents\\\\notes.txt'.")
+    path: str = Field(
+        description="Absolute path of an existing folder or document, e.g. "
+        "'C:\\\\Users\\\\me\\\\Projects\\\\garvis' or '%USERPROFILE%\\\\Documents\\\\notes.txt'."
+    )
 
 
 class OpenPathTool(Tool):

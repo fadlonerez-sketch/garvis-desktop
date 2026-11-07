@@ -2,6 +2,7 @@
 (app/voice/session.py): an optional spoken `greeting` and an optional
 `initial_noise_floor` seed. Both default to None, which must leave the
 existing session behavior exactly as it was."""
+
 from __future__ import annotations
 
 import pytest
@@ -72,9 +73,7 @@ async def test_user_can_barge_in_during_the_greeting():
     recorder = _ScriptedRecorder(
         _split(0.35, 0.05, _silence_chunk) + _speech_burst(0.4, amplitude=4000) + _split(0.5, 0.05, _silence_chunk)
     )
-    session, voice, events, _ = _build(
-        agent, recorder, player=player, greeting=_GREETING, initial_noise_floor=50.0
-    )
+    session, voice, events, _ = _build(agent, recorder, player=player, greeting=_GREETING, initial_noise_floor=50.0)
     states = _collect_states(events)
     session.start()
     await _run_briefly(session, 400)
@@ -144,9 +143,7 @@ async def test_seeded_floor_is_carried_into_the_greeting_barge_in_vad():
 
     session_module.VoiceActivityDetector = _spy
     try:
-        session, _, _, _ = _build(
-            _FakeAgent([]), _ScriptedRecorder(), greeting=_GREETING, initial_noise_floor=75.0
-        )
+        session, _, _, _ = _build(_FakeAgent([]), _ScriptedRecorder(), greeting=_GREETING, initial_noise_floor=75.0)
         session.start()
         await _run_briefly(session, 30)
         await session.stop()

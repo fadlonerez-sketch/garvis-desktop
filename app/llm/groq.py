@@ -5,6 +5,7 @@ threaded through and tool arguments are JSON-encoded strings on the wire.
 The module is message/tool-spec conversion helpers plus a thin
 `LLMProvider` subclass with `chat()` + `health_check()`.
 """
+
 from __future__ import annotations
 
 import json
@@ -64,9 +65,7 @@ def _tool_spec_to_dict(spec: ToolSpec) -> dict[str, Any]:
 def _map_http_error(exc: httpx.HTTPStatusError) -> LLMError:
     status = exc.response.status_code
     if status in (401, 403):
-        return LLMAuthenticationError(
-            "Groq rejected the request credentials. Check GARVIS_GROQ_API_KEY."
-        )
+        return LLMAuthenticationError("Groq rejected the request credentials. Check GARVIS_GROQ_API_KEY.")
     if status == 429:
         return LLMRateLimitError("Groq rate limit exceeded. Please try again shortly.")
     return LLMUnavailableError(f"Groq returned an error: {status} {exc.response.text[:300]}")
@@ -81,9 +80,7 @@ class GroqProvider(LLMProvider):
         timeout_seconds: float = 60.0,
     ) -> None:
         if not api_key:
-            raise ConfigurationError(
-                "Groq API key is not configured. Set GARVIS_GROQ_API_KEY."
-            )
+            raise ConfigurationError("Groq API key is not configured. Set GARVIS_GROQ_API_KEY.")
         self._api_key = api_key
         self._model = model
         self._base_url = base_url.rstrip("/")
@@ -108,14 +105,10 @@ class GroqProvider(LLMProvider):
 
         try:
             async with httpx.AsyncClient(base_url=self._base_url, timeout=self._timeout) as client:
-                response = await client.post(
-                    "/chat/completions", json=body, headers=self._headers()
-                )
+                response = await client.post("/chat/completions", json=body, headers=self._headers())
                 response.raise_for_status()
         except httpx.ConnectError as exc:
-            raise LLMUnavailableError(
-                "Garvis can't reach Groq. Check your network connection."
-            ) from exc
+            raise LLMUnavailableError("Garvis can't reach Groq. Check your network connection.") from exc
         except httpx.TimeoutException as exc:
             raise LLMUnavailableError("Groq did not respond in time.") from exc
         except httpx.HTTPStatusError as exc:

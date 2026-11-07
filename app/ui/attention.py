@@ -21,6 +21,7 @@ five pages) stack into it -- and at most one pulse per PULSE_COOLDOWN.
 Everything is torn down by dismiss()/shutdown(); timers are children of
 their windows.
 """
+
 from __future__ import annotations
 
 import math
@@ -51,10 +52,20 @@ PULSE_COOLDOWN = 1.6
 DISMISS_MS = {"prominent": 9000, "subtle": 6000}
 MAX_ROWS = 4
 CARD_WIDTH = 360
-_FLAGS = (Qt.WindowType.Tool | Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint
-          | Qt.WindowType.WindowDoesNotAcceptFocus | Qt.WindowType.NoDropShadowWindowHint)
-_KIND_LABEL = {"website": "WEB PAGE", "application": "APPLICATION", "path": "FILE · FOLDER", "notice": "GARVIS",
-               "result": "RESULT"}
+_FLAGS = (
+    Qt.WindowType.Tool
+    | Qt.WindowType.FramelessWindowHint
+    | Qt.WindowType.WindowStaysOnTopHint
+    | Qt.WindowType.WindowDoesNotAcceptFocus
+    | Qt.WindowType.NoDropShadowWindowHint
+)
+_KIND_LABEL = {
+    "website": "WEB PAGE",
+    "application": "APPLICATION",
+    "path": "FILE · FOLDER",
+    "notice": "GARVIS",
+    "result": "RESULT",
+}
 
 
 def _floating(widget: QWidget, click_through: bool) -> None:
@@ -174,9 +185,13 @@ class _Row(QWidget):
         text = QVBoxLayout()
         text.setSpacing(1)
         width = CARD_WIDTH - (130 if item.get("handle") else 60)
-        title = QLabel(QFontMetrics(theme.display_font(10.5)).elidedText(item.get("title", ""), Qt.TextElideMode.ElideRight, width))
-        title.setStyleSheet(f"color: {theme.TEXT_1}; font-family: '{theme.display_family()}'; "
-                            f"font-size: {13 if compact else 14}px; font-weight: 600;")
+        title = QLabel(
+            QFontMetrics(theme.display_font(10.5)).elidedText(item.get("title", ""), Qt.TextElideMode.ElideRight, width)
+        )
+        title.setStyleSheet(
+            f"color: {theme.TEXT_1}; font-family: '{theme.display_family()}'; "
+            f"font-size: {13 if compact else 14}px; font-weight: 600;"
+        )
         title.setToolTip(item.get("title", ""))
         text.addWidget(title)
         detail = item.get("detail") or ""
@@ -219,8 +234,9 @@ class AttentionCard(QWidget):
         head = QHBoxLayout()
         head.setSpacing(8)
         self.kicker = QLabel("")
-        self.kicker.setStyleSheet(f"color: {theme.ACCENT_TEXT}; font-family: '{theme.display_family()}'; "
-                                  "font-size: 11px; font-weight: 600;")
+        self.kicker.setStyleSheet(
+            f"color: {theme.ACCENT_TEXT}; font-family: '{theme.display_family()}'; font-size: 11px; font-weight: 600;"
+        )
         theme.tracked(self.kicker, 1.2)
         head.addWidget(self.kicker)
         head.addStretch(1)
@@ -296,8 +312,10 @@ class AttentionCard(QWidget):
         latest = self._items[-MAX_ROWS:]
         kinds = {item.get("kind") for item in latest}
         if len(self._items) == 1:
-            self.kicker.setText(("OPENED · " if latest[0].get("kind") != "notice" else "")
-                                + _KIND_LABEL.get(latest[0].get("kind"), "RESULT"))
+            self.kicker.setText(
+                ("OPENED · " if latest[0].get("kind") != "notice" else "")
+                + _KIND_LABEL.get(latest[0].get("kind"), "RESULT")
+            )
         else:
             self.kicker.setText(f"OPENED · {len(self._items)} ITEMS" if kinds != {"notice"} else "GARVIS")
         for item in reversed(latest):
@@ -377,8 +395,12 @@ class AttentionController(QObject):
     reveal_requested = Signal(int)
     activity_requested = Signal()
 
-    def __init__(self, cursor_pos: Callable[[], QPoint] = QCursor.pos, clock: Callable[[], float] = time.monotonic,
-                 parent: QObject | None = None) -> None:
+    def __init__(
+        self,
+        cursor_pos: Callable[[], QPoint] = QCursor.pos,
+        clock: Callable[[], float] = time.monotonic,
+        parent: QObject | None = None,
+    ) -> None:
         super().__init__(parent)
         self._cursor_pos = cursor_pos
         self._clock = clock

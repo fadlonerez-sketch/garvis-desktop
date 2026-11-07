@@ -1,4 +1,5 @@
 """Tests for token-aware trimming in ConversationContext."""
+
 from __future__ import annotations
 
 from app.agent.context import ConversationContext
@@ -29,9 +30,7 @@ def test_large_old_tool_result_is_evicted_before_message_count_limit() -> None:
     context.set_system_prompt("You are Garvis.")
 
     huge_tool_result = "x" * 8000  # ~2000 tokens, alone over budget
-    context.add(
-        Message(role=Role.TOOL, content=huge_tool_result, tool_call_id="1", name="big_tool")
-    )
+    context.add(Message(role=Role.TOOL, content=huge_tool_result, tool_call_id="1", name="big_tool"))
 
     # Well under the 30-message count limit, so only token-based trimming
     # can be responsible for removing it.

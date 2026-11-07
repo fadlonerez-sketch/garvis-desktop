@@ -22,6 +22,7 @@ reference to credential files -- gets a reason, and the Agent asks the user
 first (PermissionChecker.evaluate_call). This only decides confirmation;
 nothing is ever silently blocked or silently allowed by the LLM.
 """
+
 from __future__ import annotations
 
 import ipaddress
@@ -33,47 +34,179 @@ from app.security.sensitive import sensitive_path_reason
 from app.system.powershell import PowerShellError, PowerShellRunner, ps_string
 
 _ALIASES = {
-    "ls": "get-childitem", "dir": "get-childitem", "gci": "get-childitem", "cat": "get-content",
-    "type": "get-content", "gc": "get-content", "ps": "get-process", "gps": "get-process",
-    "gsv": "get-service", "select": "select-object", "where": "where-object", "?": "where-object",
-    "%": "foreach-object", "foreach": "foreach-object", "sort": "sort-object", "ft": "format-table",
-    "fl": "format-list", "fw": "format-wide", "measure": "measure-object", "echo": "write-output",
-    "write": "write-output", "sls": "select-string", "cd": "set-location", "chdir": "set-location",
-    "sl": "set-location", "pwd": "get-location", "gl": "get-location", "gm": "get-member",
-    "group": "group-object", "h": "get-history", "history": "get-history", "gal": "get-alias",
-    "gcm": "get-command", "gwmi": "get-wmiobject", "gcim": "get-ciminstance", "sleep": "start-sleep",
-    "diff": "compare-object", "compare": "compare-object", "gi": "get-item", "gp": "get-itemproperty",
-    "rvpa": "resolve-path", "cls": "clear-host", "clear": "clear-host", "pushd": "push-location",
-    "popd": "pop-location", "gdr": "get-psdrive", "gjb": "get-job", "help": "get-help", "man": "get-help",
+    "ls": "get-childitem",
+    "dir": "get-childitem",
+    "gci": "get-childitem",
+    "cat": "get-content",
+    "type": "get-content",
+    "gc": "get-content",
+    "ps": "get-process",
+    "gps": "get-process",
+    "gsv": "get-service",
+    "select": "select-object",
+    "where": "where-object",
+    "?": "where-object",
+    "%": "foreach-object",
+    "foreach": "foreach-object",
+    "sort": "sort-object",
+    "ft": "format-table",
+    "fl": "format-list",
+    "fw": "format-wide",
+    "measure": "measure-object",
+    "echo": "write-output",
+    "write": "write-output",
+    "sls": "select-string",
+    "cd": "set-location",
+    "chdir": "set-location",
+    "sl": "set-location",
+    "pwd": "get-location",
+    "gl": "get-location",
+    "gm": "get-member",
+    "group": "group-object",
+    "h": "get-history",
+    "history": "get-history",
+    "gal": "get-alias",
+    "gcm": "get-command",
+    "gwmi": "get-wmiobject",
+    "gcim": "get-ciminstance",
+    "sleep": "start-sleep",
+    "diff": "compare-object",
+    "compare": "compare-object",
+    "gi": "get-item",
+    "gp": "get-itemproperty",
+    "rvpa": "resolve-path",
+    "cls": "clear-host",
+    "clear": "clear-host",
+    "pushd": "push-location",
+    "popd": "pop-location",
+    "gdr": "get-psdrive",
+    "gjb": "get-job",
+    "help": "get-help",
+    "man": "get-help",
     "tnc": "test-netconnection",
 }
 _SAFE_VERB_PREFIXES = (
-    "get-", "test-", "measure-", "select-", "where-", "sort-", "group-", "format-", "convertto-",
-    "convertfrom-", "compare-", "resolve-", "find-",
+    "get-",
+    "test-",
+    "measure-",
+    "select-",
+    "where-",
+    "sort-",
+    "group-",
+    "format-",
+    "convertto-",
+    "convertfrom-",
+    "compare-",
+    "resolve-",
+    "find-",
 )
 _SAFE_CMDLETS = {
-    "foreach-object", "out-string", "out-host", "out-null", "write-output", "write-host", "start-sleep",
-    "split-path", "join-path", "set-location", "push-location", "pop-location", "clear-host",
+    "foreach-object",
+    "out-string",
+    "out-host",
+    "out-null",
+    "write-output",
+    "write-host",
+    "start-sleep",
+    "split-path",
+    "join-path",
+    "set-location",
+    "push-location",
+    "pop-location",
+    "clear-host",
 }
 _CREDENTIAL_CMDLETS = {
-    "get-credential", "get-clipboard", "get-storedcredential", "get-secret", "get-secretinfo",
-    "convertfrom-securestring", "export-clixml",
+    "get-credential",
+    "get-clipboard",
+    "get-storedcredential",
+    "get-secret",
+    "get-secretinfo",
+    "convertfrom-securestring",
+    "export-clixml",
 }
 _CREDENTIAL_TEXT = ("key=clear", "cmdkey", "dpapi", "securestring", "vaultcmd", "mimikatz")
 _SAFE_STATIC_TYPES = {
-    "[math]", "[system.math]", "[datetime]", "[system.datetime]", "[timespan]", "[string]", "[system.string]",
-    "[char]", "[convert]", "[system.convert]", "[io.path]", "[system.io.path]", "[guid]", "[version]",
-    "[int]", "[double]", "[regex]", "[environment]", "[system.environment]",
+    "[math]",
+    "[system.math]",
+    "[datetime]",
+    "[system.datetime]",
+    "[timespan]",
+    "[string]",
+    "[system.string]",
+    "[char]",
+    "[convert]",
+    "[system.convert]",
+    "[io.path]",
+    "[system.io.path]",
+    "[guid]",
+    "[version]",
+    "[int]",
+    "[double]",
+    "[regex]",
+    "[environment]",
+    "[system.environment]",
 }
 _SAFE_MEMBERS = {
-    "tostring", "trim", "trimstart", "trimend", "split", "replace", "substring", "tolower", "toupper",
-    "contains", "startswith", "endswith", "indexof", "lastindexof", "padleft", "padright", "join",
-    "gettype", "equals", "compareto", "format", "toshortdatestring", "tolongdatestring",
-    "toshorttimestring", "adddays", "addhours", "addminutes", "addseconds", "where", "foreach",
-    "containskey", "getenumerator", "tochararray", "normalize", "isnullorempty", "isnullorwhitespace",
-    "round", "floor", "ceiling", "abs", "max", "min", "pow", "sqrt", "parse", "tryparse", "frombase64string",
-    "getenvironmentvariable", "getfolderpath", "getfilename", "getextension", "getdirectoryname",
-    "combine", "getfullpath", "newguid", "now", "today", "matches", "match", "escape",
+    "tostring",
+    "trim",
+    "trimstart",
+    "trimend",
+    "split",
+    "replace",
+    "substring",
+    "tolower",
+    "toupper",
+    "contains",
+    "startswith",
+    "endswith",
+    "indexof",
+    "lastindexof",
+    "padleft",
+    "padright",
+    "join",
+    "gettype",
+    "equals",
+    "compareto",
+    "format",
+    "toshortdatestring",
+    "tolongdatestring",
+    "toshorttimestring",
+    "adddays",
+    "addhours",
+    "addminutes",
+    "addseconds",
+    "where",
+    "foreach",
+    "containskey",
+    "getenumerator",
+    "tochararray",
+    "normalize",
+    "isnullorempty",
+    "isnullorwhitespace",
+    "round",
+    "floor",
+    "ceiling",
+    "abs",
+    "max",
+    "min",
+    "pow",
+    "sqrt",
+    "parse",
+    "tryparse",
+    "frombase64string",
+    "getenvironmentvariable",
+    "getfolderpath",
+    "getfilename",
+    "getextension",
+    "getdirectoryname",
+    "combine",
+    "getfullpath",
+    "newguid",
+    "now",
+    "today",
+    "matches",
+    "match",
+    "escape",
 }
 
 
@@ -119,12 +252,46 @@ def _python(args: list[str]) -> bool:
 # folder. Checked before the read-only rules below, by program name after
 # path/extension/alias normalization.
 _TEST_RUNNER_PROGRAMS = {
-    "pytest", "py.test", "pytest-3", "tox", "nox", "nose2", "ward", "jest", "vitest", "mocha", "ava", "karma",
-    "playwright", "cypress", "phpunit", "rspec", "ctest", "vstest.console", "invoke-pester",
+    "pytest",
+    "py.test",
+    "pytest-3",
+    "tox",
+    "nox",
+    "nose2",
+    "ward",
+    "jest",
+    "vitest",
+    "mocha",
+    "ava",
+    "karma",
+    "playwright",
+    "cypress",
+    "phpunit",
+    "rspec",
+    "ctest",
+    "vstest.console",
+    "invoke-pester",
 }
 _TEST_SUBCOMMAND_TOOLS = {
-    "npm", "pnpm", "yarn", "bun", "deno", "npx", "dotnet", "cargo", "go", "mvn", "mvnw", "gradle", "gradlew",
-    "make", "nmake", "mix", "swift", "flutter", "dart",
+    "npm",
+    "pnpm",
+    "yarn",
+    "bun",
+    "deno",
+    "npx",
+    "dotnet",
+    "cargo",
+    "go",
+    "mvn",
+    "mvnw",
+    "gradle",
+    "gradlew",
+    "make",
+    "nmake",
+    "mix",
+    "swift",
+    "flutter",
+    "dart",
 }
 _TEST_SUBCOMMANDS = {"test", "t", "tst", "it", "cit", "install-test", "install-ci-test", "clean-install-test", "vstest"}
 _SCRIPT_RUNNERS = {"run", "run-script", "rum", "urn", "exec", "x", "dlx"}
@@ -151,7 +318,7 @@ def _runs_tests(name: str, args: list[str]) -> bool:
         words = [a for a in cleaned if not a.startswith("-")][:3]
         if any(w in _TEST_SUBCOMMANDS for w in words):
             return True
-        if any(w in _SCRIPT_RUNNERS and any("test" in x for x in words[i + 1:i + 2]) for i, w in enumerate(words)):
+        if any(w in _SCRIPT_RUNNERS and any("test" in x for x in words[i + 1 : i + 2]) for i, w in enumerate(words)):
             return True
         if name == "npx" and words:
             return words[0] in _TEST_RUNNER_PROGRAMS
@@ -202,7 +369,7 @@ def _nvidia_smi(args: list[str]) -> bool:
             prefix = next((p for p in _NVIDIA_VALUED if token.startswith(p)), None)
             if prefix is None:
                 return False
-            value = token[len(prefix):]
+            value = token[len(prefix) :]
         if not _NVIDIA_VALUE.match(value):
             return False
     return True
@@ -215,7 +382,9 @@ def _no_remote(args: list[str]) -> bool:
 
 _EXTERNAL_RULES: dict[str, Callable[[list[str]], bool]] = {
     "git": _git,
-    "python": _python, "python3": _python, "py": _python,
+    "python": _python,
+    "python3": _python,
+    "py": _python,
     "pip": _subcommand_in({"list", "show", "freeze", "check"}),
     # `npm view/outdated` and `winget search/show` send the (model-chosen)
     # package name or query to an online registry; they ask like any other.
@@ -231,9 +400,19 @@ _EXTERNAL_RULES: dict[str, Callable[[list[str]], bool]] = {
     "nvidia-smi": _nvidia_smi,
     "arp": _flags_in({"-a", "/a", "-g", "/g", "-v", "/v"}),  # -s/-d change the ARP cache
     **{name: _no_remote for name in ("systeminfo", "tasklist", "getmac", "driverquery")},
-    **{name: (lambda args: True) for name in (
-        "whoami", "hostname", "where", "netstat", "findstr", "fc", "tree", "ver",
-    )},
+    **{
+        name: (lambda args: True)
+        for name in (
+            "whoami",
+            "hostname",
+            "where",
+            "netstat",
+            "findstr",
+            "fc",
+            "tree",
+            "ver",
+        )
+    },
 }
 
 
@@ -244,14 +423,34 @@ _EXTERNAL_RULES: dict[str, Callable[[list[str]], bool]] = {
 # attacker this way (packet size/count could encode bits, but only Google,
 # Cloudflare, Quad9, OpenDNS or Microsoft would see them). Private LAN
 # addresses are NOT exempt: on shared Wi-Fi another device can own one.
-_BENIGN_HOSTS = frozenset({
-    "localhost",
-    "8.8.8.8", "8.8.4.4", "1.1.1.1", "1.0.0.1", "9.9.9.9", "149.112.112.112", "208.67.222.222",
-    "208.67.220.220", "2001:4860:4860::8888", "2001:4860:4860::8844", "2606:4700:4700::1111",
-    "google.com", "www.google.com", "dns.google", "cloudflare.com", "www.cloudflare.com",
-    "one.one.one.one", "microsoft.com", "www.microsoft.com", "bing.com", "www.bing.com",
-    "www.msftconnecttest.com", "github.com",
-})
+_BENIGN_HOSTS = frozenset(
+    {
+        "localhost",
+        "8.8.8.8",
+        "8.8.4.4",
+        "1.1.1.1",
+        "1.0.0.1",
+        "9.9.9.9",
+        "149.112.112.112",
+        "208.67.222.222",
+        "208.67.220.220",
+        "2001:4860:4860::8888",
+        "2001:4860:4860::8844",
+        "2606:4700:4700::1111",
+        "google.com",
+        "www.google.com",
+        "dns.google",
+        "cloudflare.com",
+        "www.cloudflare.com",
+        "one.one.one.one",
+        "microsoft.com",
+        "www.microsoft.com",
+        "bing.com",
+        "www.bing.com",
+        "www.msftconnecttest.com",
+        "github.com",
+    }
+)
 _OPTION_VALUE = re.compile(r"^[A-Za-z0-9]{1,16}$")
 
 
@@ -301,23 +500,30 @@ class _NetworkTool:
                         continue
                     if _OPTION_VALUE.match(_strip(value)):
                         continue
-                return (f"'{display}' with the option '{token[:40]}' may send data over the network, "
-                        "and Garvis can't check that option.")
+                return (
+                    f"'{display}' with the option '{token[:40]}' may send data over the network, "
+                    "and Garvis can't check that option."
+                )
             hosts.extend(token.split(","))
         if not hosts:
-            return (f"'{display}' doesn't name a fixed target here, so it may contact a host chosen at "
-                    "runtime (e.g. from piped input).")
+            return (
+                f"'{display}' doesn't name a fixed target here, so it may contact a host chosen at "
+                "runtime (e.g. from piped input)."
+            )
         for host in hosts:
             if not _benign_host(host):
-                return (f"'{display}' would contact '{_strip(host)[:60]}'. Lookups and pings send the target "
-                        "name over the network, which can carry data to whoever runs that host, so Garvis "
-                        "asks first (only localhost and a few well-known public hosts are exempt).")
+                return (
+                    f"'{display}' would contact '{_strip(host)[:60]}'. Lookups and pings send the target "
+                    "name over the network, which can carry data to whoever runs that host, so Garvis "
+                    "asks first (only localhost and a few well-known public hosts are exempt)."
+                )
         return None
 
 
 _NETWORK_TOOLS: dict[str, _NetworkTool] = {
-    "ping": _NetworkTool(switches=frozenset({"-t", "-a", "-f", "-4", "-6"}),
-                         valued=frozenset({"-n", "-l", "-i", "-v", "-r", "-s", "-w"})),
+    "ping": _NetworkTool(
+        switches=frozenset({"-t", "-a", "-f", "-4", "-6"}), valued=frozenset({"-n", "-l", "-i", "-v", "-r", "-s", "-w"})
+    ),
     "tracert": _NetworkTool(switches=frozenset({"-d", "-4", "-6"}), valued=frozenset({"-h", "-w"})),
     "pathping": _NetworkTool(switches=frozenset({"-n", "-4", "-6"}), valued=frozenset({"-h", "-p", "-q", "-w"})),
     "nslookup": _NetworkTool(
@@ -325,29 +531,82 @@ _NETWORK_TOOLS: dict[str, _NetworkTool] = {
         inline=frozenset({"-type", "-querytype", "-q", "-class", "-timeout", "-retry", "-port"}),
     ),
     "resolve-dnsname": _NetworkTool(
-        switches=frozenset({"-dnsonly", "-cacheonly", "-nohostsfile", "-quicktimeout", "-tcponly", "-noidn",
-                            "-norecursion", "-dnssecok", "-dnsseccd", "-llmnronly", "-llmnrfallback",
-                            "-llmnrnetbiosonly", "-netbiosfallback"}),
-        valued=frozenset({"-type"}), host_options=frozenset({"-name", "-server"}),
+        switches=frozenset(
+            {
+                "-dnsonly",
+                "-cacheonly",
+                "-nohostsfile",
+                "-quicktimeout",
+                "-tcponly",
+                "-noidn",
+                "-norecursion",
+                "-dnssecok",
+                "-dnsseccd",
+                "-llmnronly",
+                "-llmnrfallback",
+                "-llmnrnetbiosonly",
+                "-netbiosfallback",
+            }
+        ),
+        valued=frozenset({"-type"}),
+        host_options=frozenset({"-name", "-server"}),
     ),
     "test-connection": _NetworkTool(
-        switches=frozenset({"-quiet", "-ipv4", "-ipv6", "-resolvedestination", "-traceroute", "-ping",
-                            "-repeat", "-mtusize", "-dontfragment"}),
-        valued=frozenset({"-count", "-buffersize", "-delay", "-timetolive", "-ttl", "-maxhops",
-                          "-timeoutseconds", "-throttlelimit"}),
+        switches=frozenset(
+            {
+                "-quiet",
+                "-ipv4",
+                "-ipv6",
+                "-resolvedestination",
+                "-traceroute",
+                "-ping",
+                "-repeat",
+                "-mtusize",
+                "-dontfragment",
+            }
+        ),
+        valued=frozenset(
+            {"-count", "-buffersize", "-delay", "-timetolive", "-ttl", "-maxhops", "-timeoutseconds", "-throttlelimit"}
+        ),
         host_options=frozenset({"-computername", "-cn", "-targetname"}),
     ),
     "test-netconnection": _NetworkTool(
-        switches=frozenset({"-traceroute"}), valued=frozenset({"-port", "-commontcpport", "-informationlevel", "-hops"}),
+        switches=frozenset({"-traceroute"}),
+        valued=frozenset({"-port", "-commontcpport", "-informationlevel", "-hops"}),
         host_options=frozenset({"-computername", "-cn", "-remoteaddress"}),
     ),
 }
-_NETWORK_PROGRAMS = frozenset({
-    "invoke-webrequest", "iwr", "invoke-restmethod", "irm", "curl", "wget", "start-bitstransfer", "bitsadmin",
-    "certutil", "send-mailmessage", "ftp", "tftp", "telnet", "ssh", "scp", "sftp", "nc", "ncat",
-    "test-wsman", "test-computersecurechannel", "find-module", "find-script", "find-package", "find-command",
-    "find-dscresource", "find-rolecapability", "find-packageprovider",
-})
+_NETWORK_PROGRAMS = frozenset(
+    {
+        "invoke-webrequest",
+        "iwr",
+        "invoke-restmethod",
+        "irm",
+        "curl",
+        "wget",
+        "start-bitstransfer",
+        "bitsadmin",
+        "certutil",
+        "send-mailmessage",
+        "ftp",
+        "tftp",
+        "telnet",
+        "ssh",
+        "scp",
+        "sftp",
+        "nc",
+        "ncat",
+        "test-wsman",
+        "test-computersecurechannel",
+        "find-module",
+        "find-script",
+        "find-package",
+        "find-command",
+        "find-dscresource",
+        "find-rolecapability",
+        "find-packageprovider",
+    }
+)
 """Programs/cmdlets whose job is talking to another computer. They would ask
 anyway (not read-only); listed so the reason says why."""
 _REMOTE_PARAMETERS = ("-computername", "-cn", "-cimsession", "-session", "-server", "-connectionuri")
@@ -461,8 +720,10 @@ def classify(command: str, analysis: CommandAnalysis) -> str | None:
     if analysis.parse_errors:
         return "Garvis couldn't fully parse this command."
     if _NETWORK_PATH.search(command):
-        return ("It refers to a network path or web address (\\\\server\\..., //host, http://...); even "
-                "reading one contacts that host and can carry data to it.")
+        return (
+            "It refers to a network path or web address (\\\\server\\..., //host, http://...); even "
+            "reading one contacts that host and can carry data to it."
+        )
     if analysis.redirections:
         return "It writes output to a file (redirection)."
     if analysis.member_assignments:
@@ -483,8 +744,10 @@ def classify(command: str, analysis: CommandAnalysis) -> str | None:
         if name in _CREDENTIAL_CMDLETS:
             return f"'{parsed.name}' can expose credentials or clipboard contents."
         if _runs_tests(_normalize_name(name), parsed.args):
-            return (f"'{parsed.name}' runs a test suite, which executes the project's own code "
-                    "(approve it only for a project you trust).")
+            return (
+                f"'{parsed.name}' runs a test suite, which executes the project's own code "
+                "(approve it only for a project you trust)."
+            )
         if name == "foreach-object" and not _foreach_is_script_blocks(parsed.args):
             return "ForEach-Object with a member name calls a method on every item, which may change something."
         # The read-only rules trust a tool by name; a copy run from a path (.\ping.exe,

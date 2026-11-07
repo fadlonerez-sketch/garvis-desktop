@@ -1,6 +1,7 @@
 """The voice ownership authority (app/core/voice_ownership.py): exactly one endpoint may hold a
 microphone; the rest sleep. Pure logic with a fake clock -- the API, Desktop and client tests
 build on these rules."""
+
 from __future__ import annotations
 
 import asyncio
@@ -50,8 +51,14 @@ def _ack(manager, endpoint: str) -> dict:
         manager.report_mic(endpoint, False, manager.version)
         return manager.view(endpoint)
     view = manager.view(endpoint)
-    return manager.heartbeat(endpoint, kind="station" if endpoint == TABLET else "phone", label=endpoint,
-                             mic_open=False, seen_version=view["version"], seen_epoch=view["epoch"])
+    return manager.heartbeat(
+        endpoint,
+        kind="station" if endpoint == TABLET else "phone",
+        label=endpoint,
+        mic_open=False,
+        seen_version=view["version"],
+        seen_epoch=view["epoch"],
+    )
 
 
 def _listening(manager) -> list[str]:
@@ -367,8 +374,14 @@ def test_simultaneous_claims_from_many_threads_never_grant_two_owners():
                     manager.release(endpoint, claim.id)
                 else:
                     view = manager.view(endpoint)
-                    manager.heartbeat(endpoint, kind="phone", label=endpoint, mic_open=False,
-                                      seen_version=view["version"], seen_epoch=view["epoch"])
+                    manager.heartbeat(
+                        endpoint,
+                        kind="phone",
+                        label=endpoint,
+                        mic_open=False,
+                        seen_version=view["version"],
+                        seen_epoch=view["epoch"],
+                    )
             except VoiceClaimRefused:
                 pass
             granted = [e for e in endpoints if manager.state_of(e) in LISTENING_STATES]
@@ -398,9 +411,14 @@ def test_random_operation_sequences_keep_at_most_one_granted_microphone():
                     else:
                         manager.heartbeat(endpoint, kind="station", label=endpoint, want_standby=rng.random() < 0.7)
                 elif op < 0.4:
-                    claim, _ = manager.claim(endpoint, rng.choice(["active", "priority"]), "x",
-                                             explicit=rng.random() < 0.5, kind=None if endpoint == DESKTOP_ENDPOINT
-                                             else "phone", label=endpoint)
+                    claim, _ = manager.claim(
+                        endpoint,
+                        rng.choice(["active", "priority"]),
+                        "x",
+                        explicit=rng.random() < 0.5,
+                        kind=None if endpoint == DESKTOP_ENDPOINT else "phone",
+                        label=endpoint,
+                    )
                     claims.setdefault(endpoint, []).append(claim.id)
                 elif op < 0.55 and claims.get(endpoint):
                     manager.release(endpoint, claims[endpoint].pop())

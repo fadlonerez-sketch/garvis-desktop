@@ -24,6 +24,7 @@ unprivileged interface for it.
 app/ui/telemetry.py). Rate counters (CPU %, throughput) need two samples, so
 the first sample reports them as None.
 """
+
 from __future__ import annotations
 
 import sys
@@ -114,9 +115,9 @@ def busiest_gpu_percent(instances: dict[str, float]) -> float | None:
     for name, value in instances.items():
         parts = name.split("_")
         try:
-            luid = "_".join(parts[parts.index("luid") + 1: parts.index("luid") + 3])
+            luid = "_".join(parts[parts.index("luid") + 1 : parts.index("luid") + 3])
             engine = parts[parts.index("eng") + 1]
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             continue
         key = (luid, engine)
         totals[key] = totals.get(key, 0.0) + max(0.0, value)
@@ -187,15 +188,23 @@ if _IS_WINDOWS:
     _kernel32.GetTickCount64.restype = ctypes.c_uint64
     _kernel32.GetLogicalDriveStringsW.argtypes = [wintypes.DWORD, wintypes.LPWSTR]
     _kernel32.GetDriveTypeW.argtypes = [wintypes.LPCWSTR]
-    _kernel32.GetDiskFreeSpaceExW.argtypes = [wintypes.LPCWSTR, ctypes.POINTER(ctypes.c_uint64),
-                                              ctypes.POINTER(ctypes.c_uint64), ctypes.POINTER(ctypes.c_uint64)]
+    _kernel32.GetDiskFreeSpaceExW.argtypes = [
+        wintypes.LPCWSTR,
+        ctypes.POINTER(ctypes.c_uint64),
+        ctypes.POINTER(ctypes.c_uint64),
+        ctypes.POINTER(ctypes.c_uint64),
+    ]
     _kernel32.GetProcessTimes.argtypes = [wintypes.HANDLE] + [ctypes.POINTER(_FILETIME)] * 4
     _kernel32.K32GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD]
     _kernel32.GetActiveProcessorCount.argtypes = [wintypes.WORD]
     _kernel32.GetActiveProcessorCount.restype = wintypes.DWORD
     _ntdll = ctypes.WinDLL("ntdll")
-    _ntdll.NtQuerySystemInformation.argtypes = [ctypes.c_ulong, ctypes.c_void_p, ctypes.c_ulong,
-                                                ctypes.POINTER(ctypes.c_ulong)]
+    _ntdll.NtQuerySystemInformation.argtypes = [
+        ctypes.c_ulong,
+        ctypes.c_void_p,
+        ctypes.c_ulong,
+        ctypes.POINTER(ctypes.c_ulong),
+    ]
     _ntdll.NtQuerySystemInformation.restype = ctypes.c_long
 
     _DRIVE_FIXED = 3
@@ -208,18 +217,35 @@ if _IS_WINDOWS:
     try:
         _pdh = ctypes.WinDLL("pdh")
         _pdh.PdhOpenQueryW.argtypes = [wintypes.LPCWSTR, ctypes.c_void_p, ctypes.POINTER(wintypes.HANDLE)]
-        _pdh.PdhAddEnglishCounterW.argtypes = [wintypes.HANDLE, wintypes.LPCWSTR, ctypes.c_void_p,
-                                               ctypes.POINTER(wintypes.HANDLE)]
+        _pdh.PdhAddEnglishCounterW.argtypes = [
+            wintypes.HANDLE,
+            wintypes.LPCWSTR,
+            ctypes.c_void_p,
+            ctypes.POINTER(wintypes.HANDLE),
+        ]
         _pdh.PdhCollectQueryData.argtypes = [wintypes.HANDLE]
-        _pdh.PdhGetFormattedCounterValue.argtypes = [wintypes.HANDLE, wintypes.DWORD,
-                                                     ctypes.POINTER(wintypes.DWORD),
-                                                     ctypes.POINTER(_PDH_FMT_COUNTERVALUE)]
-        _pdh.PdhGetFormattedCounterArrayW.argtypes = [wintypes.HANDLE, wintypes.DWORD,
-                                                      ctypes.POINTER(wintypes.DWORD),
-                                                      ctypes.POINTER(wintypes.DWORD), ctypes.c_void_p]
+        _pdh.PdhGetFormattedCounterValue.argtypes = [
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            ctypes.POINTER(wintypes.DWORD),
+            ctypes.POINTER(_PDH_FMT_COUNTERVALUE),
+        ]
+        _pdh.PdhGetFormattedCounterArrayW.argtypes = [
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            ctypes.POINTER(wintypes.DWORD),
+            ctypes.POINTER(wintypes.DWORD),
+            ctypes.c_void_p,
+        ]
         _pdh.PdhCloseQuery.argtypes = [wintypes.HANDLE]
-        for _fn in ("PdhOpenQueryW", "PdhAddEnglishCounterW", "PdhCollectQueryData",
-                    "PdhGetFormattedCounterValue", "PdhGetFormattedCounterArrayW", "PdhCloseQuery"):
+        for _fn in (
+            "PdhOpenQueryW",
+            "PdhAddEnglishCounterW",
+            "PdhCollectQueryData",
+            "PdhGetFormattedCounterValue",
+            "PdhGetFormattedCounterArrayW",
+            "PdhCloseQuery",
+        ):
             getattr(_pdh, _fn).restype = wintypes.DWORD
     except OSError:  # pragma: no cover - pdh.dll ships with every supported Windows
         _pdh = None
@@ -251,16 +277,20 @@ if _IS_WINDOWS:
 
     def _process_times() -> int | None:
         created, exited, kernel, user = _FILETIME(), _FILETIME(), _FILETIME(), _FILETIME()
-        if not _kernel32.GetProcessTimes(_kernel32.GetCurrentProcess(), ctypes.byref(created),
-                                         ctypes.byref(exited), ctypes.byref(kernel), ctypes.byref(user)):
+        if not _kernel32.GetProcessTimes(
+            _kernel32.GetCurrentProcess(),
+            ctypes.byref(created),
+            ctypes.byref(exited),
+            ctypes.byref(kernel),
+            ctypes.byref(user),
+        ):
             return None
         return kernel.value + user.value
 
     def _process_memory() -> tuple[int, int] | None:
         counters = _PROCESS_MEMORY_COUNTERS_EX()
         counters.cb = ctypes.sizeof(counters)
-        if not _kernel32.K32GetProcessMemoryInfo(_kernel32.GetCurrentProcess(), ctypes.byref(counters),
-                                                 counters.cb):
+        if not _kernel32.K32GetProcessMemoryInfo(_kernel32.GetCurrentProcess(), ctypes.byref(counters), counters.cb):
             return None
         return int(counters.WorkingSetSize), int(counters.PrivateUsage)
 
@@ -273,8 +303,10 @@ if _IS_WINDOWS:
             if _kernel32.GetDriveTypeW(root) != _DRIVE_FIXED:
                 continue
             available, total, free = ctypes.c_uint64(), ctypes.c_uint64(), ctypes.c_uint64()
-            if _kernel32.GetDiskFreeSpaceExW(root, ctypes.byref(available), ctypes.byref(total),
-                                             ctypes.byref(free)) and total.value:
+            if (
+                _kernel32.GetDiskFreeSpaceExW(root, ctypes.byref(available), ctypes.byref(total), ctypes.byref(free))
+                and total.value
+            ):
                 disks.append(Disk(root=root.rstrip("\\"), total=int(total.value), free=int(free.value)))
         return tuple(disks)
 
@@ -350,18 +382,23 @@ if _IS_WINDOWS:
             if counter is None:
                 return None
             size, count = wintypes.DWORD(0), wintypes.DWORD(0)
-            status = _pdh.PdhGetFormattedCounterArrayW(counter, _PDH_FMT_DOUBLE | flags, ctypes.byref(size),
-                                                       ctypes.byref(count), None)
+            status = _pdh.PdhGetFormattedCounterArrayW(
+                counter, _PDH_FMT_DOUBLE | flags, ctypes.byref(size), ctypes.byref(count), None
+            )
             if status != _PDH_MORE_DATA or not size.value:
                 return {} if status == 0 else None
             buffer = ctypes.create_string_buffer(size.value)
-            status = _pdh.PdhGetFormattedCounterArrayW(counter, _PDH_FMT_DOUBLE | flags, ctypes.byref(size),
-                                                       ctypes.byref(count), buffer)
+            status = _pdh.PdhGetFormattedCounterArrayW(
+                counter, _PDH_FMT_DOUBLE | flags, ctypes.byref(size), ctypes.byref(count), buffer
+            )
             if status != 0:
                 return None
             items = ctypes.cast(buffer, ctypes.POINTER(_PDH_FMT_COUNTERVALUE_ITEM))
-            return {items[i].szName: float(items[i].FmtValue.doubleValue)
-                    for i in range(count.value) if items[i].FmtValue.CStatus in _PDH_VALID}
+            return {
+                items[i].szName: float(items[i].FmtValue.doubleValue)
+                for i in range(count.value)
+                if items[i].FmtValue.CStatus in _PDH_VALID
+            }
 
         def close(self) -> None:
             if self._query is not None:
@@ -407,10 +444,12 @@ class TelemetrySampler:
         cpu_key = r"HARDWARE\DESCRIPTION\System\CentralProcessor\0"
         model = _registry_value(winreg.HKEY_LOCAL_MACHINE, cpu_key, "ProcessorNameString")
         mhz = _registry_value(winreg.HKEY_LOCAL_MACHINE, cpu_key, "~MHz")
-        product = _registry_value(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion",
-                                  "ProductName")
-        build = _registry_value(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion",
-                                "CurrentBuildNumber")
+        product = _registry_value(
+            winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion", "ProductName"
+        )
+        build = _registry_value(
+            winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion", "CurrentBuildNumber"
+        )
         if product and build and build.isdigit() and int(build) >= 22000:
             product = str(product).replace("Windows 10", "Windows 11")  # the registry still says 10 on 11
         memory = _memory()

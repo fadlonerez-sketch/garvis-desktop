@@ -88,6 +88,7 @@ alone may raise the bar above `energy_threshold`, decoupling the cap from
 the synthesis file's arbitrary internal loudness while still leaving it far
 above the plain fixed threshold whenever Garvis is actually making sound.
 """
+
 from __future__ import annotations
 
 import struct
@@ -141,9 +142,7 @@ class PlaybackEnvelope:
 
     def __init__(self, pcm: bytes, sample_rate: int, frame_seconds: float = 0.02) -> None:
         self._frame_seconds = frame_seconds if frame_seconds > 0 else 0.02
-        frame_bytes = max(
-            _BYTES_PER_SAMPLE, int(self._frame_seconds * sample_rate) * _BYTES_PER_SAMPLE
-        )
+        frame_bytes = max(_BYTES_PER_SAMPLE, int(self._frame_seconds * sample_rate) * _BYTES_PER_SAMPLE)
         self._frames = [_rms(pcm[i : i + frame_bytes]) for i in range(0, len(pcm), frame_bytes)]
         tail_frame_count = max(1, int(self._TAIL_WINDOW_SECONDS / self._frame_seconds))
         self._tail_energy = max(self._frames[-tail_frame_count:]) if self._frames else 0.0

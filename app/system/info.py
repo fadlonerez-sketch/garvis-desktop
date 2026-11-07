@@ -1,6 +1,7 @@
 """Read-only system queries: processes, overall status, recent error events
 and installed applications. Fixed scripts with base64-embedded parameters;
 the LLM never supplies script text here."""
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -125,9 +126,11 @@ def installed_apps_from_registry() -> list[dict]:
                     continue
                 if not values.get("DisplayName") or values.get("SystemComponent") == 1:
                     continue
-                apps.append({
-                    "name": str(values["DisplayName"]),
-                    "version": str(values.get("DisplayVersion") or ""),
-                    "publisher": str(values.get("Publisher") or ""),
-                })
+                apps.append(
+                    {
+                        "name": str(values["DisplayName"]),
+                        "version": str(values.get("DisplayVersion") or ""),
+                        "publisher": str(values.get("Publisher") or ""),
+                    }
+                )
     return apps

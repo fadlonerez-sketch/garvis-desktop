@@ -7,6 +7,7 @@ separated so the live orb could change while the logo stays exactly as it was.
 The code below is the pre-2026-10-31 orb painter, moved here verbatim, and
 tests/test_command_center.py pins its output pixel for pixel.
 """
+
 from __future__ import annotations
 
 import math
@@ -84,13 +85,13 @@ def plasma_intensity(n: int = TEXTURE_SIZE, seed: int = TEXTURE_SEED) -> np.ndar
     total = np.zeros((n, n))
     weight = 0.0
     for octave, period in enumerate((4, 8, 16, 32)):
-        amplitude = 0.5 ** octave
+        amplitude = 0.5**octave
         total += amplitude * _value_noise(n, period, seed + octave)
         weight += amplitude
     fbm = total / weight
     fbm = (fbm - fbm.min()) / max(fbm.max() - fbm.min(), 1e-9)
     ridge = 1.0 - np.abs(2.0 * fbm - 1.0)
-    return np.clip(0.45 * ridge ** 3 + 0.6 * fbm ** 2, 0.0, 1.0)
+    return np.clip(0.45 * ridge**3 + 0.6 * fbm**2, 0.0, 1.0)
 
 
 @lru_cache(maxsize=1)
@@ -133,8 +134,14 @@ class _Palette:
         self.glow = tone(GLOW)
 
 
-def paint_logo(painter: QPainter, center: QPointF, radius: float, dyn: Dynamics, accent: Accent | None = None,
-               compact: bool = False) -> None:
+def paint_logo(
+    painter: QPainter,
+    center: QPointF,
+    radius: float,
+    dyn: Dynamics,
+    accent: Accent | None = None,
+    compact: bool = False,
+) -> None:
     """Draw the logo at `center`; `radius` is the sphere's base radius (its
     glow reaches HALO_REACH times that). `accent` is accepted for the callers'
     theme plumbing but the orb is always warm: it is Garvis's identity, not a

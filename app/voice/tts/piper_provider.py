@@ -26,6 +26,7 @@ explicit opt-in rather than the default.
 The voice model file itself is never hardcoded: it's resolved from
 `voice_dir / f"{voice}.onnx"`, both of which come from Settings.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -107,7 +108,7 @@ class PiperProvider(TextToSpeechProvider):
         if not model_path.exists():
             raise TextToSpeechError(
                 f"Voice model '{self._voice}' not found at {model_path}. Download it with: "
-                f"python -m piper.download_voices --download-dir \"{self._voice_dir}\" {self._voice}"
+                f'python -m piper.download_voices --download-dir "{self._voice_dir}" {self._voice}'
             )
         return model_path
 
@@ -163,8 +164,7 @@ class PiperProvider(TextToSpeechProvider):
                 # already turn TextToSpeechError into a non-fatal error
                 # event rather than propagating it).
                 raise TextToSpeechError(
-                    "Couldn't synthesize speech: the response contained characters "
-                    "Piper can't handle."
+                    "Couldn't synthesize speech: the response contained characters Piper can't handle."
                 ) from exc
             self._process = subprocess.Popen(
                 command,
@@ -175,8 +175,7 @@ class PiperProvider(TextToSpeechProvider):
             _, stderr = self._process.communicate(input=stdin_bytes)
             if self._process.returncode != 0:
                 raise TextToSpeechError(
-                    f"piper exited with code {self._process.returncode}: "
-                    f"{stderr.decode('utf-8', errors='replace')}"
+                    f"piper exited with code {self._process.returncode}: {stderr.decode('utf-8', errors='replace')}"
                 )
         except FileNotFoundError as exc:
             raise TextToSpeechError(

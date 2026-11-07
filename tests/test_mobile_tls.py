@@ -1,4 +1,5 @@
 """Local CA + server certificate for the mobile HTTPS endpoint."""
+
 from __future__ import annotations
 
 import datetime as dt

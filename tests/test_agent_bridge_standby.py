@@ -8,6 +8,7 @@ A real AgentBridge (real Agent, real background loop) is used, but its
 VoicePipeline is swapped for one built on a thread-safe fake recorder, fake
 STT/TTS and fake player -- no real microphone, model or speaker.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -511,8 +512,9 @@ def test_stale_sleep_request_from_an_ended_session_is_ignored(tmp_path):
 # ------------------------------------------------- typed standby commands
 def _collect(signal) -> list:
     received: list = []
-    signal.connect(lambda *args: received.append(args[0] if len(args) == 1 else args),
-                   Qt.ConnectionType.DirectConnection)
+    signal.connect(
+        lambda *args: received.append(args[0] if len(args) == 1 else args), Qt.ConnectionType.DirectConnection
+    )
     return received
 
 

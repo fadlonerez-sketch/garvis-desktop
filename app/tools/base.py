@@ -6,6 +6,7 @@ looked up through the ToolRegistry. The LLM never executes arbitrary code;
 it can only request a *named, registered* tool with *schema-validated*
 arguments.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

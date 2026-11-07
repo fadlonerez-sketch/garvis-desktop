@@ -6,6 +6,7 @@ asks (minimized + not activated for the workspace), like a well-behaved
 application. It does nothing, owns no data, and closes on WM_CLOSE or by
 itself after 90 seconds, so a failed test can't leave it behind.
 """
+
 import ctypes
 import sys
 from ctypes import wintypes
@@ -22,9 +23,15 @@ SW_SHOWDEFAULT = 10
 
 class WNDCLASSW(ctypes.Structure):
     _fields_ = [
-        ("style", wintypes.UINT), ("lpfnWndProc", WNDPROC), ("cbClsExtra", ctypes.c_int),
-        ("cbWndExtra", ctypes.c_int), ("hInstance", wintypes.HINSTANCE), ("hIcon", wintypes.HICON),
-        ("hCursor", wintypes.HANDLE), ("hbrBackground", wintypes.HBRUSH), ("lpszMenuName", wintypes.LPCWSTR),
+        ("style", wintypes.UINT),
+        ("lpfnWndProc", WNDPROC),
+        ("cbClsExtra", ctypes.c_int),
+        ("cbWndExtra", ctypes.c_int),
+        ("hInstance", wintypes.HINSTANCE),
+        ("hIcon", wintypes.HICON),
+        ("hCursor", wintypes.HANDLE),
+        ("hbrBackground", wintypes.HBRUSH),
+        ("lpszMenuName", wintypes.LPCWSTR),
         ("lpszClassName", wintypes.LPCWSTR),
     ]
 
@@ -32,8 +39,18 @@ class WNDCLASSW(ctypes.Structure):
 user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
 user32.DefWindowProcW.restype = LRESULT
 user32.CreateWindowExW.argtypes = [
-    wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-    ctypes.c_int, wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID,
+    wintypes.DWORD,
+    wintypes.LPCWSTR,
+    wintypes.LPCWSTR,
+    wintypes.DWORD,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    wintypes.HWND,
+    wintypes.HMENU,
+    wintypes.HINSTANCE,
+    wintypes.LPVOID,
 ]
 user32.CreateWindowExW.restype = wintypes.HWND
 
@@ -54,8 +71,9 @@ def main() -> None:
     instance = kernel32.GetModuleHandleW(None)
     wc = WNDCLASSW(lpfnWndProc=window_proc, hInstance=instance, lpszClassName="GarvisRoutingTestWindow")
     user32.RegisterClassW(ctypes.byref(wc))
-    hwnd = user32.CreateWindowExW(0, wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, 120, 120, 360, 200,
-                                  None, None, instance, None)
+    hwnd = user32.CreateWindowExW(
+        0, wc.lpszClassName, title, WS_OVERLAPPEDWINDOW, 120, 120, 360, 200, None, None, instance, None
+    )
     user32.ShowWindow(hwnd, SW_SHOWDEFAULT)
     user32.SetTimer(hwnd, 1, 90_000, None)
     msg = wintypes.MSG()

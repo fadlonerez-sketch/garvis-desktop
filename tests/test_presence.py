@@ -2,6 +2,7 @@
 display (Garvis Face) follows -- and its API. No face UI exists yet; these
 pin the contract: six states, versioned changes, long-poll, attention
 notifications, and that it follows the existing view-model."""
+
 from __future__ import annotations
 
 import asyncio

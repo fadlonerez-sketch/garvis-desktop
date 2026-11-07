@@ -2,6 +2,7 @@
 or closing statement is never sent to the Agent; a fixed acknowledgement is
 spoken and the owner is asked to end the session. Without a sleep matcher
 (wake mode off) every utterance reaches the Agent exactly as before."""
+
 from __future__ import annotations
 
 import pytest
@@ -156,9 +157,7 @@ async def test_interrupting_the_acknowledgement_still_goes_to_sleep():
 @pytest.mark.asyncio
 async def test_ending_the_session_during_the_acknowledgement_does_not_request_sleep():
     player = _FakePlayer(finish_after_polls=None)
-    session, voice, _, requests = _sleepy_session(
-        _FakeAgent([]), _ScriptedRecorder(_utterance_chunks()), player=player
-    )
+    session, voice, _, requests = _sleepy_session(_FakeAgent([]), _ScriptedRecorder(_utterance_chunks()), player=player)
     voice._stt.text = "Go to standby."
     session.start()
     await _run_briefly(session, 300)

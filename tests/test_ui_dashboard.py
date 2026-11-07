@@ -6,6 +6,7 @@ real one -- simulated events only: no Agent, LLM, microphone, real input,
 browser or clipboard. Real-desktop behaviour (always-on-top over other apps,
 focus, DPI changes, the animation's look) is in the manual checklist.
 """
+
 from __future__ import annotations
 
 import json
@@ -33,10 +34,22 @@ from app.ui.visuals import ACTIVE_INTERVAL_MS, IDLE_INTERVAL_MS, Dynamics
 from tests.test_main_window_mobile import _FakeBridge as _BaseFakeBridge
 
 SOURCES = [
-    {"tool": "web_research", "kind": "read", "title": "Real headline", "url": "https://news.example/a",
-     "publisher": "news.example", "snippet": "excerpt"},
-    {"tool": "web_research", "kind": "search_result", "title": "Listed", "url": "https://other.example/b",
-     "publisher": "other.example", "snippet": ""},
+    {
+        "tool": "web_research",
+        "kind": "read",
+        "title": "Real headline",
+        "url": "https://news.example/a",
+        "publisher": "news.example",
+        "snippet": "excerpt",
+    },
+    {
+        "tool": "web_research",
+        "kind": "search_result",
+        "title": "Listed",
+        "url": "https://other.example/b",
+        "publisher": "other.example",
+        "snippet": "",
+    },
 ]
 
 
@@ -70,9 +83,15 @@ class _FakeBridge(_BaseFakeBridge):
         self.usage_requests += 1
 
     def system_info(self) -> dict:
-        return {"model": "claude-haiku-5-5", "provider": "Anthropic API", "api_key_configured": False,
-                "daily_budget_usd": 0.5, "monthly_budget_usd": 5.0, "max_cost_per_task_usd": 0.05,
-                "budget_enabled": True}
+        return {
+            "model": "claude-haiku-5-5",
+            "provider": "Anthropic API",
+            "api_key_configured": False,
+            "daily_budget_usd": 0.5,
+            "monthly_budget_usd": 5.0,
+            "max_cost_per_task_usd": 0.05,
+            "budget_enabled": True,
+        }
 
 
 @pytest.fixture
@@ -253,9 +272,19 @@ def test_speaking_samples_the_real_level_only_while_speaking(window):
 
 # ------------------------------------------------------------- dashboard
 def test_existing_controls_are_still_there(window):
-    for name in ("_send_button", "_stop_button", "_mic_button", "_session_button", "_session_status_label",
-                 "_input_line", "_conversation_view", "_activity_list", "_voice_replies_checkbox",
-                 "_mobile_button", "_status_label"):
+    for name in (
+        "_send_button",
+        "_stop_button",
+        "_mic_button",
+        "_session_button",
+        "_session_status_label",
+        "_input_line",
+        "_conversation_view",
+        "_activity_list",
+        "_voice_replies_checkbox",
+        "_mobile_button",
+        "_status_label",
+    ):
         assert getattr(window, name) is not None
     assert window.windowFlags() & Qt.WindowType.FramelessWindowHint
 
@@ -308,8 +337,11 @@ def test_activity_page_links_a_turn_to_its_sources(window):
     window.show_page("activity")
     window._activity_page.flush()
     column = window._activity_page._column
-    card = next(column.itemAt(i).widget() for i in range(column.count())
-                if isinstance(column.itemAt(i).widget(), dashboard.TurnCard))
+    card = next(
+        column.itemAt(i).widget()
+        for i in range(column.count())
+        if isinstance(column.itemAt(i).widget(), dashboard.TurnCard)
+    )
     card.open_sources.emit(card.turn_id)
     assert window.current_page == "sources" and window._sources_page.selected_turn == card.turn_id
 
@@ -320,13 +352,34 @@ def test_usage_page_shows_ledger_figures_and_requests_a_refresh(window):
     window.show()
     window.show_page("usage")
     assert bridge.usage_requests >= 2  # opening the page refreshes it
-    bridge.usage_updated.emit({"available": True, "today": {"calls": 3, "ok": 2, "errors": 1, "input_tokens": 1200,
-                               "output_tokens": 80, "cache_read_tokens": 0, "cache_write_tokens": 0,
-                               "cost_usd": 0.25, "tasks": 2},
-                               "month": {"calls": 9, "ok": 9, "errors": 0, "input_tokens": 0, "output_tokens": 0,
-                                         "cache_read_tokens": 0, "cache_write_tokens": 0, "cost_usd": 1.0,
-                                         "tasks": 5},
-                               "recent": []})
+    bridge.usage_updated.emit(
+        {
+            "available": True,
+            "today": {
+                "calls": 3,
+                "ok": 2,
+                "errors": 1,
+                "input_tokens": 1200,
+                "output_tokens": 80,
+                "cache_read_tokens": 0,
+                "cache_write_tokens": 0,
+                "cost_usd": 0.25,
+                "tasks": 2,
+            },
+            "month": {
+                "calls": 9,
+                "ok": 9,
+                "errors": 0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "cache_read_tokens": 0,
+                "cache_write_tokens": 0,
+                "cost_usd": 1.0,
+                "tasks": 5,
+            },
+            "recent": [],
+        }
+    )
     window._usage_page.flush()
     assert window._usage_page.day_bar.ratio == pytest.approx(0.5)
     assert window._usage_page.today.value("Requests").startswith("3")
@@ -377,8 +430,12 @@ def presence(window, tmp_path, monkeypatch):
 def test_orb_window_never_takes_focus_and_stays_on_top(presence):
     orb = presence.orb
     flags = orb.windowFlags()
-    for flag in (Qt.WindowType.Tool, Qt.WindowType.FramelessWindowHint, Qt.WindowType.WindowStaysOnTopHint,
-                 Qt.WindowType.WindowDoesNotAcceptFocus):
+    for flag in (
+        Qt.WindowType.Tool,
+        Qt.WindowType.FramelessWindowHint,
+        Qt.WindowType.WindowStaysOnTopHint,
+        Qt.WindowType.WindowDoesNotAcceptFocus,
+    ):
         assert flags & flag
     assert orb.testAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
     assert presence.overlay.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)

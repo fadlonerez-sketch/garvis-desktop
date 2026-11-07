@@ -6,6 +6,7 @@ platform-independent regardless of what's installed. Start Menu scanning
 is exercised against real tmp_path directories rather than the actual
 filesystem.
 """
+
 from __future__ import annotations
 
 import subprocess
@@ -83,10 +84,7 @@ def test_resolve_from_app_paths_registry_finds_entry(monkeypatch):
         }
     )
     monkeypatch.setitem(sys.modules, "winreg", fake)
-    assert (
-        resolve_from_app_paths_registry("whatsapp")
-        == r"C:\Users\me\AppData\Local\WhatsApp\WhatsApp.exe"
-    )
+    assert resolve_from_app_paths_registry("whatsapp") == r"C:\Users\me\AppData\Local\WhatsApp\WhatsApp.exe"
 
 
 def test_resolve_from_app_paths_registry_accepts_name_with_exe_suffix(monkeypatch):
@@ -99,10 +97,7 @@ def test_resolve_from_app_paths_registry_accepts_name_with_exe_suffix(monkeypatc
         }
     )
     monkeypatch.setitem(sys.modules, "winreg", fake)
-    assert (
-        resolve_from_app_paths_registry("chrome.exe")
-        == r"C:\Program Files\Google\Chrome\Application\chrome.exe"
-    )
+    assert resolve_from_app_paths_registry("chrome.exe") == r"C:\Program Files\Google\Chrome\Application\chrome.exe"
 
 
 def test_resolve_from_app_paths_registry_falls_back_to_hklm(monkeypatch):
@@ -239,7 +234,12 @@ async def test_execute_launches_resolved_executable_via_subprocess(monkeypatch):
     result = await tool.execute(OpenApplicationInput(application="Notepad"))
 
     assert result.success
-    assert result.data == {"opened": "notepad", "window_verified": False, "target_desktop": "user_desktop", "target_reason": "default for this kind of window"}
+    assert result.data == {
+        "opened": "notepad",
+        "window_verified": False,
+        "target_desktop": "user_desktop",
+        "target_reason": "default for this kind of window",
+    }
     assert calls == [(["notepad.exe"], False)]
 
 
@@ -248,9 +248,7 @@ async def test_execute_launches_start_menu_shortcut_via_startfile(monkeypatch, t
     monkeypatch.setattr(sys, "platform", "win32")
     lnk = tmp_path / "WhatsApp.lnk"
     lnk.write_bytes(b"")
-    monkeypatch.setattr(
-        applications, "resolve_application", lambda name, allowlist: (str(lnk), True)
-    )
+    monkeypatch.setattr(applications, "resolve_application", lambda name, allowlist: (str(lnk), True))
     startfile_calls = []
     monkeypatch.setattr(applications.os, "startfile", lambda path: startfile_calls.append(path))
 
@@ -351,7 +349,9 @@ def test_apps_folder_is_consulted_last(monkeypatch):
     """Existing resolutions must not change: PATH (stage 4) still wins."""
     monkeypatch.setitem(sys.modules, "winreg", _FakeWinReg({}))
     monkeypatch.setattr(applications, "_start_menu_dirs", lambda: [])
-    monkeypatch.setattr(applications.shutil, "which", lambda name: r"C:\bin\calculator.exe" if name == "calculator" else None)
+    monkeypatch.setattr(
+        applications.shutil, "which", lambda name: r"C:\bin\calculator.exe" if name == "calculator" else None
+    )
     monkeypatch.setattr(applications, "_list_start_apps", lambda: list(_START_APPS))
     assert resolve_application("calculator", allowlist={}) == (r"C:\bin\calculator.exe", False)
 
@@ -398,8 +398,9 @@ def test_real_list_start_apps_single_object_and_failures(monkeypatch):
         def __init__(self, code, out):
             self.returncode, self.stdout = code, out
 
-    monkeypatch.setattr(applications.subprocess, "run",
-                        lambda args, **kw: _Completed(0, b'{"Name":"WhatsApp","AppID":"x!App"}'))
+    monkeypatch.setattr(
+        applications.subprocess, "run", lambda args, **kw: _Completed(0, b'{"Name":"WhatsApp","AppID":"x!App"}')
+    )
     assert applications._list_start_apps() == [("WhatsApp", "x!App")]
     monkeypatch.setattr(applications.subprocess, "run", lambda args, **kw: _Completed(1, b""))
     assert applications._list_start_apps() == []
@@ -423,5 +424,10 @@ async def test_execute_launches_packaged_app_via_startfile(monkeypatch):
 
     result = await OpenApplicationTool(allowlist={}).execute(OpenApplicationInput(application="WhatsApp"))
 
-    assert result.success and result.data == {"opened": "whatsapp", "window_verified": False, "target_desktop": "user_desktop", "target_reason": "default for this kind of window"}
+    assert result.success and result.data == {
+        "opened": "whatsapp",
+        "window_verified": False,
+        "target_desktop": "user_desktop",
+        "target_reason": "default for this kind of window",
+    }
     assert started == [_WHATSAPP_TARGET]

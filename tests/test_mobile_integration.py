@@ -1,5 +1,6 @@
 """The mobile server for real: TLS on 127.0.0.1 verified against the
 generated CA, and its lifecycle inside AgentBridge (shared Agent, shutdown)."""
+
 from __future__ import annotations
 
 import asyncio
@@ -157,7 +158,9 @@ def test_mobile_replies_are_not_spoken_on_the_pc_speakers(tmp_path):
     bridge._loop = _RecordingLoop()
     try:
         bridge.set_voice_replies_enabled(True)
-        bridge._on_event(AgentEvent(type=EventType.ASSISTANT_MESSAGE, payload={"text": "for the phone", "source": MOBILE_SOURCE}))
+        bridge._on_event(
+            AgentEvent(type=EventType.ASSISTANT_MESSAGE, payload={"text": "for the phone", "source": MOBILE_SOURCE})
+        )
         bridge._on_event(AgentEvent(type=EventType.ASSISTANT_MESSAGE, payload={"text": "for the desk"}))
         assert spoken == ["for the desk"]
     finally:
@@ -173,7 +176,9 @@ def test_bridge_relays_remote_messages_and_confirmation_resolution(tmp_path):
     bridge.confirmation_resolved.connect(lambda rid, outcome: resolved.append((rid, outcome)))
     try:
         bridge._on_event(AgentEvent(type=EventType.USER_MESSAGE, payload={"text": "typed here"}))
-        bridge._on_event(AgentEvent(type=EventType.USER_MESSAGE, payload={"text": "from phone", "source": MOBILE_SOURCE}))
+        bridge._on_event(
+            AgentEvent(type=EventType.USER_MESSAGE, payload={"text": "from phone", "source": MOBILE_SOURCE})
+        )
         bridge._on_event(AgentEvent(type=EventType.CONFIRMATION_RESOLVED, payload={"id": "r1", "outcome": "approved"}))
         assert remote == [("from phone", MOBILE_SOURCE)]
         assert resolved == [("r1", "approved")]

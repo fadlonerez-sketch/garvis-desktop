@@ -20,6 +20,7 @@ certificate hostname verification all still use the real hostname, so
 HTTPS keeps verifying the site it claims to be. Environment proxies are
 ignored (a proxy would do its own, unvalidated resolution).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -82,8 +83,7 @@ def _resolve_public_addresses(url: str) -> tuple[str, list[str]]:
             or not ip.is_global  # e.g. 100.64.0.0/10 (CGNAT / Tailscale devices)
         ):
             raise UnsafeURLError(
-                f"Refusing to fetch '{url}': host '{hostname}' resolves to a "
-                f"non-public address ({ip})."
+                f"Refusing to fetch '{url}': host '{hostname}' resolves to a non-public address ({ip})."
             )
         if str(ip) not in addresses:
             addresses.append(str(ip))
@@ -114,7 +114,10 @@ class _PinnedBackend(httpcore.AsyncNetworkBackend):
         for address in self._addresses:
             try:
                 return await self._inner.connect_tcp(
-                    address, port, timeout=timeout, local_address=local_address,
+                    address,
+                    port,
+                    timeout=timeout,
+                    local_address=local_address,
                     socket_options=socket_options,
                 )
             except (httpcore.ConnectError, httpcore.ConnectTimeout) as exc:

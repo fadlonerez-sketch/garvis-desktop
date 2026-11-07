@@ -1,6 +1,7 @@
 """Composition helpers for Desktop Control, mirroring app/browser/build.py:
 everything configurable comes from Settings, and the Win32 backend module
 is imported lazily (only when a desktop tool first runs on Windows)."""
+
 from __future__ import annotations
 
 import sys

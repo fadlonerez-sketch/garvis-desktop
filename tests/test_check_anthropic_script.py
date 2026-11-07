@@ -1,4 +1,5 @@
 """Tests for scripts/check_anthropic.py -- no network, no real key."""
+
 from __future__ import annotations
 
 import functools
@@ -36,7 +37,10 @@ def test_set_key_writes_only_that_line_and_never_prints_it(monkeypatch, tmp_path
     monkeypatch.setattr(check_anthropic, "verify", no_verify)
     assert check_anthropic.main() == 0
     assert env.read_text(encoding="utf-8").splitlines() == [
-        "GARVIS_LLM_PROVIDER=tiered", "GARVIS_OMNIROUTE_API_KEY=keep-me", f"ANTHROPIC_API_KEY={secret}"]
+        "GARVIS_LLM_PROVIDER=tiered",
+        "GARVIS_OMNIROUTE_API_KEY=keep-me",
+        f"ANTHROPIC_API_KEY={secret}",
+    ]
     assert secret not in capsys.readouterr().out
 
 

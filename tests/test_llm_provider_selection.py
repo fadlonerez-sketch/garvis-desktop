@@ -5,6 +5,7 @@ Mirrors the Settings(_env_file=None, **overrides) pattern used in
 tests/test_voice_build.py so these are hermetic and never touch the real
 .env or make network calls.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -24,9 +25,15 @@ def _settings(**overrides) -> Settings:
 def test_other_model_providers_cannot_be_selected(mode):
     """Single-model policy: no setting leads to a model other than Claude Haiku 5.5."""
     with pytest.raises(ConfigurationError, match="only Claude Haiku 5.5"):
-        build_llm_provider(_settings(llm_provider=mode, openrouter_api_key="fake-openrouter-key",
-                                     openrouter_model="anthropic/claude-haiku-4.5", gemini_api_key="g",
-                                     omniroute_api_key="k"))
+        build_llm_provider(
+            _settings(
+                llm_provider=mode,
+                openrouter_api_key="fake-openrouter-key",
+                openrouter_model="anthropic/claude-haiku-4.5",
+                gemini_api_key="g",
+                omniroute_api_key="k",
+            )
+        )
 
 
 def test_default_provider_is_tiered():

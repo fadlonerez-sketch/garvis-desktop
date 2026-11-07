@@ -27,6 +27,7 @@ an active session's own transcript, an explicit "go to standby" command or
 an unambiguous closing statement ("That's all for now.", "Thanks, Garvis."),
 so the session can end and hand back to standby without calling the LLM.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -165,8 +166,16 @@ class WakePhraseMatcher:
 
 # ----------------------------------------------------------- sleep/standby
 _STANDBY_VERBS = (
-    "Go to", "Go into", "Go back to", "Enter", "Switch to", "Switch into",
-    "Return to", "Back to", "Put yourself in", "Put yourself into",
+    "Go to",
+    "Go into",
+    "Go back to",
+    "Enter",
+    "Switch to",
+    "Switch into",
+    "Return to",
+    "Back to",
+    "Put yourself in",
+    "Put yourself into",
 )
 _STANDBY_TARGETS = ("standby", "standby mode", "sleep mode")
 
@@ -214,17 +223,41 @@ CLOSING_PHRASES: tuple[str, ...] = (
 _SLEEP_FILLERS: tuple[tuple[str, ...], ...] = tuple(
     tuple(f.split())
     for f in (
-        "okay", "ok", "alright", "all right", "so", "well", "great", "perfect", "good", "cool",
-        "yeah", "yes", "yep", "no", "nope", "sir", "hey", "please", "just", "and", "then",
-        "thanks", "thank you", "thank you very much", "thank you so much",
-        "for today", "bye", "i think", "it is",
+        "okay",
+        "ok",
+        "alright",
+        "all right",
+        "so",
+        "well",
+        "great",
+        "perfect",
+        "good",
+        "cool",
+        "yeah",
+        "yes",
+        "yep",
+        "no",
+        "nope",
+        "sir",
+        "hey",
+        "please",
+        "just",
+        "and",
+        "then",
+        "thanks",
+        "thank you",
+        "thank you very much",
+        "thank you so much",
+        "for today",
+        "bye",
+        "i think",
+        "it is",
     )
 )
 """Words allowed around a closing/standby phrase -- and nothing else. They
 can never match on their own: "Thanks." or "Okay." alone is not a phrase."""
 _SLEEP_LEAD_INS: tuple[tuple[str, ...], ...] = tuple(
-    tuple(f.split())
-    for f in ("now", "for now", "you can", "you may", "go ahead and", "time to", "time for you to")
+    tuple(f.split()) for f in ("now", "for now", "you can", "you may", "go ahead and", "time to", "time for you to")
 )
 """Fillers that also make a weak command count: they say "do it now"."""
 _POLITE_REQUESTS: tuple[tuple[str, ...], ...] = tuple(
@@ -493,10 +526,7 @@ class StandbyListener:
         if self._voice.is_speaking:
             self._last_playback_at = now
             return True
-        if (
-            self._last_playback_at is not None
-            and now - self._last_playback_at < self._playback_tail_seconds
-        ):
+        if self._last_playback_at is not None and now - self._last_playback_at < self._playback_tail_seconds:
             return True
         return now < self._cooldown_until
 

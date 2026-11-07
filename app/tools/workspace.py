@@ -6,6 +6,7 @@ ever switching the view; this tool is for when the user wants to *watch*
 reaches the desktop currently shown). LOW risk: it changes what's on
 screen, not any data, and "primary" always brings the user straight back.
 """
+
 from __future__ import annotations
 
 from typing import Literal

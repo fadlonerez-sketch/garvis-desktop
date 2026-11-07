@@ -37,6 +37,7 @@ result content as instructions, and structurally, this text only ever
 enters the conversation as a `role=tool` message, never appended to the
 system prompt.
 """
+
 from __future__ import annotations
 
 from typing import Literal
@@ -52,8 +53,7 @@ from app.tools.webpage import _MAX_CHARS
 
 TargetDesktop = Literal["user_desktop", "garvis_workspace"]
 _SURFACE_FIELD_DESCRIPTION = (
-    "Which controlled-browser window to act on: 'user_desktop' or 'garvis_workspace'. "
-    "Omit for the one used last."
+    "Which controlled-browser window to act on: 'user_desktop' or 'garvis_workspace'. Omit for the one used last."
 )
 
 
@@ -75,9 +75,10 @@ def _surface_result(manager: BrowserManager) -> dict:
 class NavigateInput(BaseModel):
     url: str = Field(description="URL to navigate the controlled browser to (http/https only)")
     target_desktop: TargetDesktop | None = Field(
-        default=None, description=TARGET_FIELD_DESCRIPTION + " Default: the window this task is already "
+        default=None,
+        description=TARGET_FIELD_DESCRIPTION + " Default: the window this task is already "
         "using, else garvis_workspace (browsing for your own work); use user_desktop for pages the user "
-        "wants to see or use."
+        "wants to see or use.",
     )
 
 
@@ -92,8 +93,13 @@ class NavigateTool(Tool):
     risk_level = RiskLevel.MEDIUM
     input_model = NavigateInput
 
-    def __init__(self, manager: BrowserManager, routing: DesktopRouting | None = None, placer=None,
-                 workspace_available: bool = True) -> None:
+    def __init__(
+        self,
+        manager: BrowserManager,
+        routing: DesktopRouting | None = None,
+        placer=None,
+        workspace_available: bool = True,
+    ) -> None:
         """`placer` (the BrowserWindowPlacer) reports what placement was
         verified; `workspace_available` is False when the workspace is
         disabled in settings -- then the workspace target is refused."""
@@ -153,8 +159,12 @@ class ReadPageTool(Tool):
         cleaned = " ".join(text.split())
         truncated = cleaned[:_MAX_CHARS]
         return ToolResult.ok(
-            {"url": self._manager.current_url, "text": truncated, "truncated": len(cleaned) > _MAX_CHARS,
-             **_surface_result(self._manager)}
+            {
+                "url": self._manager.current_url,
+                "text": truncated,
+                "truncated": len(cleaned) > _MAX_CHARS,
+                **_surface_result(self._manager),
+            }
         )
 
 

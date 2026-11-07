@@ -9,6 +9,7 @@ Each entry: {"tool", "kind", "title", "url", "publisher", "snippet"} where
 `kind` is "read" (Garvis opened the page and read its text) or
 "search_result" (listed by the search engine; only its snippet was seen).
 """
+
 from __future__ import annotations
 
 from urllib.parse import urlparse
@@ -50,15 +51,18 @@ def extract_sources(tool_name: str, data: object) -> list[dict]:
         if tool_name == "web_search" and isinstance(data, list):
             entries = [
                 _entry(tool_name, "search_result", r.get("title"), r.get("url"), r.get("snippet"))
-                for r in data if isinstance(r, dict)
+                for r in data
+                if isinstance(r, dict)
             ]
         elif tool_name == "web_research" and isinstance(data, dict):
             entries = [
                 _entry(tool_name, "read", s.get("title"), s.get("url"), s.get("excerpt"))
-                for s in data.get("sources") or [] if isinstance(s, dict)
+                for s in data.get("sources") or []
+                if isinstance(s, dict)
             ] + [
                 _entry(tool_name, "search_result", r.get("title"), r.get("url"), r.get("snippet"))
-                for r in data.get("results") or [] if isinstance(r, dict)
+                for r in data.get("results") or []
+                if isinstance(r, dict)
             ]
         elif tool_name in _PAGE_READERS and isinstance(data, dict):
             entries = [_entry(tool_name, "read", data.get("title"), data.get("url"), data.get("text"))]

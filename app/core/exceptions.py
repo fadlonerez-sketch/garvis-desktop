@@ -1,4 +1,5 @@
 """Exception hierarchy for Garvis."""
+
 from __future__ import annotations
 
 
@@ -22,8 +23,6 @@ class LLMUnavailableError(LLMError):
 class LLMTimeoutError(LLMUnavailableError):
     """The provider didn't answer in time. The request may still have been
     processed (and billed), so it is never resent to the same model."""
-
-
 
 
 class LLMAuthenticationError(LLMError):
@@ -50,8 +49,9 @@ class LLMBilledError(LLMError):
     use. The usage travels with the error so it is still accounted for, and
     the request is neither retried nor handed to another model."""
 
-    def __init__(self, message: str, usage=None, served_model: str | None = None,
-                 request_id: str | None = None) -> None:
+    def __init__(
+        self, message: str, usage=None, served_model: str | None = None, request_id: str | None = None
+    ) -> None:
         super().__init__(message)
         self.usage = usage
         self.served_model = served_model

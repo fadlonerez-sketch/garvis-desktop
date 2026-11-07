@@ -23,6 +23,7 @@ behind the existing permission and confirmation checks. Submissions carry
 a client `request_id`, so a retried request returns the original task
 instead of running it twice.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -231,8 +232,12 @@ def create_app(
     async def sw(request: web.Request) -> web.Response:
         # Served from the root so it may control the whole app; it only
         # caches the static shell -- never API responses.
-        return web.Response(body=service_worker, content_type="text/javascript", charset="utf-8",
-                            headers={"Service-Worker-Allowed": "/"})
+        return web.Response(
+            body=service_worker,
+            content_type="text/javascript",
+            charset="utf-8",
+            headers={"Service-Worker-Allowed": "/"},
+        )
 
     async def web_manifest(request: web.Request) -> web.Response:
         return web.Response(body=manifest, content_type="application/manifest+json", charset="utf-8")
@@ -418,8 +423,9 @@ def create_app(
             return _error(400, "Invalid request id.")
         device = _device(request)
         try:
-            return web.json_response(service.run_protocol(protocol_id, request_id, device.label if device else ""),
-                                     status=202)
+            return web.json_response(
+                service.run_protocol(protocol_id, request_id, device.label if device else ""), status=202
+            )
         except LookupError as exc:
             return _error(404, str(exc))
         except ValueError as exc:
@@ -447,8 +453,15 @@ def create_app(
     if companion is not None:
         from app.mobile.native_api import register_native_routes
 
-        register_native_routes(app, service=service, pairing=pairing, companion=companion,
-                               max_audio_bytes=max_audio_bytes, is_remote=_is_remote, remote_urls=_remote_urls)
+        register_native_routes(
+            app,
+            service=service,
+            pairing=pairing,
+            companion=companion,
+            max_audio_bytes=max_audio_bytes,
+            is_remote=_is_remote,
+            remote_urls=_remote_urls,
+        )
     return app
 
 
@@ -572,8 +585,10 @@ class MobileServer:
         self._urls = [f"https://{host}:{port}/" for host in [*lan_hosts, local_hostname()]]
         if self._remote_access:
             tailnet = await asyncio.to_thread(detect_tailscale_addresses)
-            self._remote_urls = [f"https://{host if ':' not in host else '[' + host + ']'}:{port}/"
-                                 for host in [*tailnet, *self._remote_hosts]]
+            self._remote_urls = [
+                f"https://{host if ':' not in host else '[' + host + ']'}:{port}/"
+                for host in [*tailnet, *self._remote_hosts]
+            ]
         log_extra(logger, 20, "mobile.server_started", host=self._host, port=port, urls=self._urls)
 
     async def stop(self) -> None:

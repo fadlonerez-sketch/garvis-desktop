@@ -1,5 +1,6 @@
 """Shared fakes for the mobile-interface tests: no microphone, speaker,
 network or real STT/TTS/LLM is ever touched."""
+
 from __future__ import annotations
 
 import asyncio
@@ -158,8 +159,13 @@ class HighRiskTool(Tool):
         return ToolResult.ok("did the risky thing")
 
 
-def make_agent(tmp_path, llm: LLMProvider, events: EventBus | None = None, tools: list[Tool] | None = None,
-               confirmation_timeout: float = 5.0) -> Agent:
+def make_agent(
+    tmp_path,
+    llm: LLMProvider,
+    events: EventBus | None = None,
+    tools: list[Tool] | None = None,
+    confirmation_timeout: float = 5.0,
+) -> Agent:
     registry = ToolRegistry()
     for tool in tools or []:
         registry.register(tool)

@@ -8,6 +8,7 @@ fake telemetry sampler: no Agent, LLM, microphone or real input. What the
 core looks like and how the window behaves on a real desktop is in the
 manual checklist, not here.
 """
+
 from __future__ import annotations
 
 import os
@@ -52,15 +53,24 @@ from app.ui.visuals import (
 from tests.test_ui_dashboard import _FakeBridge, _research_turn
 
 CATALOG = [
-    {"name": "web_research", "description": "Research a question on the web. Opens pages.", "risk": "low",
-     "confirm": False, "conditional": False},
+    {
+        "name": "web_research",
+        "description": "Research a question on the web. Opens pages.",
+        "risk": "low",
+        "confirm": False,
+        "conditional": False,
+    },
     {"name": "gmail_send", "description": "Send an email.", "risk": "high", "confirm": True, "conditional": False},
     {"name": "gmail_search", "description": "Search Gmail.", "risk": "low", "confirm": False, "conditional": False},
-    {"name": "run_powershell", "description": "Run PowerShell.", "risk": "medium", "confirm": False,
-     "conditional": True},
+    {
+        "name": "run_powershell",
+        "description": "Run PowerShell.",
+        "risk": "medium",
+        "confirm": False,
+        "conditional": True,
+    },
     {"name": "calculator", "description": "Do arithmetic.", "risk": "low", "confirm": False, "conditional": False},
-    {"name": "brand_new_tool", "description": "Something new.", "risk": "low", "confirm": False,
-     "conditional": False},
+    {"name": "brand_new_tool", "description": "Something new.", "risk": "low", "confirm": False, "conditional": False},
 ]
 
 
@@ -104,13 +114,28 @@ def window(qapp, monkeypatch):
 
 
 def _snapshot(detail: bool = True, **overrides) -> Snapshot:
-    values = dict(at=time.time(), detail=detail, cpu_percent=37.0, ram_total=32 * GiB, ram_available=8 * GiB,
-                  process_cpu_percent=1.5, process_memory=300 * 1024 ** 2, process_private=280 * 1024 ** 2,
-                  uptime_seconds=93_784.0)
+    values = dict(
+        at=time.time(),
+        detail=detail,
+        cpu_percent=37.0,
+        ram_total=32 * GiB,
+        ram_available=8 * GiB,
+        process_cpu_percent=1.5,
+        process_memory=300 * 1024**2,
+        process_private=280 * 1024**2,
+        uptime_seconds=93_784.0,
+    )
     if detail:
-        values.update(per_core=(10.0, 95.0, 30.0, 40.0), cpu_mhz=4200.0,
-                      disks=(Disk("C:", total=1000 * GiB, free=250 * GiB),), disk_read_bps=2.5 * 1024 ** 2,
-                      disk_write_bps=0.0, gpu_percent=12.0, gpu_memory_used=0, gpu_shared_used=GiB)
+        values.update(
+            per_core=(10.0, 95.0, 30.0, 40.0),
+            cpu_mhz=4200.0,
+            disks=(Disk("C:", total=1000 * GiB, free=250 * GiB),),
+            disk_read_bps=2.5 * 1024**2,
+            disk_write_bps=0.0,
+            gpu_percent=12.0,
+            gpu_memory_used=0,
+            gpu_shared_used=GiB,
+        )
     values.update(overrides)
     return Snapshot(**values)
 
@@ -169,8 +194,10 @@ def test_the_logo_glow_fades_smoothly_outward_with_no_rings(qapp):
     size, ratio = 420, 0.27
     image = _render_logo(_settled(Mode.IDLE), size, ratio)
     r = size * ratio
-    alphas = [image.pixelColor(int(size / 2 + r * k), size // 2).alpha() for k in
-              [1.04 + 0.02 * i for i in range(int((HALO_REACH - 1.04) / 0.02))]]
+    alphas = [
+        image.pixelColor(int(size / 2 + r * k), size // 2).alpha()
+        for k in [1.04 + 0.02 * i for i in range(int((HALO_REACH - 1.04) / 0.02))]
+    ]
     assert alphas[0] > 0
     assert all(b <= a + 1 for a, b in pairwise(alphas))  # monotonic: no rings, ticks or bands
     assert image.pixelColor(2, 2).alpha() == 0 and image.pixelColor(size // 2, 1).alpha() == 0
@@ -286,8 +313,9 @@ def test_the_shader_compiles_and_renders_on_real_opengl():
     """A child process on Qt's normal Windows platform (an offscreen GL surface; no
     window is ever shown): the real shader compiles, links and draws the orb."""
     env = {k: v for k, v in os.environ.items() if k != "QT_QPA_PLATFORM"}
-    result = subprocess.run([sys.executable, "-c", _GL_PROBE, str(ROOT)], capture_output=True, text=True,
-                            timeout=120, env=env)
+    result = subprocess.run(
+        [sys.executable, "-c", _GL_PROBE, str(ROOT)], capture_output=True, text=True, timeout=120, env=env
+    )
     lines = result.stdout.strip().splitlines()
     out = lines[-1] if lines else ""
     if out == "NOGL":
@@ -305,8 +333,14 @@ def test_states_differ_in_brightness_without_jumps():
     assert standby["glow"] < idle["glow"] < listening["glow"] < speaking["glow"]
     dyn = Dynamics()
     previous = dyn.appearance()
-    for mode, frames in ((Mode.LISTENING, 30), (Mode.THINKING, 60), (Mode.SPEAKING, 60), (Mode.LISTENING, 40),
-                         (Mode.ERROR, 40), (Mode.IDLE, 60)):
+    for mode, frames in (
+        (Mode.LISTENING, 30),
+        (Mode.THINKING, 60),
+        (Mode.SPEAKING, 60),
+        (Mode.LISTENING, 40),
+        (Mode.ERROR, 40),
+        (Mode.IDLE, 60),
+    ):
         for _ in range(frames):
             dyn.step(0.033, mode, 3000.0)
             look = dyn.appearance()
@@ -339,8 +373,9 @@ def test_speech_stopping_settles_the_glow_then_listening_takes_over():
     assert dyn.hush > 0.5 and dyn.appearance()["glow"] < speaking - 0.2  # a clear, quick settle
     for _ in range(60):
         dyn.step(0.033, Mode.LISTENING)
-    assert dyn.hush < 0.05 and dyn.appearance()["glow"] == pytest.approx(_settled(Mode.LISTENING).appearance()["glow"],
-                                                                        abs=0.03)
+    assert dyn.hush < 0.05 and dyn.appearance()["glow"] == pytest.approx(
+        _settled(Mode.LISTENING).appearance()["glow"], abs=0.03
+    )
 
 
 def test_reduced_motion_holds_the_plasma_still_but_keeps_the_state_visible():
@@ -390,8 +425,17 @@ def test_dashboard_and_orb_follow_standby(window):
 
 # ------------------------------------------------------------ structure
 def test_pages_and_navigation(window):
-    assert dashboard.PAGES == ("overview", "activity", "protocols", "system", "sources", "voice", "usage", "tools",
-                               "settings")
+    assert dashboard.PAGES == (
+        "overview",
+        "activity",
+        "protocols",
+        "system",
+        "sources",
+        "voice",
+        "usage",
+        "tools",
+        "settings",
+    )
     assert set(window._nav.buttons) == set(dashboard.PAGES)
     for key in dashboard.PAGES:
         window.show_page(key)
@@ -470,8 +514,14 @@ def test_system_page_shows_measurements_and_marks_the_unavailable(window):
     page.flush()
     assert page.cpu_gauge.value is None
     assert page.gpu_info.value("Adapter") == "Unavailable"
-    static = StaticInfo(cpu_model="Test CPU 9000", logical_cpus=4, base_mhz=3000, total_ram=32 * GiB,
-                        gpus=(GpuAdapter("Test GPU", 2 * GiB),), os_name="Windows 11 Pro (build 26200)")
+    static = StaticInfo(
+        cpu_model="Test CPU 9000",
+        logical_cpus=4,
+        base_mhz=3000,
+        total_ram=32 * GiB,
+        gpus=(GpuAdapter("Test GPU", 2 * GiB),),
+        os_name="Windows 11 Pro (build 26200)",
+    )
     _feed(window, _snapshot(), static=static)
     page.flush()
     assert page.cpu_gauge.value == pytest.approx(37.0)
@@ -494,8 +544,11 @@ def test_resource_warning_reaches_the_overview_alerts(window):
     _feed(window, *[_snapshot(detail=False, at=now - 3 + i, cpu_percent=98.0) for i in range(4)])
     overview = window._overview
     overview.flush()
-    texts = [overview.alerts_body.itemAt(i).layout().itemAt(1).widget().text()
-             for i in range(overview.alerts_body.count()) if overview.alerts_body.itemAt(i).layout()]
+    texts = [
+        overview.alerts_body.itemAt(i).layout().itemAt(1).widget().text()
+        for i in range(overview.alerts_body.count())
+        if overview.alerts_body.itemAt(i).layout()
+    ]
     assert any("CPU has stayed above 90%" in text for text in texts)
 
 
@@ -509,8 +562,12 @@ def test_tools_page_groups_the_real_catalog_and_filters(window):
     assert dashboard.tool_group("gmail_send") == "mail"
     assert dashboard.tool_group("brand_new_tool") == "other"  # nothing is dropped
     page.search.setText("gmail")
-    visible = [row.tool_name for _p, rows in page._rows for row in rows
-               if isinstance(row, dashboard.ToolRow) and not row.isHidden()]
+    visible = [
+        row.tool_name
+        for _p, rows in page._rows
+        for row in rows
+        if isinstance(row, dashboard.ToolRow) and not row.isHidden()
+    ]
     assert sorted(visible) == ["gmail_search", "gmail_send"]
     page.search.setText("no such capability")
     assert not page.no_match.isHidden()
@@ -528,11 +585,21 @@ def test_tools_page_without_a_catalog_says_so(qapp, monkeypatch):
 
 
 def test_integration_status_comes_only_from_the_configuration():
-    rows = {r["name"]: r for r in dashboard.integration_rows({
-        "model": "claude-haiku-5-5", "api_key_configured": False, "desktop_control_enabled": False,
-        "mobile_enabled": True, "gmail_status": "not_configured", "budget_enabled": True,
-        "daily_budget_usd": 0.5, "max_cost_per_task_usd": 0.05,
-    })}
+    rows = {
+        r["name"]: r
+        for r in dashboard.integration_rows(
+            {
+                "model": "claude-haiku-5-5",
+                "api_key_configured": False,
+                "desktop_control_enabled": False,
+                "mobile_enabled": True,
+                "gmail_status": "not_configured",
+                "budget_enabled": True,
+                "daily_budget_usd": 0.5,
+                "max_cost_per_task_usd": 0.05,
+            }
+        )
+    }
     assert rows["claude-haiku-5-5 · Anthropic API"]["status"] == "API key missing"
     assert rows["Desktop control"]["status"] == "Disabled" and rows["Desktop control"]["action"] is None
     assert rows["iPhone interface"]["action"] == ("Pair iPhone…", "pair")
@@ -543,8 +610,9 @@ def test_integration_status_comes_only_from_the_configuration():
 
 
 def test_gmail_status_reads_only_the_files(tmp_path):
-    settings = SimpleNamespace(gmail_token_path=tmp_path / "token.json",
-                               gmail_client_secret_path=tmp_path / "client.json")
+    settings = SimpleNamespace(
+        gmail_token_path=tmp_path / "token.json", gmail_client_secret_path=tmp_path / "client.json"
+    )
     assert _gmail_status(settings) == "not_configured"
     settings.gmail_client_secret_path.write_text("{}")
     assert _gmail_status(settings) == "sign_in_needed"
@@ -616,13 +684,35 @@ def test_usage_summary_has_a_daily_series_with_real_zeros(tmp_path):
 
 def test_usage_page_draws_the_trend_and_overview_the_budget(window):
     days = [{"day": f"2026-10-{d:02d}", "calls": 1, "cost_usd": 0.01} for d in range(10, 24)]
-    window._bridge.usage_updated.emit({
-        "available": True, "daily": days, "recent": [],
-        "today": {"calls": 3, "ok": 3, "errors": 0, "input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0,
-                  "cache_write_tokens": 0, "cost_usd": 0.25, "tasks": 1},
-        "month": {"calls": 9, "ok": 9, "errors": 0, "input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0,
-                  "cache_write_tokens": 0, "cost_usd": 1.0, "tasks": 2},
-    })
+    window._bridge.usage_updated.emit(
+        {
+            "available": True,
+            "daily": days,
+            "recent": [],
+            "today": {
+                "calls": 3,
+                "ok": 3,
+                "errors": 0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "cache_read_tokens": 0,
+                "cache_write_tokens": 0,
+                "cost_usd": 0.25,
+                "tasks": 1,
+            },
+            "month": {
+                "calls": 9,
+                "ok": 9,
+                "errors": 0,
+                "input_tokens": 0,
+                "output_tokens": 0,
+                "cache_read_tokens": 0,
+                "cache_write_tokens": 0,
+                "cost_usd": 1.0,
+                "tasks": 2,
+            },
+        }
+    )
     window._usage_page.flush()
     assert len(window._usage_page.trend.days) == 14
     assert "$0.1400 over 14 days" in window._usage_page.trend_caption.text()

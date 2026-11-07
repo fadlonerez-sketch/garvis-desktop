@@ -22,6 +22,7 @@ whether a direct path or a DERP relay is used. Nothing is ever sent to
 Garvis except GET /api/v1/hello, which carries no token. Exit code 0 when
 every required check passes.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -84,10 +85,14 @@ def probe_hello(address: str, port: int, ca_file: Path, canonical_host: str, tim
     trust only `ca_file`, require the certificate to name `canonical_host`."""
     context = ssl.create_default_context(cafile=str(ca_file))  # only Garvis's CA, no system roots
     context.minimum_version = ssl.TLSVersion.TLSv1_2
-    with socket.create_connection((address, port), timeout=timeout) as raw, \
-            context.wrap_socket(raw, server_hostname=canonical_host) as tls:
-        tls.sendall(f"GET /api/v1/hello HTTP/1.1\r\nHost: {canonical_host}:{port}\r\n"
-                    "Accept: application/json\r\nConnection: close\r\n\r\n".encode("ascii"))
+    with (
+        socket.create_connection((address, port), timeout=timeout) as raw,
+        context.wrap_socket(raw, server_hostname=canonical_host) as tls,
+    ):
+        tls.sendall(
+            f"GET /api/v1/hello HTTP/1.1\r\nHost: {canonical_host}:{port}\r\n"
+            "Accept: application/json\r\nConnection: close\r\n\r\n".encode("ascii")
+        )
         data = b""
         while chunk := tls.recv(65536):
             data += chunk
@@ -101,8 +106,10 @@ def probe_hello(address: str, port: int, ca_file: Path, canonical_host: str, tim
 def control_plane_reachable(host: str, timeout: float = 8.0) -> str:
     """'' if a verified TLS connection to `host` works, else why not."""
     try:
-        with socket.create_connection((host, 443), timeout=timeout) as raw, \
-                ssl.create_default_context().wrap_socket(raw, server_hostname=host):
+        with (
+            socket.create_connection((host, 443), timeout=timeout) as raw,
+            ssl.create_default_context().wrap_socket(raw, server_hostname=host),
+        ):
             return ""
     except (OSError, ssl.SSLError) as exc:
         return f"{type(exc).__name__}: {exc}"
@@ -126,16 +133,23 @@ $python = Get-NetFirewallApplicationFilter | Where-Object {{ $_.Program -like '*
 @{{ rule = $(if ($rule) {{ Describe $rule }}); python = @($python | ForEach-Object {{ Describe $_ }}) }} | ConvertTo-Json -Depth 4
 """
     try:
-        result = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
-                                capture_output=True, text=True, timeout=90, creationflags=_NO_WINDOW)
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", script],
+            capture_output=True,
+            text=True,
+            timeout=90,
+            creationflags=_NO_WINDOW,
+        )
         data = json.loads(result.stdout or "{}")
-    except (OSError, subprocess.SubprocessError, ValueError):
+    except OSError, subprocess.SubprocessError, ValueError:
         return None, []
     rule = data.get("rule")
     python = data.get("python") or []
     python = python if isinstance(python, list) else [python]
-    return (rule if isinstance(rule, dict) and rule.get("id") else None,
-            [r for r in python if isinstance(r, dict) and r.get("id")])
+    return (
+        rule if isinstance(rule, dict) and rule.get("id") else None,
+        [r for r in python if isinstance(r, dict) and r.get("id")],
+    )
 
 
 def broad_rules(rules: list[dict]) -> list[dict]:
@@ -145,8 +159,13 @@ def broad_rules(rules: list[dict]) -> list[dict]:
 
 def tailscale_ping(target: str) -> str:
     try:
-        result = subprocess.run([str(TAILSCALE_CLI), "ping", "--c", "3", "--timeout", "5s", target],
-                                capture_output=True, text=True, timeout=30, creationflags=_NO_WINDOW)
+        result = subprocess.run(
+            [str(TAILSCALE_CLI), "ping", "--c", "3", "--timeout", "5s", target],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            creationflags=_NO_WINDOW,
+        )
     except (OSError, subprocess.SubprocessError) as exc:
         return f"(tailscale ping failed: {exc})"
     return (result.stdout + result.stderr).strip()
@@ -195,17 +214,28 @@ def main(argv: list[str] | None = None) -> int:
         if me:
             _line(bool(pc_ipv4), f"this PC: {', '.join(me.ips) or 'no address'}  name {me.dns_name or '?'}")
             _line(None, f"node key expires {me.key_expiry or 'never (expiry disabled)'}")
-        _line(status.magic_dns_enabled or None, f"MagicDNS {'on' if status.magic_dns_enabled else 'off'}"
-              + (f" ({status.magic_dns_suffix})" if status.magic_dns_suffix else ""))
-        _line(not status.exit_node_in_use, "no exit node in use" if not status.exit_node_in_use
-              else "an EXIT NODE is in use -- turn it off (Garvis needs only the tailnet)")
+        _line(
+            status.magic_dns_enabled or None,
+            f"MagicDNS {'on' if status.magic_dns_enabled else 'off'}"
+            + (f" ({status.magic_dns_suffix})" if status.magic_dns_suffix else ""),
+        )
+        _line(
+            not status.exit_node_in_use,
+            "no exit node in use"
+            if not status.exit_node_in_use
+            else "an EXIT NODE is in use -- turn it off (Garvis needs only the tailnet)",
+        )
         failed |= status.exit_node_in_use
         for item in status.health:
             _line(None, f"Tailscale health: {item}")
     for host in CONTROL_HOSTS:
         problem = control_plane_reachable(host)
-        _line(not problem, f"{host} reachable from this network" if not problem else
-              f"{host} NOT reachable from this network ({problem}) -- this network blocks Tailscale")
+        _line(
+            not problem,
+            f"{host} reachable from this network"
+            if not problem
+            else f"{host} NOT reachable from this network ({problem}) -- this network blocks Tailscale",
+        )
         failed |= bool(problem)
 
     if args.phone:
@@ -214,8 +244,11 @@ def main(argv: list[str] | None = None) -> int:
             _line(False, "not in this tailnet (sign the phone in to the same tailnet and approve it)")
             failed = True
         else:
-            _line(phone.online, f"{phone.host_name} ({phone.os}) {', '.join(phone.ips)} "
-                  + ("online" if phone.online else "OFFLINE -- is the Tailscale VPN on in the phone?"))
+            _line(
+                phone.online,
+                f"{phone.host_name} ({phone.os}) {', '.join(phone.ips)} "
+                + ("online" if phone.online else "OFFLINE -- is the Tailscale VPN on in the phone?"),
+            )
             _line(None, f"path: {phone.connection}")
             failed |= not phone.online
             if args.ping:
@@ -231,12 +264,18 @@ def main(argv: list[str] | None = None) -> int:
         try:
             hello = probe_hello(pc_ipv4, port, ca_file, local_hostname())
             ok = hello.get("server") == "garvis" and hello.get("remote") is True
-            _line(ok, f"https://{pc_ipv4}:{port}/api/v1/hello -> certificate OK (Garvis CA, {local_hostname()}), "
-                  f"remote={hello.get('remote')}")
+            _line(
+                ok,
+                f"https://{pc_ipv4}:{port}/api/v1/hello -> certificate OK (Garvis CA, {local_hostname()}), "
+                f"remote={hello.get('remote')}",
+            )
             failed |= not ok
         except (OSError, ssl.SSLError, RuntimeError, ValueError) as exc:
-            _line(False, f"https://{pc_ipv4}:{port}/api/v1/hello failed: {type(exc).__name__}: {exc} "
-                  "(is Garvis running, restarted since the .env change?)")
+            _line(
+                False,
+                f"https://{pc_ipv4}:{port}/api/v1/hello failed: {type(exc).__name__}: {exc} "
+                "(is Garvis running, restarted since the .env change?)",
+            )
             failed = True
     else:
         _line(None, "HTTPS probe skipped (no tailnet address yet, or Garvis hasn't created its CA)")
@@ -248,12 +287,18 @@ def main(argv: list[str] | None = None) -> int:
         failed = True
     else:
         narrow = rule.get("remote", "").lower() not in ("", "any") and "100.64.0.0" not in rule.get("remote", "")
-        _line(narrow, f"{FIREWALL_RULE_ID}: enabled={rule.get('enabled')} TCP {rule.get('port')} "
-              f"from {rule.get('remote')} on '{rule.get('interface')}'"
-              + ("" if narrow else " -- not limited to the phone; re-run the script with -PhoneIp"))
+        _line(
+            narrow,
+            f"{FIREWALL_RULE_ID}: enabled={rule.get('enabled')} TCP {rule.get('port')} "
+            f"from {rule.get('remote')} on '{rule.get('interface')}'"
+            + ("" if narrow else " -- not limited to the phone; re-run the script with -PhoneIp"),
+        )
     for broad in broad_rules(python_rules):
-        _line(False, f"broad allow rule {broad.get('id')} ({broad.get('profile')}, TCP {broad.get('port')}, "
-              f"from {broad.get('remote')}) for {broad.get('program')}")
+        _line(
+            False,
+            f"broad allow rule {broad.get('id')} ({broad.get('profile')}, TCP {broad.get('port')}, "
+            f"from {broad.get('remote')}) for {broad.get('program')}",
+        )
         failed = True
     print("\n" + ("Some checks failed." if failed else "All required checks passed."))
     return 1 if failed else 0

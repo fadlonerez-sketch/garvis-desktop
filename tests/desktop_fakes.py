@@ -1,4 +1,5 @@
 """Shared in-memory DesktopBackend for desktop-control tests (hermetic, any OS)."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -12,14 +13,33 @@ class FakeDesktopBackend(DesktopBackend):
     def __init__(self, windows: list[WindowInfo] | None = None) -> None:
         self.screen = Rect(left=0, top=0, right=1920, bottom=1080)
         self.cursor = (10, 10)
-        self.windows = windows if windows is not None else [
-            WindowInfo(handle=1, title="Untitled - Notepad", process_name="Notepad.exe", pid=100,
-                       rect=Rect(left=100, top=100, right=900, bottom=700)),
-            WindowInfo(handle=2, title="WhatsApp", process_name="WhatsApp.Root.exe", pid=200,
-                       rect=Rect(left=0, top=0, right=800, bottom=600)),
-            WindowInfo(handle=3, title="Garvis", process_name="python.exe", pid=GARVIS_PID,
-                       rect=Rect(left=0, top=0, right=400, bottom=400)),
-        ]
+        self.windows = (
+            windows
+            if windows is not None
+            else [
+                WindowInfo(
+                    handle=1,
+                    title="Untitled - Notepad",
+                    process_name="Notepad.exe",
+                    pid=100,
+                    rect=Rect(left=100, top=100, right=900, bottom=700),
+                ),
+                WindowInfo(
+                    handle=2,
+                    title="WhatsApp",
+                    process_name="WhatsApp.Root.exe",
+                    pid=200,
+                    rect=Rect(left=0, top=0, right=800, bottom=600),
+                ),
+                WindowInfo(
+                    handle=3,
+                    title="Garvis",
+                    process_name="python.exe",
+                    pid=GARVIS_PID,
+                    rect=Rect(left=0, top=0, right=400, bottom=400),
+                ),
+            ]
+        )
         self.foreground = 1
         self.calls: list[tuple] = []
         self.refuse_focus: set[int] = set()

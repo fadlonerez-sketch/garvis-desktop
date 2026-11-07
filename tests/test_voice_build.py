@@ -1,4 +1,5 @@
 """Tests for the voice composition root (app/voice/build.py)."""
+
 from __future__ import annotations
 
 import pytest

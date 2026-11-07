@@ -3,6 +3,7 @@ actual microphone recording, actual faster-whisper transcription, actual
 Piper synthesis, and actual audio playback. Not part of pytest (hardware
 and model dependent). Run with: python scripts/smoke_test_voice.py
 """
+
 from __future__ import annotations
 
 import asyncio

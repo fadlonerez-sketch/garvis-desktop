@@ -2,6 +2,7 @@
 streaming player reports the DAC start and real completion; the recorder
 timestamps blocks; VoicePipeline registers/ends references on every path
 (finish, stop, synthesis failure, playback failure). No real audio."""
+
 from __future__ import annotations
 
 import wave
@@ -198,8 +199,9 @@ class _Recorder:
 async def test_pipeline_registers_the_played_clip_with_its_dac_time_and_ends_it_on_stop():
     guard = EchoGuard()
     now = [42.5]
-    voice = VoicePipeline(stt=_STT(), tts=_TTS(), recorder=_Recorder(), player=_TimedPlayer(), echo_guard=guard,
-                          clock=lambda: now[0])
+    voice = VoicePipeline(
+        stt=_STT(), tts=_TTS(), recorder=_Recorder(), player=_TimedPlayer(), echo_guard=guard, clock=lambda: now[0]
+    )
     await voice.speak("hello")
     clip = guard._clips[0]
     assert clip.start_time == 42.0 and clip.end_time is None
@@ -212,8 +214,14 @@ async def test_pipeline_registers_the_played_clip_with_its_dac_time_and_ends_it_
 @pytest.mark.parametrize("tts_fails, player_fails", [(True, False), (False, True)])
 async def test_failed_speech_leaves_no_open_reference(tts_fails, player_fails):
     guard = EchoGuard()
-    voice = VoicePipeline(stt=_STT(), tts=_TTS(fail=tts_fails), recorder=_Recorder(),
-                          player=_TimedPlayer(fail=player_fails), echo_guard=guard, clock=lambda: 50.0)
+    voice = VoicePipeline(
+        stt=_STT(),
+        tts=_TTS(fail=tts_fails),
+        recorder=_Recorder(),
+        player=_TimedPlayer(fail=player_fails),
+        echo_guard=guard,
+        clock=lambda: 50.0,
+    )
     with pytest.raises(TextToSpeechError):
         await voice.speak("hello")
     assert all(clip.end_time is not None for clip in guard._clips)

@@ -7,6 +7,7 @@ and everything the microphone heard meanwhile is waiting in the recorder's
 queue when playback starts -- exactly as with the real MicrophoneRecorder.
 Simulated audio only: no real microphone or speaker is involved.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -37,13 +38,13 @@ class LiveRoom(Room):
         self.read_pos = self.now
 
     def _render(self, start: float) -> bytes:
-        out = self._noise[self._noise_pos:self._noise_pos + BLOCK].copy()
+        out = self._noise[self._noise_pos : self._noise_pos + BLOCK].copy()
         self._noise_pos = (self._noise_pos + BLOCK) % (len(self._noise) - BLOCK)
         for at, samples in self.sources:
             offset = int(round((start - at) * MIC_RATE))
             lo, hi = max(offset, 0), min(offset + BLOCK, len(samples))
             if hi > lo:
-                out[lo - offset:hi - offset] += samples[lo:hi]
+                out[lo - offset : hi - offset] += samples[lo:hi]
         return np.clip(out, -32768, 32767).astype(np.int16).tobytes()
 
     def read_available_timed(self):
@@ -103,16 +104,24 @@ def _session(room: LiveRoom, during_thinking=None, initial_noise_floor: float | 
     stt = RecordingSTT()
     player = TimedPlayer(room)
     guard = EchoGuard()
-    voice = VoicePipeline(stt=stt, tts=ReplyTTS(), recorder=room, player=player, echo_guard=guard,
-                          clock=lambda: room.now)
+    voice = VoicePipeline(
+        stt=stt, tts=ReplyTTS(), recorder=room, player=player, echo_guard=guard, clock=lambda: room.now
+    )
     events = EventBus()
     states: list[str] = []
     events.subscribe(lambda e: states.append(e.payload["state"]) if e.type == EventType.SESSION_STATE else None)
     agent = ThinkingAgent(room, during_thinking)
     session = ConversationSession(
-        agent=agent, voice=voice, events=events, poll_interval_seconds=0.0, energy_threshold=500.0,
-        min_speech_seconds=0.15, min_silence_seconds=0.5, barge_in_energy_threshold=900.0,
-        max_utterance_seconds=5.0, initial_noise_floor=initial_noise_floor,
+        agent=agent,
+        voice=voice,
+        events=events,
+        poll_interval_seconds=0.0,
+        energy_threshold=500.0,
+        min_speech_seconds=0.15,
+        min_silence_seconds=0.5,
+        barge_in_energy_threshold=900.0,
+        max_utterance_seconds=5.0,
+        initial_noise_floor=initial_noise_floor,
     )
     return session, agent, stt, player, states, guard
 
@@ -127,12 +136,21 @@ async def _run_until(session, room: Room, until: float) -> None:
 def test_drain_returns_the_whole_backlog_and_keeps_the_echo_guard_timeline():
     room = LiveRoom()
     guard = EchoGuard()
-    voice = VoicePipeline(stt=RecordingSTT(), tts=ReplyTTS(), recorder=room, player=TimedPlayer(room),
-                          echo_guard=guard, clock=lambda: room.now)
+    voice = VoicePipeline(
+        stt=RecordingSTT(),
+        tts=ReplyTTS(),
+        recorder=room,
+        player=TimedPlayer(room),
+        echo_guard=guard,
+        clock=lambda: room.now,
+    )
     room.now += 2.0  # two seconds pass unread
     pcm = voice.drain_microphone()
     assert len(pcm) // 2 == int(2.0 * MIC_RATE // BLOCK) * BLOCK
-    assert guard._pending_time is not None and abs(guard._pending_time + len(guard._pending) / MIC_RATE - room.read_pos) < 1e-6
+    assert (
+        guard._pending_time is not None
+        and abs(guard._pending_time + len(guard._pending) / MIC_RATE - room.read_pos) < 1e-6
+    )
 
 
 async def test_sound_that_ended_while_garvis_was_thinking_does_not_cut_off_the_reply():

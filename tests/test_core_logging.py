@@ -1,6 +1,7 @@
 """Tests for the diagnostic content_fingerprint helper (app/core/logging.py),
 used to log enough about an LLM/assistant response to diagnose duplicate-
 output bugs without ever writing the full text to the log."""
+
 from __future__ import annotations
 
 import hashlib

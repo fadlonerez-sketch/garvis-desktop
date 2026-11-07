@@ -1,4 +1,5 @@
 """Turn-based trimming and tool-result elision in ConversationContext."""
+
 from __future__ import annotations
 
 import json
@@ -14,12 +15,19 @@ from tests.conftest import final_response
 
 def _tool_turn(context: ConversationContext, n: int, result_chars: int, success: bool = True) -> None:
     context.add(Message(role=Role.USER, content=f"request {n}"))
-    context.add(Message(role=Role.ASSISTANT, content="",
-                        tool_calls=[ToolCall(id=f"call-{n}", name="read_screen_text", arguments={})]))
-    payload = {"success": success, "data": {"text": "z" * result_chars}} if success else \
-        {"success": False, "error": "Denied: the user declined the confirmation."}
-    context.add(Message(role=Role.TOOL, content=json.dumps(payload), tool_call_id=f"call-{n}",
-                        name="read_screen_text"))
+    context.add(
+        Message(
+            role=Role.ASSISTANT,
+            content="",
+            tool_calls=[ToolCall(id=f"call-{n}", name="read_screen_text", arguments={})],
+        )
+    )
+    payload = (
+        {"success": success, "data": {"text": "z" * result_chars}}
+        if success
+        else {"success": False, "error": "Denied: the user declined the confirmation."}
+    )
+    context.add(Message(role=Role.TOOL, content=json.dumps(payload), tool_call_id=f"call-{n}", name="read_screen_text"))
     context.add(Message(role=Role.ASSISTANT, content=f"answer {n}"))
 
 
@@ -69,10 +77,21 @@ def test_the_current_turn_is_never_dropped_only_its_older_large_results_shrink()
     context = ConversationContext(max_messages=100, max_tokens=3_000)
     context.add(Message(role=Role.USER, content="multi-step task"))
     for n in range(4):
-        context.add(Message(role=Role.ASSISTANT, content="",
-                            tool_calls=[ToolCall(id=f"c{n}", name="inspect_ui", arguments={"n": n})]))
-        context.add(Message(role=Role.TOOL, content=json.dumps({"success": True, "data": "q" * 8_000}),
-                            tool_call_id=f"c{n}", name="inspect_ui"))
+        context.add(
+            Message(
+                role=Role.ASSISTANT,
+                content="",
+                tool_calls=[ToolCall(id=f"c{n}", name="inspect_ui", arguments={"n": n})],
+            )
+        )
+        context.add(
+            Message(
+                role=Role.TOOL,
+                content=json.dumps({"success": True, "data": "q" * 8_000}),
+                tool_call_id=f"c{n}",
+                name="inspect_ui",
+            )
+        )
     messages = context.messages
     assert messages[0].content == "multi-step task" and len(messages) == 9
     tool_results = [m.content for m in messages if m.role == Role.TOOL]
@@ -102,8 +121,13 @@ def test_dropped_turns_leave_a_digest_and_clear_resets_it():
 
 async def test_agent_puts_the_digest_in_the_system_prompt(tmp_path, make_scripted_llm):
     llm = make_scripted_llm([final_response("Noted, Eris."), final_response("Opening."), final_response("Eris.")])
-    agent = Agent(llm=llm, registry=ToolRegistry(), memory=SQLiteMemoryStore(tmp_path / "m.db"),
-                  events=EventBus(), max_context_messages=2)
+    agent = Agent(
+        llm=llm,
+        registry=ToolRegistry(),
+        memory=SQLiteMemoryStore(tmp_path / "m.db"),
+        events=EventBus(),
+        max_context_messages=2,
+    )
     await agent.handle_user_message("my name is Eris")
     await agent.handle_user_message("open notepad")
     await agent.handle_user_message("what's my name?")

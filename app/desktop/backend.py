@@ -5,6 +5,7 @@ or policy -- that all lives in `DesktopController`. Keeping the backend this
 thin means a future backend (a UI Automation-based one, a remote machine,
 a fake for tests) only has to implement raw primitives.
 """
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

@@ -13,6 +13,7 @@ that contains an obvious sequential run (abcdefgh, 12345678) or a word such
 as "test", "fake" or "example" is treated as a fake and ignored. Add
 "secret-scan: allow" to a line to silence a reviewed false positive.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -40,13 +41,24 @@ RULES: list[tuple[str, re.Pattern[str]]] = [
     ("Slack token", re.compile(r"\bxox[abpors]-[A-Za-z0-9\-]{10,}")),
     ("Tailscale key", re.compile(r"\btskey-[A-Za-z0-9\-]{10,}")),
     ("JSON Web Token", re.compile(r"\beyJ[A-Za-z0-9_\-]{10,}\.eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}")),
-    ("URL with embedded credentials", re.compile(r"\b[a-z][a-z0-9+.\-]*://[^\s/:@\"'<>]+:[^\s/@\"'<>]{3,}@[^\s/\"'<>]+")),
-    ("hard-coded secret assignment", re.compile(
-        r"(?i)\b(?:api[_-]?key|secret|password|passwd|access[_-]?token|auth[_-]?token)\b[\"']?\s*[:=]\s*[\"']"
-        r"(?=[A-Za-z0-9_\-+/=.]*\d)(?=[A-Za-z0-9_\-+/=.]*[A-Za-z])([A-Za-z0-9_\-+/=.]{24,})[\"']")),
-    ("Windows user-profile path", re.compile(
-        r"(?i)\b[A-Z]:[\\/]{1,2}Users[\\/]{1,2}(?!(?:me|you|user|username|public|default|example|name)\b)"
-        r"[A-Za-z0-9._\-]+")),
+    (
+        "URL with embedded credentials",
+        re.compile(r"\b[a-z][a-z0-9+.\-]*://[^\s/:@\"'<>]+:[^\s/@\"'<>]{3,}@[^\s/\"'<>]+"),
+    ),
+    (
+        "hard-coded secret assignment",
+        re.compile(
+            r"(?i)\b(?:api[_-]?key|secret|password|passwd|access[_-]?token|auth[_-]?token)\b[\"']?\s*[:=]\s*[\"']"
+            r"(?=[A-Za-z0-9_\-+/=.]*\d)(?=[A-Za-z0-9_\-+/=.]*[A-Za-z])([A-Za-z0-9_\-+/=.]{24,})[\"']"
+        ),
+    ),
+    (
+        "Windows user-profile path",
+        re.compile(
+            r"(?i)\b[A-Z]:[\\/]{1,2}Users[\\/]{1,2}(?!(?:me|you|user|username|public|default|example|name)\b)"
+            r"[A-Za-z0-9._\-]+"
+        ),
+    ),
 ]
 # A real PEM block: the header followed by a base64 body on the next lines
 # (code that merely names the header, like a format check, doesn't match).
@@ -54,7 +66,8 @@ PEM_KEY = re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE 
 # Files whose contents must never be committed, whatever they contain.
 FORBIDDEN_NAMES = re.compile(
     r"(?i)(^|/)(\.env(\..+)?|.*\.(pem|key|p12|pfx|dpapi|keystore|jks|db|sqlite3?|log)|id_(rsa|ed25519)[^/]*"
-    r"|gmail_(token|client_secret)[^/]*\.json)$")
+    r"|gmail_(token|client_secret)[^/]*\.json)$"
+)
 FORBIDDEN_OK = {".env.example"}
 
 
@@ -77,11 +90,14 @@ def scan_text(rel: str, text: str) -> list[str]:
 
 
 def git_files(staged: bool) -> list[str] | None:
-    cmd = (["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"] if staged
-           else ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"])
+    cmd = (
+        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z"]
+        if staged
+        else ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"]
+    )
     try:
         out = subprocess.run(cmd, cwd=ROOT, capture_output=True, check=True).stdout
-    except (OSError, subprocess.CalledProcessError):
+    except OSError, subprocess.CalledProcessError:
         return None
     return [p for p in out.decode("utf-8", "replace").split("\0") if p]
 

@@ -6,6 +6,7 @@ request with provider-reported token counts and Garvis's own cost *estimate*
 SQLite read-only mode, so a missing ledger is reported, never created -- and
 nothing here is a bill: the Anthropic Console is authoritative.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -28,6 +29,7 @@ def read_usage_summary(db_path: Path, now: datetime | None = None) -> dict:
     day = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
     month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
     with closing(_connect_read_only(Path(db_path))) as conn:
+
         def totals(since: str) -> dict:
             row = conn.execute(
                 "SELECT COUNT(*), COALESCE(SUM(status = 'ok'), 0), COALESCE(SUM(status != 'ok'), 0), "
@@ -38,13 +40,38 @@ def read_usage_summary(db_path: Path, now: datetime | None = None) -> dict:
                 "COALESCE(SUM(cost_usd), 0), COUNT(DISTINCT task_id) FROM llm_calls WHERE ts >= ?",
                 (since,),
             ).fetchone()
-            keys = ("calls", "ok", "errors", "input_tokens", "output_tokens", "cache_read_tokens",
-                    "cache_write_tokens", "cost_usd", "tasks")
+            keys = (
+                "calls",
+                "ok",
+                "errors",
+                "input_tokens",
+                "output_tokens",
+                "cache_read_tokens",
+                "cache_write_tokens",
+                "cost_usd",
+                "tasks",
+            )
             return dict(zip(keys, row, strict=True))
 
         recent = [
-            dict(zip(("ts", "tier", "model", "status", "error_type", "input_tokens", "output_tokens",
-                      "cache_read_tokens", "cost_usd", "latency_ms"), row, strict=True))
+            dict(
+                zip(
+                    (
+                        "ts",
+                        "tier",
+                        "model",
+                        "status",
+                        "error_type",
+                        "input_tokens",
+                        "output_tokens",
+                        "cache_read_tokens",
+                        "cost_usd",
+                        "latency_ms",
+                    ),
+                    row,
+                    strict=True,
+                )
+            )
             for row in conn.execute(
                 "SELECT ts, tier, COALESCE(model_served, model_requested), status, error_type, input_tokens, "
                 "output_tokens, cache_read_tokens, cost_usd, latency_ms FROM llm_calls ORDER BY ts DESC, id DESC LIMIT ?",
@@ -65,5 +92,11 @@ def read_usage_summary(db_path: Path, now: datetime | None = None) -> dict:
             key = (first_day + timedelta(days=offset)).strftime("%Y-%m-%d")
             calls, cost = per_day.get(key, (0, 0.0))
             daily.append({"day": key, "calls": calls, "cost_usd": cost})
-        return {"available": True, "today": totals(day), "month": totals(month), "recent": recent,
-                "daily": daily, "read_at": now.isoformat(timespec="seconds")}
+        return {
+            "available": True,
+            "today": totals(day),
+            "month": totals(month),
+            "recent": recent,
+            "daily": daily,
+            "read_at": now.isoformat(timespec="seconds"),
+        }

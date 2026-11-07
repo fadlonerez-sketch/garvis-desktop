@@ -21,6 +21,7 @@ The browser is launched off-screen (OFFSCREEN_LAUNCH_ARGS) so the moment
 between a window's creation and its placement shows nothing on the user's
 monitor.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -125,8 +126,14 @@ class BrowserWindowPlacer:
         if not already_there:
             await self._return_focus(window.pid)
         self.last_placement = {"target_desktop": "garvis_workspace", "moved": not already_there}
-        log_extra(logger, 20, "browser_placement.placed", desktop="garvis", moved=not already_there,
-                  was_offscreen=self._offscreen(window))
+        log_extra(
+            logger,
+            20,
+            "browser_placement.placed",
+            desktop="garvis",
+            moved=not already_there,
+            was_offscreen=self._offscreen(window),
+        )
 
     # ------------------------------------------------------- user desktop
     async def _place_for_user(self, page) -> None:
@@ -150,15 +157,22 @@ class BrowserWindowPlacer:
             raise WindowPlacementError("The browser window closed before it could be shown.")
         location = await self._workspace.window_location(window.handle)
         visible = (
-            location in ("user", "unknown") and after.on_current_desktop
-            and not after.is_minimized and not self._offscreen(after)
+            location in ("user", "unknown")
+            and after.on_current_desktop
+            and not after.is_minimized
+            and not self._offscreen(after)
         )
         if not visible:
             raise WindowPlacementError(
                 f"The page's window couldn't be shown on your desktop (desktop: {location}, "
                 f"minimized: {after.is_minimized}, off-screen: {self._offscreen(after)})."
             )
-        self.last_placement = {"target_desktop": "user_desktop", "visible": True,
-                               "focused": bool(focused and after.is_foreground), "moved_from_other_desktop": moved}
-        log_extra(logger, 20, "browser_placement.placed", desktop="user", focused=self.last_placement["focused"],
-                  moved=moved)
+        self.last_placement = {
+            "target_desktop": "user_desktop",
+            "visible": True,
+            "focused": bool(focused and after.is_foreground),
+            "moved_from_other_desktop": moved,
+        }
+        log_extra(
+            logger, 20, "browser_placement.placed", desktop="user", focused=self.last_placement["focused"], moved=moved
+        )

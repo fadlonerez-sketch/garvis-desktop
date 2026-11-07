@@ -4,6 +4,7 @@ Uses Python's `ast` module to evaluate a restricted grammar (numbers and
 + - * / // % ** and parentheses) instead of `eval`, so the LLM cannot use
 this tool to execute arbitrary code.
 """
+
 from __future__ import annotations
 
 import ast
@@ -89,6 +90,6 @@ class CalculatorTool(Tool):
             return ToolResult.fail(str(exc))
         except ZeroDivisionError:
             return ToolResult.fail("Division by zero")
-        except (OverflowError, ValueError):  # float overflow; int too large to convert
+        except OverflowError, ValueError:  # float overflow; int too large to convert
             return ToolResult.fail("Result too large")
         return ToolResult.ok(result)

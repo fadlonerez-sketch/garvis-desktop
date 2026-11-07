@@ -9,6 +9,7 @@ corner of the primary screen and the dashboard is centred there.
 Preferences (orb on/off, corner, animations) live in the same JSON file:
 data/ui_state.json. It holds no secrets and can be deleted at any time.
 """
+
 from __future__ import annotations
 
 import json
@@ -19,8 +20,12 @@ from pathlib import Path
 from PySide6.QtCore import QPoint, QRect, QSize
 
 CORNERS = ("bottom-right", "bottom-left", "top-right", "top-left")
-CORNER_LABELS = {"bottom-right": "Bottom right", "bottom-left": "Bottom left",
-                 "top-right": "Top right", "top-left": "Top left"}
+CORNER_LABELS = {
+    "bottom-right": "Bottom right",
+    "bottom-left": "Bottom left",
+    "top-right": "Top right",
+    "top-left": "Top left",
+}
 ORB_MARGIN = 28
 _MIN_VISIBLE_FRACTION = 0.6
 
@@ -93,7 +98,7 @@ class UiStateStore:
     def load(self) -> UiPrefs:
         try:
             raw = json.loads(self._path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+        except OSError, ValueError:
             return UiPrefs()
         if not isinstance(raw, dict):
             return UiPrefs()

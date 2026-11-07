@@ -28,6 +28,7 @@ whole server certificate if any one of its names falls outside the CA's
 name constraints, so such names are left out of it (and logged) rather than
 breaking HTTPS for every name.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -207,9 +208,7 @@ def _create_ca(name_constraints: bool) -> tuple[x509.Certificate, ec.EllipticCur
         .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
     )
     if name_constraints:
-        permitted: list[x509.GeneralName] = [
-            x509.IPAddress(ipaddress.ip_network(net)) for net in _PERMITTED_NETWORKS
-        ]
+        permitted: list[x509.GeneralName] = [x509.IPAddress(ipaddress.ip_network(net)) for net in _PERMITTED_NETWORKS]
         permitted += [x509.DNSName(name) for name in _PERMITTED_DNS]
         builder = builder.add_extension(
             x509.NameConstraints(permitted_subtrees=permitted, excluded_subtrees=None), critical=True
@@ -249,29 +248,25 @@ def _create_server_cert(
         )
         .add_extension(x509.ExtendedKeyUsage([ExtendedKeyUsageOID.SERVER_AUTH]), critical=False)
         .add_extension(x509.SubjectKeyIdentifier.from_public_key(key.public_key()), critical=False)
-        .add_extension(
-            x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()), critical=False
-        )
+        .add_extension(x509.AuthorityKeyIdentifier.from_issuer_public_key(ca_key.public_key()), critical=False)
         .sign(ca_key, hashes.SHA256())
     )
     return cert, key
 
 
-def _server_cert_is_current(
-    cert_path: Path, key_path: Path, ca_cert: x509.Certificate, hosts: tuple[str, ...]
-) -> bool:
+def _server_cert_is_current(cert_path: Path, key_path: Path, ca_cert: x509.Certificate, hosts: tuple[str, ...]) -> bool:
     if not cert_path.exists() or not key_path.exists():
         return False
     try:
         cert = x509.load_pem_x509_certificate(cert_path.read_bytes())
         san = cert.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
-    except (ValueError, x509.ExtensionNotFound):
+    except ValueError, x509.ExtensionNotFound:
         return False
     if cert.issuer != ca_cert.subject:
         return False
     try:
         cert.verify_directly_issued_by(ca_cert)
-    except (InvalidSignature, ValueError, TypeError):
+    except InvalidSignature, ValueError, TypeError:
         return False
     if cert.not_valid_after_utc - _now() < dt.timedelta(days=RENEW_BEFORE_DAYS):
         return False
@@ -307,8 +302,12 @@ def ensure_tls_material(directory: Path, hosts: list[str], *, name_constraints: 
 
     allowed = tuple(host for host in unique_hosts if _permitted_by(ca_cert, host))
     if len(allowed) != len(unique_hosts):
-        log_extra(logger, 30, "mobile.tls.hosts_outside_name_constraints",
-                  dropped=[host for host in unique_hosts if host not in allowed])
+        log_extra(
+            logger,
+            30,
+            "mobile.tls.hosts_outside_name_constraints",
+            dropped=[host for host in unique_hosts if host not in allowed],
+        )
     if not allowed:
         raise ValueError("None of the host names is allowed by the local CA's name constraints.")
     unique_hosts = allowed

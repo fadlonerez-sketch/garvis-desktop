@@ -1,6 +1,7 @@
 """Desktop side of the mobile interface (app/ui/main_window.py): the
 confirmation dialog closes when the phone answers first, phone turns are
 shown (escaped), and the iPhone pairing dialog. Offscreen Qt, fake bridge."""
+
 from __future__ import annotations
 
 import os

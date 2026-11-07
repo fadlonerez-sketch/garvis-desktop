@@ -1,5 +1,6 @@
 """Tests for SleepCommandMatcher (app/voice/wake.py): explicit standby
 commands and unambiguous closing statements -- pure text logic."""
+
 from __future__ import annotations
 
 import pytest

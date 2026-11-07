@@ -10,6 +10,7 @@ When started by app/main.py, install_desktop_presence() adds the floating
 orb, the orb <-> dashboard transition and a tray icon (app/ui/presence.py).
 Without it (tests, embedding) MainWindow is a normal window.
 """
+
 from __future__ import annotations
 
 import concurrent.futures
@@ -141,8 +142,11 @@ class MobileDialog(QDialog):
         revoke = getattr(self._mobile.pairing, "revoke_device", None) if self._mobile is not None else None
         if not device_id or revoke is None:
             return
-        self._notice = ("Unpaired that device. It has to pair again with a new code." if revoke(device_id)
-                        else "That device was already unpaired.")
+        self._notice = (
+            "Unpaired that device. It has to pair again with a new code."
+            if revoke(device_id)
+            else "That device was already unpaired."
+        )
         self._render()
 
     def _refresh_devices(self) -> None:
@@ -151,8 +155,9 @@ class MobileDialog(QDialog):
         for record in listing() if listing is not None else []:
             paired = time.strftime("%d %b %Y", time.localtime(record.created_at))
             expires = time.strftime("%d %b %Y", time.localtime(record.expires_at))
-            self.device_combo.addItem(f"{record.label or 'device'} -- paired {paired}, until {expires} "
-                                      f"(id {record.id})", record.id)
+            self.device_combo.addItem(
+                f"{record.label or 'device'} -- paired {paired}, until {expires} (id {record.id})", record.id
+            )
         self.unpair_device_button.setEnabled(self.device_combo.count() > 0)
 
     def _render(self) -> None:
@@ -358,9 +363,23 @@ class MainWindow(QWidget):
 
             store = ProtocolStore(get_settings().data_dir / "protocols")
         self._protocols_page = ProtocolsPage(store, getattr(self._bridge, "available_tools", None))
-        self._page_widgets = dict(zip(PAGES, (self._overview, self._activity_page, self._protocols_page,
-                                              self._system_page, self._sources_page, self._voice_page,
-                                              self._usage_page, self._tools_page, self._settings_page), strict=True))
+        self._page_widgets = dict(
+            zip(
+                PAGES,
+                (
+                    self._overview,
+                    self._activity_page,
+                    self._protocols_page,
+                    self._system_page,
+                    self._sources_page,
+                    self._voice_page,
+                    self._usage_page,
+                    self._tools_page,
+                    self._settings_page,
+                ),
+                strict=True,
+            )
+        )
         for page in self._page_widgets.values():
             self._pages.addWidget(page)
         content.addWidget(self._pages, 1)
@@ -438,9 +457,11 @@ class MainWindow(QWidget):
             signal = getattr(self._bridge, signal_name, None)
             if signal is not None:
                 signal.connect(slot)
-        for page_signal, bridge_method in ((self._protocols_page.run_requested, "run_protocol"),
-                                           (self._protocols_page.cancel_requested, "cancel_task"),
-                                           (self._activity_page.tasks_panel.cancel_requested, "cancel_task")):
+        for page_signal, bridge_method in (
+            (self._protocols_page.run_requested, "run_protocol"),
+            (self._protocols_page.cancel_requested, "cancel_task"),
+            (self._activity_page.tasks_panel.cancel_requested, "cancel_task"),
+        ):
             method = getattr(self._bridge, bridge_method, None)
             if method is not None:
                 page_signal.connect(method)
@@ -469,8 +490,10 @@ class MainWindow(QWidget):
         info = self._system_info()
         if info.get("model"):
             self._title_bar.set_model(info["model"], info.get("provider", ""))
-            self._title_bar.model_chip.setToolTip(f"{info['model']}: every model request goes to this model "
-                                                  "through the Anthropic API. No other model or provider is used.")
+            self._title_bar.model_chip.setToolTip(
+                f"{info['model']}: every model request goes to this model "
+                "through the Anthropic API. No other model or provider is used."
+            )
         else:
             self._title_bar.set_model_known(False)
         self._title_bar.key_chip.setVisible(info.get("api_key_configured") is False)
@@ -714,7 +737,9 @@ class MainWindow(QWidget):
     def _on_listening_changed(self, listening: bool) -> None:
         self._mic_button.setProperty("recording", listening)
         self._mic_button.setText("Stop && send" if listening else "Start listening")
-        set_button_icon(self._mic_button, "stop_circle" if listening else "mic", "#FFE1E1" if listening else theme.TEXT_1)
+        set_button_icon(
+            self._mic_button, "stop_circle" if listening else "mic", "#FFE1E1" if listening else theme.TEXT_1
+        )
         repolish(self._mic_button)
 
     # ------------------------------------------------- global hotkey / instance
@@ -765,8 +790,13 @@ class MainWindow(QWidget):
                 detail = status.message
                 if not status.registered:
                     self._append_conversation("Garvis", f"⚠️ {html.escape(status.message)}")
-            log_extra(get_logger("ui.main_window"), 20 if status.registered or handled_by_shortcut else 30,
-                      "global_hotkey.status", registered=status.registered, detail=detail)
+            log_extra(
+                get_logger("ui.main_window"),
+                20 if status.registered or handled_by_shortcut else 30,
+                "global_hotkey.status",
+                registered=status.registered,
+                detail=detail,
+            )
         return hotkey
 
     # ------------------------------------------- orb, tray and transitions
@@ -779,8 +809,9 @@ class MainWindow(QWidget):
         from app.ui.presence import PresenceController
 
         store = UiStateStore(get_settings().data_dir / "ui_state.json")
-        presence = PresenceController(self, self._state, store,
-                                      level_source=getattr(self._bridge, "voice_level", None), parent=self)
+        presence = PresenceController(
+            self, self._state, store, level_source=getattr(self._bridge, "voice_level", None), parent=self
+        )
         self._presence = presence
         app.setQuitOnLastWindowClosed(False)
         rect = presence.dashboard_rect()
@@ -813,8 +844,9 @@ class MainWindow(QWidget):
         return self.grab()
 
     def remember_geometry(self, presence) -> None:
-        presence.remember_dashboard_rect(self._normal_geometry if self._maximized and self._normal_geometry
-                                         else self.geometry())
+        presence.remember_dashboard_rect(
+            self._normal_geometry if self._maximized and self._normal_geometry else self.geometry()
+        )
         presence.prefs.dashboard_maximized = self._maximized
 
     def present(self, presence=None) -> None:
@@ -868,21 +900,29 @@ class MainWindow(QWidget):
         self._add_action(menu, "Open dashboard", presence.expand)
         self._fill_sources_menu(menu.addMenu("Sources"))
         menu.addSeparator()
-        self._add_action(menu, "End session" if self._session_running else "Start session",
-                         self._session_button.click, enabled=self._session_button.isEnabled())
+        self._add_action(
+            menu,
+            "End session" if self._session_running else "Start session",
+            self._session_button.click,
+            enabled=self._session_button.isEnabled(),
+        )
         self._add_action(menu, "Stop speaking", self._bridge.stop_speaking, enabled=self._state.playing)
         menu.addSeparator()
         has_tray = presence._tray is not None  # noqa: SLF001 -- same UI package
-        self._add_action(menu, "Hide orb", presence.hide_orb, enabled=has_tray,
-                         tooltip="Bring it back from the tray icon.")
+        self._add_action(
+            menu, "Hide orb", presence.hide_orb, enabled=has_tray, tooltip="Bring it back from the tray icon."
+        )
         self._add_action(menu, "Quit Garvis", self.close)
         _exec_menu(menu, pos)
 
     def _build_tray_menu(self) -> QMenu:
         menu = self._menu()
         self._add_action(menu, "Open dashboard", lambda: self._presence.expand())
-        self._add_action(menu, "Show orb", lambda: self._presence.show_orb() if self._presence.view == "collapsed"
-                         else self._presence.collapse())
+        self._add_action(
+            menu,
+            "Show orb",
+            lambda: self._presence.show_orb() if self._presence.view == "collapsed" else self._presence.collapse(),
+        )
         menu.addSeparator()
         self._add_action(menu, "Quit Garvis", self.close)
         return menu
@@ -926,8 +966,10 @@ class MainWindow(QWidget):
         return edges
 
     _CURSORS = {
-        Qt.Edge.LeftEdge: Qt.CursorShape.SizeHorCursor, Qt.Edge.RightEdge: Qt.CursorShape.SizeHorCursor,
-        Qt.Edge.TopEdge: Qt.CursorShape.SizeVerCursor, Qt.Edge.BottomEdge: Qt.CursorShape.SizeVerCursor,
+        Qt.Edge.LeftEdge: Qt.CursorShape.SizeHorCursor,
+        Qt.Edge.RightEdge: Qt.CursorShape.SizeHorCursor,
+        Qt.Edge.TopEdge: Qt.CursorShape.SizeVerCursor,
+        Qt.Edge.BottomEdge: Qt.CursorShape.SizeVerCursor,
         Qt.Edge.LeftEdge | Qt.Edge.TopEdge: Qt.CursorShape.SizeFDiagCursor,
         Qt.Edge.RightEdge | Qt.Edge.BottomEdge: Qt.CursorShape.SizeFDiagCursor,
         Qt.Edge.RightEdge | Qt.Edge.TopEdge: Qt.CursorShape.SizeBDiagCursor,
@@ -971,8 +1013,9 @@ class MainWindow(QWidget):
                 import ctypes
 
                 preference = ctypes.c_int(2)  # DWMWCP_ROUND
-                ctypes.windll.dwmapi.DwmSetWindowAttribute(int(self.winId()), 33, ctypes.byref(preference),
-                                                           ctypes.sizeof(preference))
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    int(self.winId()), 33, ctypes.byref(preference), ctypes.sizeof(preference)
+                )
             except Exception:  # noqa: BLE001 -- purely cosmetic
                 pass
 
@@ -1012,7 +1055,6 @@ class MainWindow(QWidget):
         painter.drawRect(QRect(0, 0, w - 1, h - 1))
         painter.end()
         return pixmap
-
 
     def hideEvent(self, event) -> None:  # noqa: N802 (Qt override)
         super().hideEvent(event)

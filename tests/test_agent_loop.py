@@ -30,9 +30,7 @@ async def test_agent_answers_directly_without_tools(make_scripted_llm, memory_st
 
 
 @pytest.mark.asyncio
-async def test_one_user_message_without_tools_produces_exactly_one_llm_request(
-    make_scripted_llm, memory_store
-):
+async def test_one_user_message_without_tools_produces_exactly_one_llm_request(make_scripted_llm, memory_store):
     """Regression test (Groq 429 / uncontrolled-request investigation): a
     single handle_user_message() call for a plain conversational turn (no
     tool use) must make exactly one underlying LLM request -- never more,

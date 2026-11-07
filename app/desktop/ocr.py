@@ -10,6 +10,7 @@ Nothing is uploaded anywhere: recognition runs on this PC.
 Word boxes come back in screenshot pixels and are shifted by the capture's
 offset, so every line has real screen coordinates to click on.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -156,14 +157,27 @@ class TesseractOcr(OcrEngine):
             return self._last[1].model_copy(update={"cached": True, "elapsed_ms": 0})
         exe, tessdata, languages = self._resolve()
         command = [
-            str(exe), str(image_path), "stdout", "-l", languages, "--psm", "3",
-            "--tessdata-dir", str(tessdata), "-c", "tessedit_create_tsv=1",
+            str(exe),
+            str(image_path),
+            "stdout",
+            "-l",
+            languages,
+            "--psm",
+            "3",
+            "--tessdata-dir",
+            str(tessdata),
+            "-c",
+            "tessedit_create_tsv=1",
         ]
         started = time.perf_counter()
         try:
             completed = subprocess.run(
-                command, capture_output=True, timeout=self._timeout, cwd=str(exe.parent),
-                creationflags=CREATE_NO_WINDOW if os.name == "nt" else 0, stdin=subprocess.DEVNULL,
+                command,
+                capture_output=True,
+                timeout=self._timeout,
+                cwd=str(exe.parent),
+                creationflags=CREATE_NO_WINDOW if os.name == "nt" else 0,
+                stdin=subprocess.DEVNULL,
             )
         except subprocess.TimeoutExpired as exc:
             raise DesktopError(f"OCR took longer than {self._timeout:.0f} s; try a smaller window or region.") from exc
@@ -171,7 +185,9 @@ class TesseractOcr(OcrEngine):
             raise DesktopError(f"Tesseract could not be started: {exc}") from exc
         if completed.returncode != 0:
             detail = completed.stderr.decode("utf-8", "replace").strip().splitlines()
-            raise DesktopError(f"OCR failed (exit {completed.returncode})" + (f": {detail[-1][:200]}" if detail else ""))
+            raise DesktopError(
+                f"OCR failed (exit {completed.returncode})" + (f": {detail[-1][:200]}" if detail else "")
+            )
         tsv = completed.stdout.decode("utf-8", "replace")
         result = OcrResult(
             lines=parse_tsv(tsv, offset_x, offset_y),

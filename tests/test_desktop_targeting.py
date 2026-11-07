@@ -6,6 +6,7 @@ Notepad window on another virtual desktop (Garvis's workspace), because
 open_application didn't identify/focus the new window and keyboard input
 went to whatever had focus, while inspection only saw the current desktop.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -24,8 +25,16 @@ class Backend(FakeDesktopBackend):
 
     def __init__(self):
         super().__init__()
-        self.windows.append(WindowInfo(handle=5, title="hello - Notepad", process_name="Notepad.exe", pid=500,
-                                       rect=Rect(left=0, top=0, right=500, bottom=400), on_current_desktop=False))
+        self.windows.append(
+            WindowInfo(
+                handle=5,
+                title="hello - Notepad",
+                process_name="Notepad.exe",
+                pid=500,
+                rect=Rect(left=0, top=0, right=500, bottom=400),
+                on_current_desktop=False,
+            )
+        )
         self.context = InputContext()
         self.moved: list[int] = []
         self.steal_focus_to: int | None = None
@@ -60,8 +69,9 @@ def controller(backend, tmp_path):
     async def mover(handle):
         backend.move_here(handle)
 
-    return DesktopController(backend_factory=lambda: backend, screenshot_dir=tmp_path, own_pid=GARVIS_PID,
-                             window_mover=mover)
+    return DesktopController(
+        backend_factory=lambda: backend, screenshot_dir=tmp_path, own_pid=GARVIS_PID, window_mover=mover
+    )
 
 
 def _typed(backend):
@@ -138,15 +148,32 @@ async def test_nothing_is_typed_if_focus_moves_before_the_keys_are_sent(controll
     assert _typed(backend) == []
 
 
-@pytest.mark.parametrize("context, fragment", [
-    (InputContext(session_id=2, console_session_id=1, interactive=False,
-                  reason="Garvis runs in Windows session 2, but the screen in front of you is session 1"), "session 2"),
-    (InputContext(input_desktop=None, interactive=False, reason="Windows is showing the lock screen"), "lock screen"),
-])
+@pytest.mark.parametrize(
+    "context, fragment",
+    [
+        (
+            InputContext(
+                session_id=2,
+                console_session_id=1,
+                interactive=False,
+                reason="Garvis runs in Windows session 2, but the screen in front of you is session 1",
+            ),
+            "session 2",
+        ),
+        (
+            InputContext(input_desktop=None, interactive=False, reason="Windows is showing the lock screen"),
+            "lock screen",
+        ),
+    ],
+)
 async def test_input_is_refused_when_the_desktop_isnt_reachable(controller, backend, context, fragment):
     backend.context = context
-    for action in (lambda: controller.type_text("hi"), lambda: controller.click(10, 10),
-                   lambda: controller.focus_window("whatsapp"), lambda: controller.press_key("enter")):
+    for action in (
+        lambda: controller.type_text("hi"),
+        lambda: controller.click(10, 10),
+        lambda: controller.focus_window("whatsapp"),
+        lambda: controller.press_key("enter"),
+    ):
         with pytest.raises(DesktopError, match=fragment):
             await action()
     assert not any(c[0] in ("type", "click", "keys", "focus") for c in backend.calls)
@@ -164,8 +191,11 @@ async def test_open_application_identifies_focuses_and_reports_the_new_window(co
 
 async def test_a_new_window_on_another_desktop_is_brought_here(controller, backend):
     def launch():
-        backend.windows.append(WindowInfo(handle=9, title="Untitled - Notepad", process_name="Notepad.exe",
-                                          pid=900, on_current_desktop=False))
+        backend.windows.append(
+            WindowInfo(
+                handle=9, title="Untitled - Notepad", process_name="Notepad.exe", pid=900, on_current_desktop=False
+            )
+        )
 
     result = await controller.launch_and_activate("notepad", launch, timeout_seconds=2)
     assert result["moved_from_other_desktop"] is True and backend.moved == [9]
@@ -213,11 +243,14 @@ class _Uia(UiInspector):
         return self.texts.pop(0) if len(self.texts) > 1 else self.texts[0]
 
 
-@pytest.mark.parametrize("texts, verified", [
-    (["", "hello"], True),               # the window's field now shows the text
-    (["hello", "hello"], False),         # unchanged: the keys didn't land there
-    ([None, None], None),                # unreadable field (canvas, terminal)
-])
+@pytest.mark.parametrize(
+    "texts, verified",
+    [
+        (["", "hello"], True),  # the window's field now shows the text
+        (["hello", "hello"], False),  # unchanged: the keys didn't land there
+        ([None, None], None),  # unreadable field (canvas, terminal)
+    ],
+)
 async def test_keyboard_type_reports_whether_the_window_really_shows_the_text(controller, texts, verified):
     tool = {t.name: t for t in build_desktop_tools(controller, uia=_Uia(texts))}["keyboard_type"]
     result = await tool.execute(tool.validate_arguments({"text": "hello"}))

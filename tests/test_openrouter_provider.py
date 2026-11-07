@@ -54,9 +54,7 @@ async def test_chat_uses_the_configured_model(monkeypatch):
         import json
 
         captured["body"] = json.loads(request.content)
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]})
 
     provider = OpenRouterProvider(api_key="test-key", model="anthropic/claude-haiku-4.5")
     _patch_transport(monkeypatch, handler)
@@ -73,9 +71,7 @@ async def test_chat_posts_to_the_configured_base_url(monkeypatch):
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen_urls.append(str(request.url))
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]})
 
     provider = OpenRouterProvider(api_key="test-key", model="test-model")
     _patch_transport(monkeypatch, handler)
@@ -90,13 +86,9 @@ async def test_chat_respects_custom_base_url(monkeypatch):
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen_urls.append(str(request.url))
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]})
 
-    provider = OpenRouterProvider(
-        api_key="test-key", model="test-model", base_url="https://example.test/api/v1"
-    )
+    provider = OpenRouterProvider(api_key="test-key", model="test-model", base_url="https://example.test/api/v1")
     _patch_transport(monkeypatch, handler)
 
     await provider.chat([Message(role=Role.USER, content="hello")])
@@ -113,9 +105,7 @@ async def test_chat_sends_tool_definitions(monkeypatch):
         import json
 
         captured["body"] = json.loads(request.content)
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]})
 
     provider = OpenRouterProvider(api_key="test-key", model="test-model")
     _patch_transport(monkeypatch, handler)
@@ -153,9 +143,7 @@ async def test_chat_omits_tools_field_when_no_tools_given(monkeypatch):
         import json
 
         captured["body"] = json.loads(request.content)
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "ok"}}]})
 
     provider = OpenRouterProvider(api_key="test-key", model="test-model")
     _patch_transport(monkeypatch, handler)
@@ -262,9 +250,7 @@ async def test_chat_sends_tool_call_id_and_json_arguments(monkeypatch):
         import json
 
         captured["body"] = json.loads(request.content)
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": "done"}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": "done"}}]})
 
     from app.llm.base import ToolCall
 
@@ -477,9 +463,7 @@ async def test_chat_response_log_carries_content_fingerprint_not_full_text(monke
     reply = "Acknowledged, Sir."
 
     def handler(request: httpx.Request) -> httpx.Response:
-        return httpx.Response(
-            200, json={"choices": [{"message": {"role": "assistant", "content": reply}}]}
-        )
+        return httpx.Response(200, json={"choices": [{"message": {"role": "assistant", "content": reply}}]})
 
     provider = OpenRouterProvider(api_key="test-key", model="test-model")
     _patch_transport(monkeypatch, handler)

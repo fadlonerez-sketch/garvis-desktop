@@ -25,6 +25,7 @@ about HTTP; server.py maps these methods and exceptions onto routes.
   for a protocol run. The TaskManager -- on the desktop -- accepts,
   validates and executes; the phone only asks.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -230,7 +231,7 @@ class MobileService:
             task.cancel()
             try:
                 await task
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError, Exception:
                 pass
         self._notify()  # release any long-poll waiting for news
 
@@ -357,8 +358,9 @@ class MobileService:
         if self._agent.is_busy:
             raise MobileBusyError("Garvis is busy with a request from the PC. Try again in a moment.")
 
-    def submit_text(self, text: str, *, kind: str = "text", request_id: str | None = None,
-                    device: str = "") -> MobileTurn:
+    def submit_text(
+        self, text: str, *, kind: str = "text", request_id: str | None = None, device: str = ""
+    ) -> MobileTurn:
         """Start an Agent turn in the background (or queue it as a task) and
         return immediately. Raises ValueError (bad text) or MobileBusyError."""
         if device:
@@ -429,8 +431,13 @@ class MobileService:
                 turn.done = True
                 if self._current_turn is turn:
                     self._current_turn = None
-                self._append("turn_finished", turn_id=turn.id, turn_kind=turn.kind, has_reply=bool(turn.reply),
-                             status=task.status)
+                self._append(
+                    "turn_finished",
+                    turn_id=turn.id,
+                    turn_kind=turn.kind,
+                    has_reply=bool(turn.reply),
+                    status=task.status,
+                )
         self._notify()
 
     def list_tasks(self, limit: int = 50) -> dict[str, Any]:
@@ -469,8 +476,7 @@ class MobileService:
         if self._tasks is None or self._protocols is None:
             raise LookupError("Protocols aren't available.")
         try:
-            task = self._tasks.submit_protocol(protocol_id, origin=MOBILE_SOURCE, request_id=request_id,
-                                               device=device)
+            task = self._tasks.submit_protocol(protocol_id, origin=MOBILE_SOURCE, request_id=request_id, device=device)
         except TaskError as exc:
             if "doesn't exist" in str(exc):
                 raise LookupError(str(exc)) from exc

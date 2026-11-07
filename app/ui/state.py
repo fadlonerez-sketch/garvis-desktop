@@ -12,6 +12,7 @@ tool calls and sources, recent errors and a voice timeline.
   error      for a few seconds after an error
   idle       otherwise (with `standby` when the wake word is armed)
 """
+
 from __future__ import annotations
 
 import time
@@ -154,8 +155,11 @@ class GarvisState(QObject):
             self.mode_changed.connect(presence.set_mode)
             presence.set_mode(self._mode.value)
         # Newer bridge capabilities; an older/fake bridge simply lacks them.
-        for signal_name, slot in (("speaking_changed", self.on_playing), ("tool_sources", self.on_tool_sources),
-                                  ("request_started", self.on_request_started)):
+        for signal_name, slot in (
+            ("speaking_changed", self.on_playing),
+            ("tool_sources", self.on_tool_sources),
+            ("request_started", self.on_request_started),
+        ):
             signal = getattr(bridge, signal_name, None)
             if signal is not None:
                 signal.connect(slot)
@@ -258,7 +262,9 @@ class GarvisState(QObject):
 
     def on_tool_finished(self, name: str, success: bool, error: str) -> None:
         turn = self.current_turn
-        tool = next((t for t in reversed(turn.tools) if t.name == name and t.finished_at is None), None) if turn else None
+        tool = (
+            next((t for t in reversed(turn.tools) if t.name == name and t.finished_at is None), None) if turn else None
+        )
         if tool is not None:
             tool.finished_at = self._clock()
             tool.success = success

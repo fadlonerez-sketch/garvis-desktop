@@ -7,6 +7,7 @@ ever sees the *outcome* (the tool ran, or was denied, or is pending
 confirmation) -- it has no way to bypass this layer because tool
 execution never happens except through it.
 """
+
 from __future__ import annotations
 
 from enum import StrEnum
@@ -41,8 +42,9 @@ class PermissionChecker:
     tool itself flags as consequential (Tool.confirmation_reason).
     """
 
-    async def evaluate_call(self, tool: Tool, args: BaseModel,
-                            history: list[Message] | None = None) -> PermissionResult:
+    async def evaluate_call(
+        self, tool: Tool, args: BaseModel, history: list[Message] | None = None
+    ) -> PermissionResult:
         """`evaluate(tool)`, plus the tool's own per-call check for ALLOW
         decisions. The per-call check can only escalate ALLOW to
         REQUIRE_CONFIRMATION -- never relax a tool-level decision -- and if

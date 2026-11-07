@@ -1,4 +1,5 @@
 """Tools exposing persistent memory to the LLM."""
+
 from __future__ import annotations
 
 from pydantic import BaseModel, Field

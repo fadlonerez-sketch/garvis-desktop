@@ -1,5 +1,6 @@
 """Tests for the Garvis workspace (app/desktop/workspace.py) and the
 switch_workspace tool, against an in-memory virtual-desktop backend."""
+
 from __future__ import annotations
 
 import threading
@@ -119,7 +120,9 @@ async def test_unsupported_interface_marks_workspace_unavailable_permanently():
 
     def factory():
         calls.append(1)
-        raise NotImplementedError("Interface IVirtualDesktopManagerInternal not supported for windows version 10.0.99999")
+        raise NotImplementedError(
+            "Interface IVirtualDesktopManagerInternal not supported for windows version 10.0.99999"
+        )
 
     manager = WorkspaceManager(backend_factory=factory)
     try:

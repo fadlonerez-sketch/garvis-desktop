@@ -13,6 +13,7 @@ Icons are looked up by name in material_symbols_rounded.codepoints and drawn
 by codepoint (never by ligature), so a missing name gives an empty string
 instead of the name spelled out in the icon font.
 """
+
 from __future__ import annotations
 
 from functools import lru_cache
@@ -69,8 +70,12 @@ def ensure_loaded() -> dict[str, bool]:
             if family in QFontDatabase.applicationFontFamilies(font_id):
                 registered = True
             else:
-                _log(30, "fonts.unexpected_family", file=name,
-                     families=", ".join(QFontDatabase.applicationFontFamilies(font_id)))
+                _log(
+                    30,
+                    "fonts.unexpected_family",
+                    file=name,
+                    families=", ".join(QFontDatabase.applicationFontFamilies(font_id)),
+                )
         result[family] = registered or family in QFontDatabase.families()
         if not result[family]:
             _log(30, "fonts.family_unavailable", family=family)
@@ -118,8 +123,9 @@ def icon_font(pixel_size: float, filled: bool = False) -> QFont:
     return font
 
 
-def draw_icon(painter: QPainter, rect: QRectF, name: str, color: QColor | str, pixel_size: float,
-              filled: bool = False) -> bool:
+def draw_icon(
+    painter: QPainter, rect: QRectF, name: str, color: QColor | str, pixel_size: float, filled: bool = False
+) -> bool:
     """Draw icon `name` centred in `rect`. False (nothing drawn) when the
     icon font or the name is unavailable -- callers fall back."""
     char = icon_char(name)
@@ -133,8 +139,7 @@ def draw_icon(painter: QPainter, rect: QRectF, name: str, color: QColor | str, p
     return True
 
 
-def icon_pixmap(name: str, color: QColor | str, size: int = 20, filled: bool = False,
-                ratio: float = 2.0) -> QPixmap:
+def icon_pixmap(name: str, color: QColor | str, size: int = 20, filled: bool = False, ratio: float = 2.0) -> QPixmap:
     pixmap = QPixmap(int(size * ratio), int(size * ratio))
     pixmap.setDevicePixelRatio(ratio)
     pixmap.fill(Qt.GlobalColor.transparent)
@@ -146,8 +151,9 @@ def icon_pixmap(name: str, color: QColor | str, size: int = 20, filled: bool = F
     return pixmap
 
 
-def icon(name: str, color: QColor | str, size: int = 20, filled: bool = False,
-         disabled_color: QColor | str | None = None) -> QIcon:
+def icon(
+    name: str, color: QColor | str, size: int = 20, filled: bool = False, disabled_color: QColor | str | None = None
+) -> QIcon:
     """A QIcon of the glyph (empty when icons are unavailable, so a button
     keeps just its text)."""
     if not icon_char(name) or not icons_available(filled):
@@ -164,5 +170,4 @@ def icon_html(name: str, color: str, pixel_size: int = 16, filled: bool = False)
     if not char or not icons_available(filled):
         return ""
     family = ICONS_FILLED if filled else ICONS
-    return (f'<span style="font-family:\'{family}\'; font-size:{pixel_size}px; color:{color};">'
-            f"&#x{ord(char):x};</span>")
+    return f"<span style=\"font-family:'{family}'; font-size:{pixel_size}px; color:{color};\">&#x{ord(char):x};</span>"

@@ -3,6 +3,7 @@
 Pure deterministic logic -- fed synthetic PCM chunks, no real microphone
 or audio hardware involved.
 """
+
 from __future__ import annotations
 
 import struct
@@ -189,9 +190,7 @@ def test_noise_floor_does_not_rise_during_an_active_speech_segment():
     """A brief in-utterance pause (well under min_silence_seconds) must not
     be absorbed into the noise floor -- only genuine ambient audio between
     utterances should shift it."""
-    vad = _make_vad(
-        energy_threshold=500.0, min_speech_seconds=0.1, min_silence_seconds=0.5
-    )
+    vad = _make_vad(energy_threshold=500.0, min_speech_seconds=0.1, min_silence_seconds=0.5)
     vad.process(_tone_chunk(0.15, 2000))
     assert vad.is_active
     floor_before = vad.noise_floor
@@ -328,8 +327,7 @@ def test_real_speech_still_interrupts_despite_high_reference_energy():
     real_speech_amplitude = 8000  # clearly above own_voice_reference * 1.5
 
     results = [
-        vad.process(_tone_chunk(0.05, real_speech_amplitude), reference_energy=own_voice_reference)
-        for _ in range(4)
+        vad.process(_tone_chunk(0.05, real_speech_amplitude), reference_energy=own_voice_reference) for _ in range(4)
     ]
 
     assert "speech_start" in results
@@ -415,9 +413,7 @@ def test_reference_energy_has_no_effect_once_garvis_falls_silent():
     all -- the echo guard must not linger past the moment it's needed."""
     vad = _make_vad(energy_threshold=900.0, min_speech_seconds=0.1, echo_margin_ratio=1.5)
 
-    results = [
-        vad.process(_tone_chunk(0.05, 2000), reference_energy=0.0) for _ in range(3)
-    ]
+    results = [vad.process(_tone_chunk(0.05, 2000), reference_energy=0.0) for _ in range(3)]
 
     assert "speech_start" in results
 
@@ -458,9 +454,7 @@ def test_playback_envelope_holds_trailing_loudness_past_its_own_estimate_when_st
 
     past_the_end = 1.2  # beyond the clip's own 1.0s duration
     assert envelope.energy_at(past_the_end) == 0.0  # default: caller thinks it's done
-    assert envelope.energy_at(past_the_end, held_if_still_playing=True) == pytest.approx(
-        5000.0, rel=0.01
-    )
+    assert envelope.energy_at(past_the_end, held_if_still_playing=True) == pytest.approx(5000.0, rel=0.01)
 
 
 def test_playback_envelope_tracks_a_quiet_then_loud_clip():

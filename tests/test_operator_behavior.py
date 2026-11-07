@@ -2,6 +2,7 @@
 deduplicated recurring notices, and the screen-reading engines (OCR TSV
 parsing; real Tesseract on a rendered image; a passive real UI Automation
 read). Real-engine tests are skipped when the engine isn't available."""
+
 from __future__ import annotations
 
 import sys
@@ -43,19 +44,32 @@ def test_prompt_demands_short_answers_and_no_repetition():
 def test_prompt_names_only_tools_that_exist():
     from app.agent.build import build_agent
 
-    settings = Settings(_env_file=None, llm_provider="tiered", omniroute_api_key="fake",
-                        memory_db_path=Path(tempfile.mkdtemp()) / "m.db")
+    settings = Settings(
+        _env_file=None,
+        llm_provider="tiered",
+        omniroute_api_key="fake",
+        memory_db_path=Path(tempfile.mkdtemp()) / "m.db",
+    )
     registered = {t.name for t in build_agent(settings)._registry.all_tools()}
-    mentioned = {"inspect_ui", "read_screen_text", "click_ui_element", "list_processes", "system_status",
-                 "recent_system_errors", "run_powershell"}
+    mentioned = {
+        "inspect_ui",
+        "read_screen_text",
+        "click_ui_element",
+        "list_processes",
+        "system_status",
+        "recent_system_errors",
+        "run_powershell",
+    }
     assert all(name in _BASE_SYSTEM_PROMPT for name in mentioned)
     assert mentioned <= registered
 
 
 def test_desktop_context_is_appended_last():
     prompt = build_system_prompt(None, "active window 'Inbox' (olk.exe); other open apps: chrome.")
-    assert prompt.endswith("Current desktop (observed by Garvis at the start of this turn): "
-                           "active window 'Inbox' (olk.exe); other open apps: chrome.")
+    assert prompt.endswith(
+        "Current desktop (observed by Garvis at the start of this turn): "
+        "active window 'Inbox' (olk.exe); other open apps: chrome."
+    )
     assert "Current desktop" not in build_system_prompt(None, None)
 
 
@@ -78,8 +92,13 @@ async def test_agent_refreshes_desktop_context_every_turn_and_survives_failures(
         return state
 
     llm = _LLM()
-    agent = Agent(llm=llm, registry=ToolRegistry(), memory=SQLiteMemoryStore(tmp_path / "m.db"), events=EventBus(),
-                  context_provider=provider)
+    agent = Agent(
+        llm=llm,
+        registry=ToolRegistry(),
+        memory=SQLiteMemoryStore(tmp_path / "m.db"),
+        events=EventBus(),
+        context_provider=provider,
+    )
     for text in ("one", "two", "three"):
         assert await agent.handle_user_message(text) == "Done, Sir."
     system_prompts = [call[0].content for call in llm.calls]
@@ -107,8 +126,9 @@ def test_notice_filter_reports_once_until_quiet():
 def _bridge(tmp_path):
     from app.ui.agent_bridge import AgentBridge
 
-    return AgentBridge(settings=Settings(memory_db_path=tmp_path / "t.db", llm_provider="tiered",
-                                         omniroute_api_key="fake-test-key"))
+    return AgentBridge(
+        settings=Settings(memory_db_path=tmp_path / "t.db", llm_provider="tiered", omniroute_api_key="fake-test-key")
+    )
 
 
 def test_bridge_shows_a_recurring_background_error_once(tmp_path):
@@ -139,13 +159,15 @@ async def test_bridge_always_shows_errors_that_answer_a_turn(tmp_path):
 
 
 # --------------------------------------------------------------------- OCR
-_TSV = "\n".join([
-    "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext",
-    "5\t1\t1\t1\t1\t1\t10\t20\t40\t12\t95.0\tError:",
-    "5\t1\t1\t1\t1\t2\t55\t20\t60\t12\t90.0\tdisk full",
-    "5\t1\t2\t1\t1\t1\t10\t50\t30\t12\t12.0\t~#%",           # junk below the confidence floor
-    "5\t1\t3\t1\t1\t1\t10\t80\t50\t12\t88.0\tשמור",
-])
+_TSV = "\n".join(
+    [
+        "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\theight\tconf\ttext",
+        "5\t1\t1\t1\t1\t1\t10\t20\t40\t12\t95.0\tError:",
+        "5\t1\t1\t1\t1\t2\t55\t20\t60\t12\t90.0\tdisk full",
+        "5\t1\t2\t1\t1\t1\t10\t50\t30\t12\t12.0\t~#%",  # junk below the confidence floor
+        "5\t1\t3\t1\t1\t1\t10\t80\t50\t12\t88.0\tשמור",
+    ]
+)
 
 
 def test_tsv_words_become_lines_with_screen_coordinates():
@@ -183,8 +205,14 @@ def _render_text_png(path: Path, lines: list[str], width: int = 900, height: int
     gdi = ctypes.WinDLL("gdi32")
     gdi.CreateCompatibleDC.argtypes = [wintypes.HDC]
     gdi.CreateCompatibleDC.restype = wintypes.HDC
-    gdi.CreateDIBSection.argtypes = [wintypes.HDC, ctypes.POINTER(BITMAPINFOHEADER), wintypes.UINT,
-                                     ctypes.POINTER(ctypes.c_void_p), wintypes.HANDLE, wintypes.DWORD]
+    gdi.CreateDIBSection.argtypes = [
+        wintypes.HDC,
+        ctypes.POINTER(BITMAPINFOHEADER),
+        wintypes.UINT,
+        ctypes.POINTER(ctypes.c_void_p),
+        wintypes.HANDLE,
+        wintypes.DWORD,
+    ]
     gdi.CreateDIBSection.restype = wintypes.HBITMAP
     gdi.SelectObject.argtypes = [wintypes.HDC, wintypes.HGDIOBJ]
     gdi.SelectObject.restype = wintypes.HGDIOBJ
@@ -198,8 +226,14 @@ def _render_text_png(path: Path, lines: list[str], width: int = 900, height: int
     gdi.DeleteDC.argtypes = [wintypes.HDC]
 
     dc = gdi.CreateCompatibleDC(None)
-    header = BITMAPINFOHEADER(biSize=ctypes.sizeof(BITMAPINFOHEADER), biWidth=width, biHeight=-height,
-                              biPlanes=1, biBitCount=32, biCompression=0)
+    header = BITMAPINFOHEADER(
+        biSize=ctypes.sizeof(BITMAPINFOHEADER),
+        biWidth=width,
+        biHeight=-height,
+        biPlanes=1,
+        biBitCount=32,
+        biCompression=0,
+    )
     bits = ctypes.c_void_p()
     bitmap = gdi.CreateDIBSection(dc, ctypes.byref(header), 0, ctypes.byref(bits), None, 0)
     font = gdi.CreateFontW(-40, 0, 0, 0, 400, 0, 0, 0, 0, 0, 0, 5, 0, "Arial")  # 5 = CLEARTYPE_QUALITY
@@ -246,9 +280,15 @@ class _PassiveProbeWindow:
 
     BUTTON, LABEL, EDIT = "Garvis probe button", "Garvis probe label", "garvis probe value"
     _SUSPICIOUS = {
-        0x0006: "WM_ACTIVATE", 0x0007: "WM_SETFOCUS", 0x0086: "WM_NCACTIVATE",
-        0x0111: "WM_COMMAND", 0x0100: "WM_KEYDOWN", 0x0102: "WM_CHAR",
-        0x0201: "WM_LBUTTONDOWN", 0x0204: "WM_RBUTTONDOWN", 0x0021: "WM_MOUSEACTIVATE",
+        0x0006: "WM_ACTIVATE",
+        0x0007: "WM_SETFOCUS",
+        0x0086: "WM_NCACTIVATE",
+        0x0111: "WM_COMMAND",
+        0x0100: "WM_KEYDOWN",
+        0x0102: "WM_CHAR",
+        0x0201: "WM_LBUTTONDOWN",
+        0x0204: "WM_RBUTTONDOWN",
+        0x0021: "WM_MOUSEACTIVATE",
     }
 
     def __init__(self, shown: bool = True) -> None:
@@ -282,11 +322,17 @@ class _PassiveProbeWindow:
         from ctypes import wintypes
 
         class GUITHREADINFO(ctypes.Structure):
-            _fields_ = [("cbSize", wintypes.DWORD), ("flags", wintypes.DWORD),
-                        ("hwndActive", wintypes.HWND), ("hwndFocus", wintypes.HWND),
-                        ("hwndCapture", wintypes.HWND), ("hwndMenuOwner", wintypes.HWND),
-                        ("hwndMoveSize", wintypes.HWND), ("hwndCaret", wintypes.HWND),
-                        ("rcCaret", wintypes.RECT)]
+            _fields_ = [
+                ("cbSize", wintypes.DWORD),
+                ("flags", wintypes.DWORD),
+                ("hwndActive", wintypes.HWND),
+                ("hwndFocus", wintypes.HWND),
+                ("hwndCapture", wintypes.HWND),
+                ("hwndMenuOwner", wintypes.HWND),
+                ("hwndMoveSize", wintypes.HWND),
+                ("hwndCaret", wintypes.HWND),
+                ("rcCaret", wintypes.RECT),
+            ]
 
         user32 = ctypes.windll.user32
         user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.c_void_p]
@@ -306,24 +352,54 @@ class _PassiveProbeWindow:
             WNDPROC = ctypes.WINFUNCTYPE(LRESULT, wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM)
             user32.DefWindowProcW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
             user32.DefWindowProcW.restype = LRESULT
-            user32.CreateWindowExW.argtypes = [wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
-                                               ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
-                                               wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID]
+            user32.CreateWindowExW.argtypes = [
+                wintypes.DWORD,
+                wintypes.LPCWSTR,
+                wintypes.LPCWSTR,
+                wintypes.DWORD,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                wintypes.HWND,
+                wintypes.HMENU,
+                wintypes.HINSTANCE,
+                wintypes.LPVOID,
+            ]
             user32.CreateWindowExW.restype = wintypes.HWND
-            user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int,
-                                            ctypes.c_int, ctypes.c_int, wintypes.UINT]
-            user32.SetLayeredWindowAttributes.argtypes = [wintypes.HWND, wintypes.COLORREF, wintypes.BYTE, wintypes.DWORD]
+            user32.SetWindowPos.argtypes = [
+                wintypes.HWND,
+                wintypes.HWND,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                wintypes.UINT,
+            ]
+            user32.SetLayeredWindowAttributes.argtypes = [
+                wintypes.HWND,
+                wintypes.COLORREF,
+                wintypes.BYTE,
+                wintypes.DWORD,
+            ]
             user32.GetMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), wintypes.HWND, wintypes.UINT, wintypes.UINT]
             kernel32.GetModuleHandleW.restype = wintypes.HMODULE
             user32.UnregisterClassW.argtypes = [wintypes.LPCWSTR, wintypes.HINSTANCE]
             user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
 
             class WNDCLASSW(ctypes.Structure):
-                _fields_ = [("style", wintypes.UINT), ("lpfnWndProc", WNDPROC), ("cbClsExtra", ctypes.c_int),
-                            ("cbWndExtra", ctypes.c_int), ("hInstance", wintypes.HINSTANCE),
-                            ("hIcon", wintypes.HICON), ("hCursor", wintypes.HANDLE),
-                            ("hbrBackground", wintypes.HBRUSH), ("lpszMenuName", wintypes.LPCWSTR),
-                            ("lpszClassName", wintypes.LPCWSTR)]
+                _fields_ = [
+                    ("style", wintypes.UINT),
+                    ("lpfnWndProc", WNDPROC),
+                    ("cbClsExtra", ctypes.c_int),
+                    ("cbWndExtra", ctypes.c_int),
+                    ("hInstance", wintypes.HINSTANCE),
+                    ("hIcon", wintypes.HICON),
+                    ("hCursor", wintypes.HANDLE),
+                    ("hbrBackground", wintypes.HBRUSH),
+                    ("lpszMenuName", wintypes.LPCWSTR),
+                    ("lpszClassName", wintypes.LPCWSTR),
+                ]
 
             def wndproc(hwnd, msg, wparam, lparam):
                 name = self._SUSPICIOUS.get(msg)
@@ -340,18 +416,31 @@ class _PassiveProbeWindow:
             if not user32.RegisterClassW(ctypes.byref(wc)):
                 raise ctypes.WinError()
             ex_style = 0x00080000 | 0x00000020 | 0x08000000 | 0x00000080  # LAYERED|TRANSPARENT|NOACTIVATE|TOOLWINDOW
-            self.hwnd = user32.CreateWindowExW(ex_style, class_name, "Garvis passive UIA probe",
-                                               0x80000000 | 0x02000000,  # WS_POPUP | WS_CLIPCHILDREN
-                                               0, 0, 360, 120, None, None, instance, None)
+            self.hwnd = user32.CreateWindowExW(
+                ex_style,
+                class_name,
+                "Garvis passive UIA probe",
+                0x80000000 | 0x02000000,  # WS_POPUP | WS_CLIPCHILDREN
+                0,
+                0,
+                360,
+                120,
+                None,
+                None,
+                instance,
+                None,
+            )
             if not self.hwnd:
                 raise ctypes.WinError()
             child = 0x40000000 | 0x10000000  # WS_CHILD | WS_VISIBLE
             for cls, text, style, (x, y, cx, cy), ident in (
-                    ("BUTTON", self.BUTTON, 0, (10, 10, 160, 30), 101),
-                    ("STATIC", self.LABEL, 0, (180, 10, 170, 30), 102),
-                    ("EDIT", self.EDIT, 0x00800000, (10, 60, 340, 30), 103)):  # WS_BORDER
-                if not user32.CreateWindowExW(0, cls, text, child | style, x, y, cx, cy,
-                                              self.hwnd, ident, instance, None):
+                ("BUTTON", self.BUTTON, 0, (10, 10, 160, 30), 101),
+                ("STATIC", self.LABEL, 0, (180, 10, 170, 30), 102),
+                ("EDIT", self.EDIT, 0x00800000, (10, 60, 340, 30), 103),
+            ):  # WS_BORDER
+                if not user32.CreateWindowExW(
+                    0, cls, text, child | style, x, y, cx, cy, self.hwnd, ident, instance, None
+                ):
                     raise ctypes.WinError()
             user32.SetLayeredWindowAttributes(self.hwnd, 0, 0, 0x2)  # LWA_ALPHA, fully transparent
             if self.shown:  # bottom of the z-order, without activating it
@@ -421,8 +510,10 @@ async def test_real_ui_automation_reads_the_taskbar_passively():
     if not taskbar:
         pytest.skip("no taskbar window (e.g. a headless session)")
     if not user32.IsWindowVisible(taskbar):
-        pytest.skip("the Windows taskbar (Shell_TrayWnd) exists but is hidden, "
-                    "e.g. by a replacement shell; UI Automation exposes no controls for it")
+        pytest.skip(
+            "the Windows taskbar (Shell_TrayWnd) exists but is hidden, "
+            "e.g. by a replacement shell; UI Automation exposes no controls for it"
+        )
     elements = await ComUiAutomation().elements(taskbar, limit=50)
     assert elements, "the taskbar exposes named controls"
     assert all(e.rect is None or e.rect.width >= 0 for e in elements)

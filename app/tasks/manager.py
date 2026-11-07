@@ -18,6 +18,7 @@ Guarantees:
   closed is marked "interrupted" and is never re-run automatically --
   repeating desktop actions unasked could do them twice.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -93,19 +94,35 @@ class Task:
 
     def summary(self) -> dict:
         return {
-            "id": self.id, "kind": self.kind, "origin": self.origin, "device": self.device, "title": self.title,
+            "id": self.id,
+            "kind": self.kind,
+            "origin": self.origin,
+            "device": self.device,
+            "title": self.title,
             "status": self.status,
-            "created_at": self.created_at, "started_at": self.started_at, "finished_at": self.finished_at,
-            "progress": dict(self.progress), "note": self.note, "error": _clip(self.error, 300),
-            "result_preview": _clip(self.result, 160), "opened_count": len(self.opened),
-            "source_count": len(self.sources), "protocol_id": self.protocol_id,
+            "created_at": self.created_at,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
+            "progress": dict(self.progress),
+            "note": self.note,
+            "error": _clip(self.error, 300),
+            "result_preview": _clip(self.result, 160),
+            "opened_count": len(self.opened),
+            "source_count": len(self.sources),
+            "protocol_id": self.protocol_id,
             "cancellable": self.status in (QUEUED, RUNNING, WAITING) and self.kind != "chat",
         }
 
     def detail(self) -> dict:
         data = self.summary()
-        data.update(text=self.text, result=self.result, error=self.error, steps=list(self.steps),
-                    sources=list(self.sources), opened=[_public_presentation(o) for o in self.opened])
+        data.update(
+            text=self.text,
+            result=self.result,
+            error=self.error,
+            steps=list(self.steps),
+            sources=list(self.sources),
+            opened=[_public_presentation(o) for o in self.opened],
+        )
         return data
 
 
@@ -115,10 +132,19 @@ def _public_presentation(item: dict) -> dict:
 
 
 class TaskManager:
-    def __init__(self, agent, events: EventBus, store_path: Path, protocols: ProtocolStore, *,
-                 available_tools: Callable[[], set[str] | None] = lambda: None,
-                 is_desktop_session_active: Callable[[], bool] = lambda: False,
-                 max_queued: int = 20, keep: int = 200, max_text_chars: int = 4000) -> None:
+    def __init__(
+        self,
+        agent,
+        events: EventBus,
+        store_path: Path,
+        protocols: ProtocolStore,
+        *,
+        available_tools: Callable[[], set[str] | None] = lambda: None,
+        is_desktop_session_active: Callable[[], bool] = lambda: False,
+        max_queued: int = 20,
+        keep: int = 200,
+        max_text_chars: int = 4000,
+    ) -> None:
         self._agent = agent
         self._events = events
         self._path = Path(store_path)
@@ -161,7 +187,7 @@ class TaskManager:
             worker.cancel()
             try:
                 await worker
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError, Exception:
                 pass
         for task in self._tasks.values():
             if task.status in ACTIVE:
@@ -207,8 +233,9 @@ class TaskManager:
         self._changed(task)
         return task
 
-    def submit_instruction(self, text: str, *, origin: str = MOBILE, request_id: str | None = None,
-                           device: str = "") -> Task:
+    def submit_instruction(
+        self, text: str, *, origin: str = MOBILE, request_id: str | None = None, device: str = ""
+    ) -> Task:
         existing = self._deduplicate(request_id)
         if existing is not None:
             return existing
@@ -218,11 +245,21 @@ class TaskManager:
         if len(text) > self._max_text:
             raise TaskError(f"The instruction is too long (limit {self._max_text} characters).")
         title = text if len(text) <= 80 else text[:79] + "…"
-        return self._accept(Task(id=secrets.token_urlsafe(9), kind="instruction", origin=origin, title=title,
-                                 text=text, request_id=request_id or "", device=device[:20]))
+        return self._accept(
+            Task(
+                id=secrets.token_urlsafe(9),
+                kind="instruction",
+                origin=origin,
+                title=title,
+                text=text,
+                request_id=request_id or "",
+                device=device[:20],
+            )
+        )
 
-    def submit_protocol(self, protocol_id: str, *, origin: str = "desktop", request_id: str | None = None,
-                        device: str = "") -> Task:
+    def submit_protocol(
+        self, protocol_id: str, *, origin: str = "desktop", request_id: str | None = None, device: str = ""
+    ) -> Task:
         """The desktop decides: the protocol must exist, be enabled and pass
         validation now -- a phone holding an old id gets no shortcut."""
         existing = self._deduplicate(request_id)
@@ -240,11 +277,21 @@ class TaskManager:
         if busy is not None:
             raise TaskError(f"“{protocol.name}” is already {'running' if busy.status != QUEUED else 'queued'}.")
         enabled = [s for s in protocol.steps if s.enabled]
-        task = Task(id=secrets.token_urlsafe(9), kind="protocol", origin=origin, title=protocol.name, device=device[:20],
-                    text=protocol.description, protocol_id=protocol.id, request_id=request_id or "",
-                    progress={"step": 0, "total": len(enabled), "label": ""},
-                    steps=[{"index": i, "type": s.type, "label": describe_step(s), "status": "pending", "message": ""}
-                           for i, s in enumerate(enabled)])
+        task = Task(
+            id=secrets.token_urlsafe(9),
+            kind="protocol",
+            origin=origin,
+            title=protocol.name,
+            device=device[:20],
+            text=protocol.description,
+            protocol_id=protocol.id,
+            request_id=request_id or "",
+            progress={"step": 0, "total": len(enabled), "label": ""},
+            steps=[
+                {"index": i, "type": s.type, "label": describe_step(s), "status": "pending", "message": ""}
+                for i, s in enumerate(enabled)
+            ],
+        )
         task._snapshot = protocol.model_copy(deep=True)  # what runs, even if the protocol is edited meanwhile
         return self._accept(task)
 
@@ -320,19 +367,32 @@ class TaskManager:
         if protocol is None:
             self._finish(task, FAILED, error="The protocol was deleted before it could run.")
             return
-        await self._events.publish(AgentEvent(type=EventType.REQUEST_STARTED, payload={
-            "text": f"Protocol: {protocol.name}", "source": source, "task_id": task.id, "kind": "protocol"}))
+        await self._events.publish(
+            AgentEvent(
+                type=EventType.REQUEST_STARTED,
+                payload={
+                    "text": f"Protocol: {protocol.name}",
+                    "source": source,
+                    "task_id": task.id,
+                    "kind": "protocol",
+                },
+            )
+        )
 
         def on_step(steps: list[dict]) -> None:
             task.steps = [dict(s) for s in steps]
             running = next((s for s in steps if s["status"] == "running"), None)
             done = sum(1 for s in steps if s["status"] not in ("pending", "running"))
-            task.progress = {"step": (running["index"] + 1) if running else done, "total": len(steps),
-                             "label": running["label"] if running else ""}
+            task.progress = {
+                "step": (running["index"] + 1) if running else done,
+                "total": len(steps),
+                "label": running["label"] if running else "",
+            }
             self._changed(task)
 
-        run = ProtocolRun(self._agent, self._events, protocol, task_id=task.id, source=source,
-                          cancel=self._cancel, on_step=on_step)
+        run = ProtocolRun(
+            self._agent, self._events, protocol, task_id=task.id, source=source, cancel=self._cancel, on_step=on_step
+        )
         try:
             outcome, summary = await run.run()
         finally:
@@ -349,9 +409,15 @@ class TaskManager:
             if self._passive is not None:
                 self._finish(self._passive, COMPLETED if self._passive.result else FAILED)
             text = _clip(payload.get("text"), self._max_text)
-            self._passive = Task(id=secrets.token_urlsafe(9), kind="chat", origin="desktop",
-                                 title=text if len(text) <= 80 else text[:79] + "…", text=text,
-                                 status=RUNNING, started_at=time.time())
+            self._passive = Task(
+                id=secrets.token_urlsafe(9),
+                kind="chat",
+                origin="desktop",
+                title=text if len(text) <= 80 else text[:79] + "…",
+                text=text,
+                status=RUNNING,
+                started_at=time.time(),
+            )
             self._tasks[self._passive.id] = self._passive
             self._order.append(self._passive.id)
             self._trim()
@@ -362,8 +428,15 @@ class TaskManager:
             return
         if kind == EventType.TOOL_STARTED:
             if task.kind != "protocol":
-                task.steps.append({"index": len(task.steps), "type": "tool", "label": str(payload.get("name", "")),
-                                   "status": "running", "message": ""})
+                task.steps.append(
+                    {
+                        "index": len(task.steps),
+                        "type": "tool",
+                        "label": str(payload.get("name", "")),
+                        "status": "running",
+                        "message": "",
+                    }
+                )
                 self._changed(task)
         elif kind == EventType.TOOL_FINISHED:
             if task.kind != "protocol" and task.steps:
@@ -465,11 +538,11 @@ class TaskManager:
             records = data.get("tasks", []) if isinstance(data, dict) else []
         except FileNotFoundError:
             return
-        except (OSError, ValueError):
+        except OSError, ValueError:
             log_extra(logger, 30, "task.load_failed")
             return
         fields = set(Task.__dataclass_fields__)
-        for record in records[-self._keep:]:
+        for record in records[-self._keep :]:
             if not isinstance(record, dict) or not record.get("id"):
                 continue
             try:

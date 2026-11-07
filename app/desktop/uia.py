@@ -14,6 +14,7 @@ thousands. Password fields never report their value.
 
 `UiInspector` is the interface the tools depend on; tests use a fake.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -27,19 +28,65 @@ from app.core.exceptions import DesktopError
 from app.desktop.backend import Rect
 
 CONTROL_TYPES = {
-    50000: "button", 50001: "calendar", 50002: "checkbox", 50003: "combobox", 50004: "edit",
-    50005: "hyperlink", 50006: "image", 50007: "listitem", 50008: "list", 50009: "menu",
-    50010: "menubar", 50011: "menuitem", 50012: "progressbar", 50013: "radiobutton",
-    50014: "scrollbar", 50015: "slider", 50016: "spinner", 50017: "statusbar", 50018: "tab",
-    50019: "tabitem", 50020: "text", 50021: "toolbar", 50022: "tooltip", 50023: "tree",
-    50024: "treeitem", 50025: "custom", 50026: "group", 50027: "thumb", 50028: "datagrid",
-    50029: "dataitem", 50030: "document", 50031: "splitbutton", 50032: "window", 50033: "pane",
-    50034: "header", 50035: "headeritem", 50036: "table", 50037: "titlebar", 50038: "separator",
-    50039: "semanticzoom", 50040: "appbar",
+    50000: "button",
+    50001: "calendar",
+    50002: "checkbox",
+    50003: "combobox",
+    50004: "edit",
+    50005: "hyperlink",
+    50006: "image",
+    50007: "listitem",
+    50008: "list",
+    50009: "menu",
+    50010: "menubar",
+    50011: "menuitem",
+    50012: "progressbar",
+    50013: "radiobutton",
+    50014: "scrollbar",
+    50015: "slider",
+    50016: "spinner",
+    50017: "statusbar",
+    50018: "tab",
+    50019: "tabitem",
+    50020: "text",
+    50021: "toolbar",
+    50022: "tooltip",
+    50023: "tree",
+    50024: "treeitem",
+    50025: "custom",
+    50026: "group",
+    50027: "thumb",
+    50028: "datagrid",
+    50029: "dataitem",
+    50030: "document",
+    50031: "splitbutton",
+    50032: "window",
+    50033: "pane",
+    50034: "header",
+    50035: "headeritem",
+    50036: "table",
+    50037: "titlebar",
+    50038: "separator",
+    50039: "semanticzoom",
+    50040: "appbar",
 }
 INTERACTIVE_TYPES = {
-    "button", "checkbox", "combobox", "edit", "hyperlink", "listitem", "menuitem", "radiobutton",
-    "slider", "spinner", "tabitem", "treeitem", "splitbutton", "dataitem", "document", "headeritem",
+    "button",
+    "checkbox",
+    "combobox",
+    "edit",
+    "hyperlink",
+    "listitem",
+    "menuitem",
+    "radiobutton",
+    "slider",
+    "spinner",
+    "tabitem",
+    "treeitem",
+    "splitbutton",
+    "dataitem",
+    "document",
+    "headeritem",
 }
 _MAX_VISITED = 4000
 _MAX_TEXT_CHARS = 4000
@@ -223,8 +270,12 @@ class ComUiAutomation(UiInspector):
             element = self._to_element(raw, read_text=read_text)
             if element.text:
                 texts_read += 1
-            if not (element.name or element.value or element.text or
-                    (element.control_type in INTERACTIVE_TYPES and element.automation_id)):
+            if not (
+                element.name
+                or element.value
+                or element.text
+                or (element.control_type in INTERACTIVE_TYPES and element.automation_id)
+            ):
                 continue
             if query and not matches(element, query):
                 continue

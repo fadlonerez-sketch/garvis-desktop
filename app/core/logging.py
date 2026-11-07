@@ -5,6 +5,7 @@ Callers must never pass secrets (tokens, passwords, OAuth credentials) into
 log fields -- see `redact()` for the small set of keys we defensively mask
 if they slip through.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -74,9 +75,7 @@ def set_content_excerpt_logging(enabled: bool) -> None:
     _log_content_excerpts = bool(enabled)
 
 
-def configure_logging(
-    log_level: str = "INFO", log_dir: Path | None = None, log_content_excerpts: bool = False
-) -> None:
+def configure_logging(log_level: str = "INFO", log_dir: Path | None = None, log_content_excerpts: bool = False) -> None:
     """Configure the root Garvis logger. Safe to call multiple times."""
     set_content_excerpt_logging(log_content_excerpts)
     root = logging.getLogger("garvis")

@@ -14,6 +14,7 @@ Samples cross to the GUI thread as a queued Qt signal; the history buffers
 only. A pause leaves a real gap in the history -- charts draw it as a gap
 rather than inventing the missing points.
 """
+
 from __future__ import annotations
 
 import threading
@@ -33,7 +34,7 @@ INTERVALS = {SUMMARY: 2.0, DETAIL: 1.0}
 HISTORY_SECONDS = 180.0
 _MAX_POINTS = 240
 
-GiB = 1024 ** 3
+GiB = 1024**3
 
 
 class Series:
@@ -95,17 +96,26 @@ def resource_alerts(history: TelemetryHistory, now: float | None = None) -> list
     alerts: list[ResourceAlert] = []
     recent = [v for _, v in history.series["cpu"].since(now - 12.0)]
     if len(recent) >= 3 and min(recent) >= 90.0:
-        alerts.append(ResourceAlert("warn", f"CPU has stayed above 90% for {len(recent)} samples "
-                                             f"(now {recent[-1]:.0f}%)."))
+        alerts.append(
+            ResourceAlert("warn", f"CPU has stayed above 90% for {len(recent)} samples (now {recent[-1]:.0f}%).")
+        )
     ram = snap.ram_percent
     if ram is not None and ram >= 90.0:
-        alerts.append(ResourceAlert("error" if ram >= 96.0 else "warn",
-                                    f"Memory is {ram:.0f}% used — {snap.ram_available / GiB:.1f} GB left."))
+        alerts.append(
+            ResourceAlert(
+                "error" if ram >= 96.0 else "warn",
+                f"Memory is {ram:.0f}% used — {snap.ram_available / GiB:.1f} GB left.",
+            )
+        )
     detail = history.latest_detail
     for disk in (detail.disks or ()) if detail is not None else ():
         if disk.total and disk.free / disk.total < 0.10:
-            alerts.append(ResourceAlert("warn", f"Drive {disk.root} has only {disk.free / GiB:.1f} GB free "
-                                                f"({100 * disk.free / disk.total:.0f}%)."))
+            alerts.append(
+                ResourceAlert(
+                    "warn",
+                    f"Drive {disk.root} has only {disk.free / GiB:.1f} GB free ({100 * disk.free / disk.total:.0f}%).",
+                )
+            )
     if snap.process_memory is not None and snap.process_memory >= 2 * GiB:
         alerts.append(ResourceAlert("warn", f"Garvis itself is using {snap.process_memory / GiB:.1f} GB of memory."))
     return alerts
@@ -121,8 +131,9 @@ class TelemetryMonitor(QObject):
     _sampled = Signal(object)
     _static = Signal(object)
 
-    def __init__(self, sampler_factory=TelemetrySampler, intervals: dict[str, float] | None = None,
-                 parent: QObject | None = None) -> None:
+    def __init__(
+        self, sampler_factory=TelemetrySampler, intervals: dict[str, float] | None = None, parent: QObject | None = None
+    ) -> None:
         super().__init__(parent)
         self._factory = sampler_factory
         self._intervals = dict(intervals or INTERVALS)

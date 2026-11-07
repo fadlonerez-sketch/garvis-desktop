@@ -4,6 +4,7 @@ The `piper` package (in-process default path), `subprocess` (standalone-
 executable path), and `winsound` are all faked so these tests don't need a
 real Piper install, a real voice model, or real audio hardware.
 """
+
 from __future__ import annotations
 
 import struct
@@ -228,9 +229,7 @@ async def test_synthesize_to_file_prepends_approximately_200ms_of_silence(tmp_pa
     result = await provider.synthesize_to_file("hello there", output_path)
 
     with wave.open(result, "rb") as wav_file:
-        all_samples = struct.unpack(
-            f"<{wav_file.getnframes()}h", wav_file.readframes(wav_file.getnframes())
-        )
+        all_samples = struct.unpack(f"<{wav_file.getnframes()}h", wav_file.readframes(wav_file.getnframes()))
 
     expected_silence_frames = int(framerate * _LEADING_SILENCE_SECONDS)
     assert expected_silence_frames == 3200  # 0.2s * 16000Hz
@@ -259,9 +258,7 @@ async def test_synthesize_to_file_original_audio_follows_silence_unchanged(tmp_p
 
     with wave.open(result, "rb") as wav_file:
         params = wav_file.getparams()
-        all_samples = struct.unpack(
-            f"<{wav_file.getnframes()}h", wav_file.readframes(wav_file.getnframes())
-        )
+        all_samples = struct.unpack(f"<{wav_file.getnframes()}h", wav_file.readframes(wav_file.getnframes()))
 
     # format preserved
     assert params.framerate == framerate
@@ -293,9 +290,7 @@ async def test_synthesized_file_can_still_be_cleaned_up_after_silence_prepend(tm
 
 
 @pytest.mark.asyncio
-async def test_audio_player_duration_estimate_accounts_for_prepended_silence(
-    tmp_path, fake_piper, fake_winsound
-):
+async def test_audio_player_duration_estimate_accounts_for_prepended_silence(tmp_path, fake_piper, fake_winsound):
     """AudioPlayer estimates on_finished timing purely from the WAV file's
     own frame count/rate (_estimate_duration_seconds) -- it must naturally
     include the prepended silence's extra frames with no special-casing, so
@@ -343,7 +338,7 @@ def test_sanitize_for_tts_removes_lone_surrogate():
 
 
 def test_sanitize_for_tts_preserves_hebrew_and_emoji():
-    text = "שלום \U0001F600 hello"
+    text = "שלום \U0001f600 hello"
     sanitized = _sanitize_for_tts(text)
     assert sanitized == text  # nothing well-formed is touched
 
@@ -587,9 +582,7 @@ async def test_jarvis_high_voice_output_still_has_leading_silence():
         with wave.open(output_path, "rb") as wav_file:
             rate = wav_file.getframerate()
             expected_silence_frames = int(rate * _LEADING_SILENCE_SECONDS)
-            samples = struct.unpack(
-                f"<{wav_file.getnframes()}h", wav_file.readframes(wav_file.getnframes())
-            )
+            samples = struct.unpack(f"<{wav_file.getnframes()}h", wav_file.readframes(wav_file.getnframes()))
         assert len(samples) > expected_silence_frames
         assert all(sample == 0 for sample in samples[:expected_silence_frames])
     finally:

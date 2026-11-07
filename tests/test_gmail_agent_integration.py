@@ -5,6 +5,7 @@ Verifies gmail_send only ever executes after explicit confirmation, is
 never sent on denial, and that Gmail API/auth failures reach the LLM as
 safe ToolResult data rather than crashing the agent loop.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -60,9 +61,7 @@ def _build_registry(gmail_manager) -> ToolRegistry:
 
 
 @pytest.mark.asyncio
-async def test_gmail_search_is_discoverable_and_invokable_without_confirmation(
-    memory_store, make_scripted_llm
-):
+async def test_gmail_search_is_discoverable_and_invokable_without_confirmation(memory_store, make_scripted_llm):
     llm = make_scripted_llm(
         [
             tool_call_response("gmail_search", {"query": "from:alice"}),
@@ -83,9 +82,7 @@ async def test_gmail_search_is_discoverable_and_invokable_without_confirmation(
 async def test_send_email_waits_for_confirmation_then_actually_sends(memory_store, make_scripted_llm):
     llm = make_scripted_llm(
         [
-            tool_call_response(
-                "gmail_send", {"to": "bob@example.com", "subject": "Hi", "body": "hello"}
-            ),
+            tool_call_response("gmail_send", {"to": "bob@example.com", "subject": "Hi", "body": "hello"}),
             final_response("I've sent the email to Bob."),
         ]
     )
@@ -129,9 +126,7 @@ async def test_send_email_never_sent_when_confirmation_denied(memory_store, make
     email is genuinely never sent, not merely reported as failed."""
     llm = make_scripted_llm(
         [
-            tool_call_response(
-                "gmail_send", {"to": "bob@example.com", "subject": "Hi", "body": "hello"}
-            ),
+            tool_call_response("gmail_send", {"to": "bob@example.com", "subject": "Hi", "body": "hello"}),
             final_response("I did not send the email since you declined."),
         ]
     )

@@ -14,4 +14,5 @@ importer) and app/llm (providers behind one interface):
 The LLM never gets arbitrary code execution: it can only call a named tool
 whose arguments are schema-validated, then range-checked by the controller.
 """
+
 from __future__ import annotations

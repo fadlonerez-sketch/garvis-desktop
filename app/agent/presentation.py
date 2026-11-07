@@ -11,6 +11,7 @@ protocol step may override the level for its own call.
 that was opened). Nothing is guessed: no title means the card says what was
 opened and offers the Activity page instead of a window to show.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -48,8 +49,9 @@ def level_for(tool_level: str, data: Any, override: str | None = None) -> Presen
         return Presentation.NONE
 
 
-def describe(tool_name: str, data: Any, level: Presentation, *, source: str | None = None,
-             task_id: str | None = None) -> dict:
+def describe(
+    tool_name: str, data: Any, level: Presentation, *, source: str | None = None, task_id: str | None = None
+) -> dict:
     """The PRESENTATION event payload for a successful call."""
     data = data if isinstance(data, dict) else {}
     kind = _KIND_BY_TOOL.get(tool_name, "result")
@@ -85,8 +87,9 @@ def describe(tool_name: str, data: Any, level: Presentation, *, source: str | No
     }
 
 
-def notice(title: str, message: str, level: Presentation, *, source: str | None = None,
-           task_id: str | None = None) -> dict:
+def notice(
+    title: str, message: str, level: Presentation, *, source: str | None = None, task_id: str | None = None
+) -> dict:
     """A PRESENTATION payload for an explicit notification (a protocol's
     "Notify me" step, a task summary) rather than a tool result."""
     return {

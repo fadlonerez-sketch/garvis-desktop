@@ -5,6 +5,7 @@ module maps them to Windows virtual-key codes. Pure data + parsing, no
 ctypes, so it's testable on any platform. Unknown names raise ValueError
 rather than guessing -- a mistyped key must never turn into a different key.
 """
+
 from __future__ import annotations
 
 MODIFIER_KEYS: dict[str, int] = {
@@ -73,9 +74,7 @@ NAMED_KEYS.update({f"f{n}": 0x70 + n - 1 for n in range(1, 25)})
 NAMED_KEYS.update({chr(c): c for c in range(ord("0"), ord("9") + 1)})
 NAMED_KEYS.update({chr(c).lower(): c for c in range(ord("A"), ord("Z") + 1)})
 
-EXTENDED_KEYS = frozenset(
-    {0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E, 0x5B, 0x5D}
-)
+EXTENDED_KEYS = frozenset({0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x2D, 0x2E, 0x5B, 0x5D})
 """VKs that need KEYEVENTF_EXTENDEDKEY, or SendInput delivers the numpad
 variant (e.g. arrow keys arriving as numpad 4/6 when NumLock is off)."""
 
@@ -94,8 +93,17 @@ open_application instead; these are refused outright, not confirmed."""
 
 def _canonical(name: str) -> str:
     key = name.strip().lower().replace(" ", "").replace("_", "")
-    aliases = {"control": "ctrl", "windows": "win", "meta": "win", "cmd": "win", "esc": "escape",
-               "return": "enter", "del": "delete", "spacebar": "space", "apps": "menu"}
+    aliases = {
+        "control": "ctrl",
+        "windows": "win",
+        "meta": "win",
+        "cmd": "win",
+        "esc": "escape",
+        "return": "enter",
+        "del": "delete",
+        "spacebar": "space",
+        "apps": "menu",
+    }
     return aliases.get(key, key)
 
 

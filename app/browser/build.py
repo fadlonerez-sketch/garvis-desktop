@@ -2,6 +2,7 @@
 app/voice/build.py: reads config from Settings so nothing about the
 browser (headless mode, timeouts) is hardcoded elsewhere.
 """
+
 from __future__ import annotations
 
 from app.browser.manager import BrowserManager, PageHook

@@ -2,6 +2,7 @@
 as instructions -- both structurally (which message role it lands in) and
 via the system prompt's explicit anti-injection instruction.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -46,9 +47,7 @@ def test_read_page_tool_passes_malicious_text_through_unmodified():
 
 
 @pytest.mark.asyncio
-async def test_malicious_page_content_only_ever_appears_in_a_tool_role_message(
-    make_scripted_llm, memory_store
-):
+async def test_malicious_page_content_only_ever_appears_in_a_tool_role_message(make_scripted_llm, memory_store):
     """End-to-end through the real Agent: browser_read_page returns text
     containing an injection attempt. That text must land ONLY in a
     role=tool message -- never folded into the system or user message
@@ -83,9 +82,7 @@ async def test_malicious_page_content_only_ever_appears_in_a_tool_role_message(
 
 
 @pytest.mark.asyncio
-async def test_system_prompt_explicitly_instructs_against_obeying_tool_content(
-    make_scripted_llm, memory_store
-):
+async def test_system_prompt_explicitly_instructs_against_obeying_tool_content(make_scripted_llm, memory_store):
     llm = make_scripted_llm([final_response("hi")])
     registry = ToolRegistry()
     agent = Agent(llm=llm, registry=registry, memory=memory_store, events=EventBus())

@@ -14,6 +14,7 @@ force before the gap -- e.g. 02:30 becomes 03:30 -- and repeated wall times
 (fall-back overlap) use the earlier instant. java.time's ZonedDateTime.of
 does exactly the same, so both sides pick the same instant.
 """
+
 from __future__ import annotations
 
 import datetime as dt
@@ -56,13 +57,15 @@ def zone_database_available() -> bool:
     (the phone always sends one) looks "unknown"."""
     try:
         ZoneInfo("Etc/UTC")
-    except (ZoneInfoNotFoundError, ValueError):
+    except ZoneInfoNotFoundError, ValueError:
         return False
     return True
 
 
-TZDATA_MISSING = ("Garvis on your PC can't read time zones: the 'tzdata' package is missing from the Python that "
-                  "runs Garvis. Install it there (python -m pip install tzdata) and restart Garvis.")
+TZDATA_MISSING = (
+    "Garvis on your PC can't read time zones: the 'tzdata' package is missing from the Python that "
+    "runs Garvis. Install it there (python -m pip install tzdata) and restart Garvis."
+)
 
 
 def local_fixed_zone_name() -> str:
@@ -76,7 +79,7 @@ def local_fixed_zone_name() -> str:
 
 
 def parse_hhmm(text: str) -> tuple[int, int]:
-    """"8:05", "08:05", "20:30" -> (hour, minute). Also accepts "8pm"/"8:30 am"."""
+    """ "8:05", "08:05", "20:30" -> (hour, minute). Also accepts "8pm"/"8:30 am"."""
     raw = (text or "").strip().lower().replace(".", "")
     ampm = None
     for suffix in ("am", "pm"):
@@ -142,7 +145,7 @@ def next_occurrence(repeat: str, local_time: str, tz: str, days: list[int], afte
 
 
 def resolve_date(text: str, zone: dt.tzinfo, now: float) -> dt.date:
-    """"today" / "tomorrow" / "YYYY-MM-DD" / a weekday name (the next one,
+    """ "today" / "tomorrow" / "YYYY-MM-DD" / a weekday name (the next one,
     today included)."""
     today = dt.datetime.fromtimestamp(now, zone).date()
     word = (text or "").strip().lower()
@@ -161,8 +164,9 @@ def resolve_date(text: str, zone: dt.tzinfo, now: float) -> dt.date:
     return today + dt.timedelta(days=(weekday - today.weekday()) % 7)
 
 
-def resolve_once(*, tz: str, now: float, time: str | None = None, date: str | None = None,
-                 in_minutes: float | None = None) -> float:
+def resolve_once(
+    *, tz: str, now: float, time: str | None = None, date: str | None = None, in_minutes: float | None = None
+) -> float:
     """The instant for a one-off reminder. `in_minutes` wins; otherwise
     `time` (+ optional `date`). A bare time already past today means tomorrow."""
     if in_minutes is not None:
@@ -183,7 +187,7 @@ def resolve_once(*, tz: str, now: float, time: str | None = None, date: str | No
 
 
 def describe(instant: float | None, tz: str) -> str:
-    """"Sun 26 Oct 2026, 08:00 (Asia/Jerusalem)" -- for tool results and lists."""
+    """ "Sun 26 Oct 2026, 08:00 (Asia/Jerusalem)" -- for tool results and lists."""
     if instant is None:
         return "not scheduled"
     local = dt.datetime.fromtimestamp(instant, get_zone(tz))

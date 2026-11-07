@@ -7,6 +7,7 @@ UTF-8 output and a hard timeout (the whole process tree is killed when it
 expires). Values that a script needs (paths, filters) are embedded as
 base64 strings via `ps_string()`, never by string concatenation of raw text.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -72,8 +73,11 @@ class PowerShellRunner:
         except subprocess.TimeoutExpired:
             timed_out = True
             if os.name == "nt":
-                subprocess.run(["taskkill", "/T", "/F", "/PID", str(process.pid)], capture_output=True,
-                               creationflags=CREATE_NO_WINDOW)
+                subprocess.run(
+                    ["taskkill", "/T", "/F", "/PID", str(process.pid)],
+                    capture_output=True,
+                    creationflags=CREATE_NO_WINDOW,
+                )
             process.kill()
             out, err = process.communicate()
         return PowerShellResult(

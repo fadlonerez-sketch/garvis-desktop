@@ -3,6 +3,7 @@ simulated room: Garvis's reply really comes back through the "microphone"
 (delayed, filtered, attenuated) from the moment the player starts it, and
 stops when playback stops. No mocked playback-state booleans decide anything
 here -- the mic signal does."""
+
 from __future__ import annotations
 
 import asyncio
@@ -58,13 +59,13 @@ class Room:
 
     def read_available_timed(self):
         start = self.now
-        out = self._noise[self._noise_pos:self._noise_pos + BLOCK].copy()
+        out = self._noise[self._noise_pos : self._noise_pos + BLOCK].copy()
         self._noise_pos = (self._noise_pos + BLOCK) % (len(self._noise) - BLOCK)
         for at, samples in self.sources:
             offset = int(round((start - at) * MIC_RATE))
             lo, hi = max(offset, 0), min(offset + BLOCK, len(samples))
             if hi > lo:
-                out[lo - offset:hi - offset] += samples[lo:hi]
+                out[lo - offset : hi - offset] += samples[lo:hi]
         self.now += BLOCK / MIC_RATE
         return [(start, np.clip(out, -32768, 32767).astype(np.int16).tobytes())]
 
@@ -152,15 +153,24 @@ class Agent:
 def _session(room: Room, guard: EchoGuard | None):
     stt = CountingSTT()
     player = RoomPlayer(room)
-    voice = VoicePipeline(stt=stt, tts=ReplyTTS(), recorder=room, player=player, echo_guard=guard, clock=lambda: room.now)
+    voice = VoicePipeline(
+        stt=stt, tts=ReplyTTS(), recorder=room, player=player, echo_guard=guard, clock=lambda: room.now
+    )
     events = EventBus()
     states: list[str] = []
     events.subscribe(lambda e: states.append(e.payload["state"]) if e.type == EventType.SESSION_STATE else None)
     agent = Agent()
     session = ConversationSession(
-        agent=agent, voice=voice, events=events, poll_interval_seconds=0.0, energy_threshold=500.0,
-        min_speech_seconds=0.15, min_silence_seconds=0.5, barge_in_energy_threshold=900.0,
-        max_utterance_seconds=5.0, initial_noise_floor=150.0,
+        agent=agent,
+        voice=voice,
+        events=events,
+        poll_interval_seconds=0.0,
+        energy_threshold=500.0,
+        min_speech_seconds=0.15,
+        min_silence_seconds=0.5,
+        barge_in_energy_threshold=900.0,
+        max_utterance_seconds=5.0,
+        initial_noise_floor=150.0,
     )
     return session, agent, stt, player, states
 

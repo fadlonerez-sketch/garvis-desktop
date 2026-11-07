@@ -5,6 +5,7 @@ A real Agent with fake tools and a scripted/gated LLM: no desktop, browser,
 network or real model. Desktop-acting tools are test doubles that record
 their calls; open_path gets a fake opener.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -59,8 +60,15 @@ class FakeWebsiteTool(Tool):
             await asyncio.sleep(self.delay)
         if self.fail:
             return ToolResult.fail("The browser refused.")
-        return ToolResult.ok({"opened": args.url, "window": "Forecast - Browser", "handle": 4242,
-                              "visible_verified": True, "target_desktop": args.target_desktop or "user_desktop"})
+        return ToolResult.ok(
+            {
+                "opened": args.url,
+                "window": "Forecast - Browser",
+                "handle": 4242,
+                "visible_verified": True,
+                "target_desktop": args.target_desktop or "user_desktop",
+            }
+        )
 
 
 class _AppArgs(BaseModel):
@@ -82,8 +90,14 @@ class FakeAppTool(Tool):
         self.calls.append((args.application, args.target_desktop))
         if args.application == "missing":
             return ToolResult.fail("Could not find an installed application matching 'missing'.")
-        return ToolResult.ok({"opened": args.application, "window": f"{args.application} window", "handle": 7,
-                              "target_desktop": args.target_desktop or "user_desktop"})
+        return ToolResult.ok(
+            {
+                "opened": args.application,
+                "window": f"{args.application} window",
+                "handle": 7,
+                "target_desktop": args.target_desktop or "user_desktop",
+            }
+        )
 
 
 def _collect(events: EventBus, kind: EventType) -> list[dict]:
@@ -103,8 +117,13 @@ def test_presentation_levels_are_explicit_and_background_work_is_never_shown():
 
 
 def test_presentation_card_uses_only_the_tools_own_result():
-    card = pres.describe("open_website", {"opened": "https://weather.example/x", "window": "Weather - Chrome",
-                                          "handle": 9}, pres.Presentation.PROMINENT, source="mobile", task_id="t1")
+    card = pres.describe(
+        "open_website",
+        {"opened": "https://weather.example/x", "window": "Weather - Chrome", "handle": 9},
+        pres.Presentation.PROMINENT,
+        source="mobile",
+        task_id="t1",
+    )
     assert card["title"] == "Weather - Chrome" and card["url"] == "https://weather.example/x"
     assert card["handle"] == 9 and card["source"] == "mobile" and card["task_id"] == "t1"
     unverified = pres.describe("open_website", {"opened": "https://weather.example/x"}, pres.Presentation.PROMINENT)
@@ -117,8 +136,9 @@ def test_presentation_card_uses_only_the_tools_own_result():
 # ---------------------------------------------------------------- the agent
 async def test_chat_turn_presents_what_a_tool_opened(tmp_path):
     events = EventBus()
-    llm = GatedLLM([tool_call_response("open_website", {"url": "https://weather.example"}), final_response("Opened.")],
-                   gated=False)
+    llm = GatedLLM(
+        [tool_call_response("open_website", {"url": "https://weather.example"}), final_response("Opened.")], gated=False
+    )
     tool = FakeWebsiteTool()
     agent = make_agent(tmp_path, llm, events=events, tools=[tool])
     shown = _collect(events, EventType.PRESENTATION)
@@ -184,7 +204,7 @@ def test_open_path_refuses_anything_that_runs(tmp_path):
     shortcut.write_bytes(b"L")
     for path in (script, exe, shortcut):
         assert "runs or changes something" in refusal(path)
-    assert refusal(tmp_path / "nope") .startswith("Nothing exists")
+    assert refusal(tmp_path / "nope").startswith("Nothing exists")
     assert "UNC" in refusal(Path("\\\\server\\share\\doc.txt"))
     key = tmp_path / "id_rsa.pem"
     key.write_text("secret")
@@ -212,8 +232,18 @@ def _protocol(*steps: Step, **fields) -> Protocol:
 
 
 def test_only_allowlisted_actions_exist_and_none_runs_arbitrary_code():
-    assert set(ACTIONS) == {"open_application", "open_website", "open_websites", "open_path", "focus_window",
-                            "wait_for_window", "wait", "notify", "confirm", "ask_garvis"}
+    assert set(ACTIONS) == {
+        "open_application",
+        "open_website",
+        "open_websites",
+        "open_path",
+        "focus_window",
+        "wait_for_window",
+        "wait",
+        "notify",
+        "confirm",
+        "ask_garvis",
+    }
     tools = {a.tool for a in ACTIONS.values() if a.tool}
     assert not tools & {"run_powershell", "write_text_file", "edit_text_file", "gmail_send", "keyboard_type"}
 
@@ -250,7 +280,9 @@ def test_store_round_trip_invalid_files_duplicate_and_delete(tmp_path):
     saved = store.save(_protocol(Step(type="wait", params={"seconds": 1}), name="Morning"))
     assert store.get(saved.id).name == "Morning"
     (tmp_path / "protocols" / "deadbeefdeadbeef.json").write_text("{not json")
-    (tmp_path / "protocols" / "0123456789abcdef.json").write_text(json.dumps({"schema_version": 99, "id": "0123456789abcdef"}))
+    (tmp_path / "protocols" / "0123456789abcdef.json").write_text(
+        json.dumps({"schema_version": 99, "id": "0123456789abcdef"})
+    )
     entries = store.load_all()
     assert [e.protocol.name for e in entries if e.protocol] == ["Morning"]
     assert sum(1 for e in entries if e.protocol is None) == 2  # reported, never run
@@ -263,8 +295,10 @@ def test_store_round_trip_invalid_files_duplicate_and_delete(tmp_path):
 
 
 def test_the_phone_sees_descriptions_not_raw_parameters():
-    protocol = _protocol(Step(type="ask_garvis", params={"instruction": "x" * 300}),
-                         Step(type="open_path", params={"path": "C:\\Users\\me\\secret-project"}, label="My project"))
+    protocol = _protocol(
+        Step(type="ask_garvis", params={"instruction": "x" * 300}),
+        Step(type="open_path", params={"path": "C:\\Users\\me\\secret-project"}, label="My project"),
+    )
     summary = public_summary(protocol, tools=set())
     assert summary["steps"][1] == "My project"
     assert "secret-project" not in json.dumps(summary)
@@ -277,13 +311,19 @@ class _Rig:
         self.events = EventBus()
         self.web = FakeWebsiteTool()
         self.app = FakeAppTool()
-        self.agent = make_agent(tmp_path, llm or GatedLLM(gated=False), events=self.events,
-                                tools=tools or [self.web, self.app])
+        self.agent = make_agent(
+            tmp_path, llm or GatedLLM(gated=False), events=self.events, tools=tools or [self.web, self.app]
+        )
         self.store = ProtocolStore(tmp_path / "protocols")
         self.path = tmp_path / "tasks.json"
-        self.manager = TaskManager(self.agent, self.events, self.path, self.store,
-                                   available_tools=lambda: {"open_website", "open_application"},
-                                   is_desktop_session_active=session)
+        self.manager = TaskManager(
+            self.agent,
+            self.events,
+            self.path,
+            self.store,
+            available_tools=lambda: {"open_website", "open_application"},
+            is_desktop_session_active=session,
+        )
 
     def protocol(self, *steps: Step, **fields) -> Protocol:
         return self.store.save(_protocol(*steps, **fields))
@@ -378,8 +418,10 @@ async def test_protocol_run_executes_steps_through_the_agent_and_records_results
 
 
 async def test_a_failing_required_step_stops_the_protocol(rig):
-    protocol = rig.protocol(Step(type="open_application", params={"application": "missing"}),
-                            Step(type="open_website", params={"url": "https://never.example"}))
+    protocol = rig.protocol(
+        Step(type="open_application", params={"application": "missing"}),
+        Step(type="open_website", params={"url": "https://never.example"}),
+    )
     task = rig.manager.submit_protocol(protocol.id)
     await wait_until(lambda: task.terminal)
     assert task.status == FAILED and "Could not find" in task.error
@@ -387,8 +429,10 @@ async def test_a_failing_required_step_stops_the_protocol(rig):
 
 
 async def test_continue_on_failure_runs_the_rest_but_reports_the_failure(rig):
-    protocol = rig.protocol(Step(type="open_application", params={"application": "missing"}, on_failure="continue"),
-                            Step(type="open_website", params={"url": "https://next.example"}))
+    protocol = rig.protocol(
+        Step(type="open_application", params={"application": "missing"}, on_failure="continue"),
+        Step(type="open_website", params={"url": "https://next.example"}),
+    )
     task = rig.manager.submit_protocol(protocol.id)
     await wait_until(lambda: task.terminal)
     assert task.status == FAILED and rig.web.calls == ["https://next.example"]
@@ -417,8 +461,9 @@ async def test_a_protocol_already_running_is_not_queued_twice(rig):
 
 
 async def test_cancelling_during_a_pause_stops_promptly_and_skips_the_rest(rig):
-    protocol = rig.protocol(Step(type="wait", params={"seconds": 60}),
-                            Step(type="open_website", params={"url": "https://never.example"}))
+    protocol = rig.protocol(
+        Step(type="wait", params={"seconds": 60}), Step(type="open_website", params={"url": "https://never.example"})
+    )
     task = rig.manager.submit_protocol(protocol.id)
     await wait_until(lambda: task.status == "running" and task.steps[0]["status"] == "running")
     rig.manager.cancel(task.id)
@@ -429,8 +474,10 @@ async def test_cancelling_during_a_pause_stops_promptly_and_skips_the_rest(rig):
 
 async def test_confirm_step_waits_for_the_user_and_a_no_stops_the_protocol(rig):
     requests = _collect(rig.events, EventType.CONFIRMATION_REQUESTED)
-    protocol = rig.protocol(Step(type="confirm", params={"message": "Open the work apps?"}),
-                            Step(type="open_application", params={"application": "Code"}))
+    protocol = rig.protocol(
+        Step(type="confirm", params={"message": "Open the work apps?"}),
+        Step(type="open_application", params={"application": "Code"}),
+    )
     task = rig.manager.submit_protocol(protocol.id)
     await wait_until(lambda: requests)
     assert task.status == "waiting_confirmation"
@@ -440,8 +487,9 @@ async def test_confirm_step_waits_for_the_user_and_a_no_stops_the_protocol(rig):
 
 
 async def test_editing_a_protocol_during_a_run_does_not_change_the_run(rig):
-    protocol = rig.protocol(Step(type="wait", params={"seconds": 1}),
-                            Step(type="open_website", params={"url": "https://original.example"}))
+    protocol = rig.protocol(
+        Step(type="wait", params={"seconds": 1}), Step(type="open_website", params={"url": "https://original.example"})
+    )
     task = rig.manager.submit_protocol(protocol.id)
     edited = protocol.model_copy(deep=True)
     edited.steps[1] = Step(type="open_website", params={"url": "https://edited.example"})

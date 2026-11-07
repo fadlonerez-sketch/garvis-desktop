@@ -6,6 +6,7 @@ different models, was removed under the single-model policy; these are its
 classification cases, now asserted on the tier decision itself. The tier
 only picks Claude Haiku 5.5's effort level -- never a different model.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -92,8 +93,11 @@ def test_ongoing_tool_loop_is_not_small():
     messages = [
         Message(role=Role.SYSTEM, content="sys"),
         Message(role=Role.USER, content="What is the capital of France?"),
-        Message(role=Role.ASSISTANT, content="",
-                tool_calls=[ToolCall(id="call-1", name="web_search", arguments={"query": "capital of france"})]),
+        Message(
+            role=Role.ASSISTANT,
+            content="",
+            tool_calls=[ToolCall(id="call-1", name="web_search", arguments={"query": "capital of france"})],
+        ),
         Message(role=Role.TOOL, content='{"result": "Paris"}', tool_call_id="call-1", name="web_search"),
     ]
     assert classify_tier(messages) == (ModelTier.MEDIUM, "tool_activity")

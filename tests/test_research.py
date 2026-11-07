@@ -1,5 +1,6 @@
 """Tests for browser research (app/browser/research.py) and the
 web_research tool -- fake BrowserManager, no network."""
+
 from __future__ import annotations
 
 import base64
@@ -27,8 +28,14 @@ def test_decode_bing_redirect():
 
 @pytest.mark.parametrize(
     "href",
-    ["", "javascript:void(0)", "https://duckduckgo.com/y.js?ad_provider=x", "https://www.bing.com/images",
-     "https://www.bing.com/ck/a?u=a1%%%notbase64", "mailto:x@y.z"],
+    [
+        "",
+        "javascript:void(0)",
+        "https://duckduckgo.com/y.js?ad_provider=x",
+        "https://www.bing.com/images",
+        "https://www.bing.com/ck/a?u=a1%%%notbase64",
+        "mailto:x@y.z",
+    ],
 )
 def test_decode_rejects_engine_internal_and_non_http(href):
     assert decode_result_url(href) is None
@@ -40,12 +47,14 @@ def test_decode_passes_plain_links_through():
 
 # ------------------------------------------------------- relevant_excerpt
 def test_relevant_excerpt_prefers_lines_matching_the_query():
-    text = "\n".join([
-        "Accept all cookies to continue browsing this website today",
-        "Navigation Home Markets News Research Learn About",
-        "Bitcoin price today is $64,210.55 USD, up 2.1% in 24 hours",
-        "Subscribe to our newsletter for weekly market updates and more",
-    ])
+    text = "\n".join(
+        [
+            "Accept all cookies to continue browsing this website today",
+            "Navigation Home Markets News Research Learn About",
+            "Bitcoin price today is $64,210.55 USD, up 2.1% in 24 hours",
+            "Subscribe to our newsletter for weekly market updates and more",
+        ]
+    )
     excerpt = relevant_excerpt(text, "current bitcoin price", budget=200)
     assert excerpt.startswith("Bitcoin price today is $64,210.55")
     assert "cookies" not in excerpt
@@ -66,19 +75,40 @@ def test_relevant_excerpt_falls_back_to_page_start():
 # ---------------------------------------------------------------- fakes
 class FakeResearchBrowser:
     def __init__(self, rows=None, pages=None, fail_search=False):
-        self.rows = rows if rows is not None else [
-            {"title": "Ad", "href": "https://duckduckgo.com/y.js?ad=1", "snippet": "", "class": "result result--ad"},
-            {"title": "CoinDesk BTC", "href": "https://duckduckgo.com/l/?uddg=https%3A%2F%2Fa.test%2Fbtc",
-             "snippet": "BTC price", "class": "result"},
-            {"title": "Dup", "href": "https://duckduckgo.com/l/?uddg=https%3A%2F%2Fa.test%2Fbtc", "snippet": "",
-             "class": "result"},
-            {"title": "Broken site", "href": "https://b.test/x", "snippet": "", "class": "result"},
-            {"title": "Market", "href": "https://c.test/y", "snippet": "live", "class": "result"},
-        ]
-        self.pages = pages if pages is not None else {
-            "https://a.test/btc": "Bitcoin price today is $64,000 according to our live index feed",
-            "https://c.test/y": "The bitcoin price moved sharply this week as markets reacted",
-        }
+        self.rows = (
+            rows
+            if rows is not None
+            else [
+                {
+                    "title": "Ad",
+                    "href": "https://duckduckgo.com/y.js?ad=1",
+                    "snippet": "",
+                    "class": "result result--ad",
+                },
+                {
+                    "title": "CoinDesk BTC",
+                    "href": "https://duckduckgo.com/l/?uddg=https%3A%2F%2Fa.test%2Fbtc",
+                    "snippet": "BTC price",
+                    "class": "result",
+                },
+                {
+                    "title": "Dup",
+                    "href": "https://duckduckgo.com/l/?uddg=https%3A%2F%2Fa.test%2Fbtc",
+                    "snippet": "",
+                    "class": "result",
+                },
+                {"title": "Broken site", "href": "https://b.test/x", "snippet": "", "class": "result"},
+                {"title": "Market", "href": "https://c.test/y", "snippet": "live", "class": "result"},
+            ]
+        )
+        self.pages = (
+            pages
+            if pages is not None
+            else {
+                "https://a.test/btc": "Bitcoin price today is $64,000 according to our live index feed",
+                "https://c.test/y": "The bitcoin price moved sharply this week as markets reacted",
+            }
+        )
         self.fail_search = fail_search
         self.navigated: list[str] = []
         self._current = None
@@ -198,7 +228,8 @@ async def test_research_refuses_to_run_on_the_users_desktop_when_workspace_is_un
         await _researcher(browser, workspace=unavailable).research("bitcoin price")
     assert browser.navigated == []
     result = await WebResearchTool(_researcher(browser, workspace=unavailable)).execute(
-        WebResearchInput(query="bitcoin price"))
+        WebResearchInput(query="bitcoin price")
+    )
     assert not result.success and "wasn't started" in result.error
 
 

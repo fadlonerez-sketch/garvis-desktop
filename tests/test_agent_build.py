@@ -1,5 +1,6 @@
 """Tests for the composition root (app/agent/build.py) with the Phase 7
 browser tools and Phase 9 Gmail tools wired in."""
+
 from __future__ import annotations
 
 from app.agent.build import build_registry

@@ -20,6 +20,7 @@ Safety, decided by code rather than the LLM:
   - There is no delete tool; deleting goes through run_powershell, which
     always asks first.
 """
+
 from __future__ import annotations
 
 import os
@@ -38,8 +39,18 @@ _LAUNCH_SUFFIXES = frozenset(
     ".exe .com .bat .cmd .ps1 .psm1 .psd1 .vbs .vbe .wsf .wsh .wsc .hta .lnk .url .reg .scr .pif .msi .msp "
     ".cpl .jar .scf .inf .application .appref-ms .msc .settingcontent-ms".split()
 )
-_AUTORUN_NAMES = frozenset({"sitecustomize.py", "usercustomize.py", ".bashrc", ".bash_profile", ".bash_login",
-                            ".profile", ".zshrc", ".zprofile"})
+_AUTORUN_NAMES = frozenset(
+    {
+        "sitecustomize.py",
+        "usercustomize.py",
+        ".bashrc",
+        ".bash_profile",
+        ".bash_login",
+        ".profile",
+        ".zshrc",
+        ".zprofile",
+    }
+)
 _DEFAULT_BACKUP_DIR = Path(__file__).resolve().parents[2] / "data" / "file_backups"
 
 _MAX_READ_BYTES = 2_000_000
@@ -102,8 +113,11 @@ def _write_reason(path: Path) -> str | None:
         return f"'{path}' is git configuration or a git hook, which can run commands."
     # Python runs .pth files and site/usercustomize from site-packages at every
     # start (Garvis's own included); shells run their startup files.
-    if (path.suffix.lower() == ".pth" or path.name.lower() in _AUTORUN_NAMES
-            or any(part.lower() in ("site-packages", "dist-packages") for part in path.parts)):
+    if (
+        path.suffix.lower() == ".pth"
+        or path.name.lower() in _AUTORUN_NAMES
+        or any(part.lower() in ("site-packages", "dist-packages") for part in path.parts)
+    ):
         return f"'{path}' is run automatically by Python or a shell at startup."
     if _PROJECT_ROOT in path.parents and _PROJECT_ROOT / "data" not in path.parents:
         return f"'{path}' is part of Garvis's own code or configuration."
@@ -165,12 +179,14 @@ class ListDirectoryTool(_FileTool):
                     stat = p.stat()
                 except OSError:
                     continue
-                entries.append({
-                    "name": p.name,
-                    "is_dir": p.is_dir(),
-                    "size_bytes": stat.st_size if p.is_file() else None,
-                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="minutes"),
-                })
+                entries.append(
+                    {
+                        "name": p.name,
+                        "is_dir": p.is_dir(),
+                        "size_bytes": stat.st_size if p.is_file() else None,
+                        "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="minutes"),
+                    }
+                )
         except OSError as exc:
             return ToolResult.fail(f"Could not list '{target}': {exc}")
         return ToolResult.ok(entries)
@@ -216,14 +232,16 @@ class ReadTextFileTool(_FileTool):
             return ToolResult.fail(f"Could not read '{args.relative_path}': {exc}")
         lines = content.splitlines()
         start = args.start_line - 1
-        selected = lines[start:start + args.max_lines]
-        return ToolResult.ok({
-            "path": str(target),
-            "content": redact_secrets("\n".join(selected)),
-            "start_line": args.start_line,
-            "end_line": start + len(selected),
-            "total_lines": len(lines),
-        })
+        selected = lines[start : start + args.max_lines]
+        return ToolResult.ok(
+            {
+                "path": str(target),
+                "content": redact_secrets("\n".join(selected)),
+                "start_line": args.start_line,
+                "end_line": start + len(selected),
+                "total_lines": len(lines),
+            }
+        )
 
 
 class FindFilesInput(BaseModel):
@@ -268,13 +286,20 @@ class FindFilesTool(_FileTool):
                         return results, True
                     if needle is None:
                         results.append({"path": str(path)})
-                    elif not sensitive_path_reason(path) and path.stat().st_size < 1_000_000 and _is_probably_text(path):
+                    elif (
+                        not sensitive_path_reason(path) and path.stat().st_size < 1_000_000 and _is_probably_text(path)
+                    ):
                         try:
                             with path.open(encoding="utf-8", errors="replace") as handle:
                                 for number, line in enumerate(handle, 1):
                                     if needle in line.lower():
-                                        results.append({"path": str(path), "line": number,
-                                                        "text": redact_secrets(line.strip()[:200])})
+                                        results.append(
+                                            {
+                                                "path": str(path),
+                                                "line": number,
+                                                "text": redact_secrets(line.strip()[:200]),
+                                            }
+                                        )
                                         break
                         except OSError:
                             continue
@@ -318,10 +343,14 @@ class WriteTextFileTool(_FileTool):
             target.write_text(args.content, encoding="utf-8")
         except (OSError, ValueError) as exc:
             return ToolResult.fail(f"Could not write '{args.path}': {exc}")
-        return ToolResult.ok({
-            "path": str(target), "created": backup is None, "bytes": target.stat().st_size,
-            "backup": str(backup) if backup else None,
-        })
+        return ToolResult.ok(
+            {
+                "path": str(target),
+                "created": backup is None,
+                "bytes": target.stat().st_size,
+                "backup": str(backup) if backup else None,
+            }
+        )
 
 
 class EditTextFileInput(BaseModel):
@@ -374,10 +403,14 @@ class EditTextFileTool(_FileTool):
         except OSError as exc:
             return ToolResult.fail(f"Could not write '{target}': {exc}")
         first_line = text[: text.index(old)].count(newline) + 1
-        return ToolResult.ok({
-            "path": str(target), "replacements": count if args.replace_all else 1,
-            "first_changed_line": first_line, "backup": str(backup),
-        })
+        return ToolResult.ok(
+            {
+                "path": str(target),
+                "replacements": count if args.replace_all else 1,
+                "first_changed_line": first_line,
+                "backup": str(backup),
+            }
+        )
 
 
 def build_file_tools(root: Path = _DEFAULT_ROOT, backup_dir: Path = _DEFAULT_BACKUP_DIR) -> list[Tool]:
