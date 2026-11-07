@@ -262,8 +262,8 @@ class BrowserManager:
             self._save_active()
             try:
                 await page.close()
-            except Exception:
-                pass
+            except Exception as close_exc:
+                log_extra(logger, 10, "browser.misplaced_page_close_failed", error=str(close_exc))
             raise BrowserError(str(exc)) from exc
         except Exception as exc:
             log_extra(logger, 30, "browser.page_hook_failed", error=str(exc))
@@ -317,8 +317,8 @@ class BrowserManager:
             log_extra(logger, 30, "browser.rebinding_blocked", ip=bad_ip)
             try:
                 await self._page.goto("about:blank")
-            except Exception:
-                pass
+            except Exception as exc:
+                log_extra(logger, 10, "browser.blank_after_block_failed", error=str(exc))
             raise BrowserError(
                 f"Refusing to use '{url}': the browser connected to a non-public address ({bad_ip})."
             )
@@ -358,8 +358,8 @@ class BrowserManager:
         page = self._require_page()
         try:
             await page.wait_for_load_state("networkidle", timeout=timeout_ms)
-        except Exception:
-            pass
+        except Exception as exc:
+            log_extra(logger, 10, "browser.settle_wait_ended", error=str(exc))
 
     async def page_title(self) -> str:
         page = self._require_page()
@@ -451,13 +451,13 @@ class BrowserManager:
             if obj is not None:
                 try:
                     await obj.close()
-                except Exception:
-                    pass
+                except Exception as exc:
+                    log_extra(logger, 10, "browser.close_failed", error=str(exc))
         if self._playwright is not None:
             try:
                 await self._playwright.stop()
-            except Exception:
-                pass
+            except Exception as exc:
+                log_extra(logger, 10, "browser.playwright_stop_failed", error=str(exc))
         self._playwright = None
         self._browser = None
         self._context = None

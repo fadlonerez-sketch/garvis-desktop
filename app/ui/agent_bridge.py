@@ -596,8 +596,8 @@ class AgentBridge(QObject):
             # stream, so the two never race each other.
             try:
                 await asyncio.wrap_future(pending_stop)
-            except Exception:
-                pass
+            except Exception as exc:
+                log_extra(logger, 10, "agent_bridge.pending_stop_failed", error=str(exc))
         if session is not self._session:
             return  # superseded by an end_session() that ran before this
         if not claim_id:  # not through start_session(): the session still needs the voice
@@ -922,40 +922,30 @@ class AgentBridge(QObject):
             session = self._session
             self._session = None
             self._session_active = False
-            future = asyncio.run_coroutine_threadsafe(session.stop(), self._loop)
-            try:
-                future.result(timeout=5)
-            except Exception:
-                pass
-        future = asyncio.run_coroutine_threadsafe(self._stop_standby(), self._loop)
-        try:
-            future.result(timeout=5)
-        except Exception:
-            pass
+            self._finish_on_loop(session.stop(), "session")
+        self._finish_on_loop(self._stop_standby(), "standby")
         # Accepted tasks that haven't finished are recorded as interrupted (never re-run).
-        future = asyncio.run_coroutine_threadsafe(self._tasks.stop(), self._loop)
-        try:
-            future.result(timeout=5)
-        except Exception:
-            pass
+        self._finish_on_loop(self._tasks.stop(), "tasks")
         if self._mobile is not None:
             # Close the port and end any mobile turn before the loop stops.
-            future = asyncio.run_coroutine_threadsafe(self._mobile.stop(), self._loop)
-            try:
-                future.result(timeout=5)
-            except Exception:
-                pass
+            self._finish_on_loop(self._mobile.stop(), "mobile")
         browser_manager = self._agent.browser_manager
         if browser_manager is not None:
             # Block briefly so the browser process is actually closed before
             # the app exits -- otherwise a launched-but-unclosed browser can
             # be left running as an orphaned process.
-            future = asyncio.run_coroutine_threadsafe(browser_manager.shutdown(), self._loop)
-            try:
-                future.result(timeout=5)
-            except Exception:
-                pass
+            self._finish_on_loop(browser_manager.shutdown(), "browser")
         self._loop.call_soon_threadsafe(self._loop.stop)
+
+    def _finish_on_loop(self, coro, step: str) -> None:
+        """Run one shutdown step on the agent loop and wait up to 5 s. A step
+        that fails or times out is logged at debug level and skipped, so the
+        remaining steps (and the app's exit) still happen."""
+        future = asyncio.run_coroutine_threadsafe(coro, self._loop)
+        try:
+            future.result(timeout=5)
+        except Exception as exc:
+            log_extra(logger, 10, "agent_bridge.shutdown_step_failed", step=step, error=str(exc) or type(exc).__name__)
 
 
 def describe_voice_owner(view: dict) -> str:
